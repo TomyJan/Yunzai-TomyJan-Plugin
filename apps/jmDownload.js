@@ -202,7 +202,7 @@ export class jmDownloadApp extends plugin {
             }
           }
           tjLogger.debug(`发送文件结果: ${JSON.stringify(ret)}`)
-          if(config.getConfig().keppFile){
+          if(config.getConfig().keepFile){
             // 新增移动到归档目录逻辑
             if (!fs.existsSync(this.targetDir)) {
               fs.mkdirSync(this.targetDir, { recursive: true });
@@ -243,7 +243,7 @@ export class jmDownloadApp extends plugin {
           }
           tjLogger.debug(`发送文件结果: ${JSON.stringify(ret)}`)
           tjLogger.debug(`清理 JMComic 临时文件: ${pdfPath}`)
-          if(config.getConfig().keppFile){
+          if(config.getConfig().keepFile){
             // 新增移动到归档目录逻辑
             if (!fs.existsSync(this.targetDir)) {
               fs.mkdirSync(this.targetDir, { recursive: true });
