@@ -204,12 +204,13 @@ export class jmDownloadApp extends plugin {
           tjLogger.debug(`发送文件结果: ${JSON.stringify(ret)}`)
           if(config.getConfig().keepFile){
             // 新增移动到归档目录逻辑
-            if (!fs.existsSync(this.targetDir)) {
-              fs.mkdirSync(this.targetDir, { recursive: true });
+            var targetDir = `${jmDownloadApp.targetDir}`
+            if (!fs.existsSync(targetDir)) {
+              fs.mkdirSync(targetDir, { recursive: true });
             }
-            const targetPath = path.join(this.targetDir, path.basename(pdfPath));
-            fs.renameSync(pdfPath, targetPath);
-            tjLogger.info(`已移动 PDF 文件到归档目录: ${targetPath}`);
+            var file = path.basename(pdfPath)
+            fs.renameSync(pdfPath, `${jmDownloadApp.targetDir}/${file}`);
+            tjLogger.info(`已移动 PDF 文件到归档目录: ${jmDownloadApp.targetDir}/${file}`);
           }else {
             fs.unlinkSync(pdfPath)
           }
@@ -245,12 +246,13 @@ export class jmDownloadApp extends plugin {
           tjLogger.debug(`清理 JMComic 临时文件: ${pdfPath}`)
           if(config.getConfig().keepFile){
             // 新增移动到归档目录逻辑
-            if (!fs.existsSync(this.targetDir)) {
-              fs.mkdirSync(this.targetDir, { recursive: true });
+            var targetDir = `${jmDownloadApp.targetDir}`
+            if (!fs.existsSync(targetDir)) {
+              fs.mkdirSync(targetDir, { recursive: true });
             }
-            const targetPath = path.join(this.targetDir, path.basename(pdfPath));
-            fs.renameSync(pdfPath, targetPath);
-            tjLogger.info(`已移动 PDF 文件到归档目录: ${targetPath}`);
+            var file = path.basename(pdfPath)
+            fs.renameSync(pdfPath, `${jmDownloadApp.targetDir}/${file}`);
+            tjLogger.info(`已移动 PDF 文件到归档目录: ${jmDownloadApp.targetDir}/${file}`);
           }else {
             fs.unlinkSync(pdfPath)
           }
