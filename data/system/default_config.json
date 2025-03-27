@@ -10,5 +10,6 @@
   },
   "useRandomBgInCard": true,
   "attemptSendNonFriend": true,
+  "keepFile": false,
   "botQQ": 0
 }

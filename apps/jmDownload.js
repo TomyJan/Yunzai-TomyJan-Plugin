@@ -1,3 +1,4 @@
+import path from 'path';
 import plugin from '../../../lib/plugins/plugin.js'
 import tjLogger from '../components/logger.js'
 import config from '../components/config.js'
@@ -30,6 +31,7 @@ export class jmDownloadApp extends plugin {
   static commandExists = false
   static downloadPathPrefix = `${_DataPath}/JMComic/cache/download`
   static convertPathPrefix = `${_DataPath}/JMComic/cache/convert`
+  static targetDir = `${_DataPath}/JMComic/download`
 
   /** 插件初始化时执行 */
   static async init() {
@@ -200,7 +202,17 @@ export class jmDownloadApp extends plugin {
             }
           }
           tjLogger.debug(`发送文件结果: ${JSON.stringify(ret)}`)
-          fs.unlinkSync(pdfPath)
+          if(config.getConfig().keppFile){
+            // 新增移动到归档目录逻辑
+            if (!fs.existsSync(this.targetDir)) {
+              fs.mkdirSync(this.targetDir, { recursive: true });
+            }
+            const targetPath = path.join(this.targetDir, path.basename(pdfPath));
+            fs.renameSync(pdfPath, targetPath);
+            tjLogger.info(`已移动 PDF 文件到归档目录: ${targetPath}`);
+          }else {
+            fs.unlinkSync(pdfPath)
+          }
           this.e.group.recallMsg(prepareSendFileMsg.message_id)
           if (ret !== null && typeof ret !== 'object') {
             return `文件发送失败, 可能是协议不支持`
@@ -231,7 +243,17 @@ export class jmDownloadApp extends plugin {
           }
           tjLogger.debug(`发送文件结果: ${JSON.stringify(ret)}`)
           tjLogger.debug(`清理 JMComic 临时文件: ${pdfPath}`)
-          fs.unlinkSync(pdfPath)
+          if(config.getConfig().keppFile){
+            // 新增移动到归档目录逻辑
+            if (!fs.existsSync(this.targetDir)) {
+              fs.mkdirSync(this.targetDir, { recursive: true });
+            }
+            const targetPath = path.join(this.targetDir, path.basename(pdfPath));
+            fs.renameSync(pdfPath, targetPath);
+            tjLogger.info(`已移动 PDF 文件到归档目录: ${targetPath}`);
+          }else {
+            fs.unlinkSync(pdfPath)
+          }
           this.e.friend.recallMsg(prepareSendFileMsg.message_id)
           if (ret !== null && typeof ret !== 'object') {
             return `文件发送失败, 可能是协议不支持`
@@ -281,3 +303,4 @@ async function checkCommand() {
 
 // 在插件加载时执行初始化
 jmDownloadApp.init()
+
