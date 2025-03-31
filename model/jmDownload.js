@@ -9,6 +9,8 @@ export default class jmDownload {
   static commandExists = false
   static downloadPathPrefix = `${_DataPath}/JMComic/cache/download`
   static convertPathPrefix = `${_DataPath}/JMComic/cache/convert`
+  static archiveDownloadPathPrefix = `${_DataPath}/JMComic/archive/download`
+  static archiveConvertPathPrefix = `${_DataPath}/JMComic/archive/convert`
 
   /**
    * 初始化服务
@@ -73,10 +75,13 @@ export default class jmDownload {
    * @param {number} type 类型, 1=图片目录, 2=PDF文件
    * @param {string} path 文件(夹)的路径
    * @param {Boolean} valid 文件是否有效, 功能预留参数
+   * @param {string} id JMComic ID, 用于给归档命名. 因为下载成功的图片文件夹已经重命名过了提取会麻烦
    */
-  static async delTempFile(type, path, valid) {
+  static async delTempFile(type, path, valid, id) {
     tjLogger.debug(`删除 JMComic 临时文件 ${path} , type=${type}, valid=${valid}`)
     // TODO: 预留 valid 参数, 为下一步归档下载的图片 / PDF 功能用, 注意如果要归档图片文件夹, 还需要判断最后一部分有没有 _ , 如果有归档后要删掉 _ 及之后的部分
+    let archiveDownloadedImg = config.getConfig().JMComic.archiveDownloadedImg
+    let archiveConvertedPdf = config.getConfig().JMComic.archiveConvertedPdf
     try {
       // 检查路径是否存在
       if (!fs.existsSync(path)) {
@@ -87,6 +92,23 @@ export default class jmDownload {
       if (type === 1) {
         // 删除图片文件夹
         if (fs.statSync(path).isDirectory()) {
+          // 先判断是否需要归档
+          if (archiveDownloadedImg) {
+            const archivePath = `${this.archiveDownloadPathPrefix}/${id}`
+
+            if (fs.existsSync(archivePath)) {
+              fs.rmSync(archivePath, { recursive: true, force: true })
+            }
+            fs.mkdirSync(archivePath, { recursive: true })
+
+            const files = fs.readdirSync(path)
+            for (const file of files) {
+              const srcFile = `${path}/${file}`
+              const destFile = `${archivePath}/${file}`
+              fs.copyFileSync(srcFile, destFile)
+            }
+            tjLogger.info(`已归档 JMComic 下载的图片: ${archivePath}`)
+          }
           await fs.rm(path, { recursive: true, force: true }, (err) => {
             if (err)
               tjLogger.warn(
@@ -100,6 +122,13 @@ export default class jmDownload {
       } else if (type === 2) {
         // 删除 PDF 文件
         if (fs.statSync(path).isFile()) {
+          // 先判断是否需要归档
+          if (archiveConvertedPdf) {
+            const pdfPwd = config.getConfig().JMComic.pdfPassword
+            const archivePath = `${this.archiveConvertPathPrefix}/${id}${pdfPwd ? `_Password_${pdfPwd}` : ''}.pdf`
+            fs.copyFileSync(path, archivePath, fs.constants.COPYFILE_FICLONE)
+            tjLogger.info(`已归档 JMComic 转换的 PDF: ${archivePath}`)
+          }
           await fs.unlink(path, (err) => {
             if (err)
               tjLogger.warn(

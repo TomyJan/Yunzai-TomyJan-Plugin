@@ -7,7 +7,9 @@
     "enable": true,
     "pdfPassword": "",
     "sendPdfPassword": false,
-    "sendFilePolicy": 1
+    "sendFilePolicy": 1,
+    "archiveDownloadedImg": false,
+    "archiveConvertedPdf": false
   },
   "httpServer": {
     "enable": false,

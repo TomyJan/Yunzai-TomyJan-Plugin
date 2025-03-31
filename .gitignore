@@ -8,6 +8,7 @@ config/
 data/system/versionCache.json
 data/system/taskProcess.json
 data/JMComic/cache
+data/JMComic/archive
 data/httpServer/root
 
 #nodejs

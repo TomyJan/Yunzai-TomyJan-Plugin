@@ -62,7 +62,8 @@ git -C ./plugins/Yunzai-TomyJan-Plugin/ pull
 
 `./config` 为插件配置目录
 
-`./data` 为插件用户数据目录. 其中, `./data/system` 为插件系统数据, `./data/JMComic` 为 `JMComic` 功能的系统和缓存数据, `./data/httpServer` 为 插件内置服务器的系统和缓存数据, 不用备份
+`./data` 为插件用户数据目录, 若你开启了 `JMComic` 的存档功能, 则需要备份 `./data/JMComic/archive` 目录, 这是你的存档数据.
+其他的, `./data/system` 为插件系统数据, `./data/JMComic` 为 `JMComic` 功能的系统和缓存数据, `./data/httpServer` 为 插件内置服务器的系统和缓存数据, 不用备份
 
 ### 插件配置
 
@@ -77,9 +78,11 @@ git -C ./plugins/Yunzai-TomyJan-Plugin/ pull
   },
     "JMComic": { // JMComic 功能配置
     "enable": true, // 是否启用 JMComic 功能
-    "pdfPassword": "", // PDF 密码, 为空则不加密
+    "pdfPassword": "", // PDF 密码, 为空则不加密, 如果同时开启下方归档 PDF 功能, 请请确保设置的密码没有不可用于文件名的字符
     "sendPdfPassword": false, // 是否发送 PDF 密码, 仅在 `pdfPassword` 不为空时生效
-    "sendFilePolicy": 1 // 发送文件策略, 0=只发文件, 1=优先文件, 2=只发链接
+    "sendFilePolicy": 1, // 发送文件策略, 0=只发文件, 1=优先文件, 2=只发链接
+    "archiveDownloadedImg": false, // 是否归档下载的图片到 `./data/JMComic/archive/download/`
+    "archiveConvertedPdf": false // 是否归档转换后的 PDF 到 `./data/JMComic/archive/convert/`, 若为加密 PDF 则文件名会加上密码, 请确保设置的密码没有不可用于文件名的字符
   },
   "httpServer": { // 插件内置 HTTP 服务器配置
     "enable": false, // 是否启用 HTTP 服务器, 默认关闭, 建议手动启用并修改相关配置

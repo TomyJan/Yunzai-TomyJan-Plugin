@@ -95,7 +95,7 @@ export function supportGuoba() {
         {
           field: 'JMComic.sendPdfPassword',
           label: '发送 PDF 密码',
-          helpMessage: '发送 JMComic 功能发送的 PDF 时是否同时发送 PDF 密码',
+          helpMessage: '发送 JMComic 功能发送的 PDF 时是否同时发送 PDF 密码, 如果同时开启下方归档 PDF 功能, 请请确保设置的密码没有不可用于文件名的字符',
           bottomHelpMessage: '更改即时生效, 默认不发送',
           component: 'Switch',
         },
@@ -115,6 +115,22 @@ export function supportGuoba() {
             ],
             placeholder: '配置项异常',
           },
+        },
+        {
+          field: 'JMComic.archiveDownloadedImg',
+          label: '归档图片',
+          helpMessage: '是否归档下载的图片',
+          bottomHelpMessage:
+            '更改即时生效, 归档保存在 插件根目录/data/JMComic/archives/download/ 下',
+          component: 'Switch',
+        },
+        {
+          field: 'JMComic.archiveConvertedPdf',
+          label: '归档 PDF',
+          helpMessage: '是否归档转换的 PDF, 若为加密 PDF 则文件名会加上密码, 请确保设置的密码没有不可用于文件名的字符',
+          bottomHelpMessage:
+            '更改即时生效, 归档保存在 插件根目录/data/JMComic/archives/convert/ 下',
+          component: 'Switch',
         },
         {
           component: 'Divider',
