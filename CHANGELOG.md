@@ -1,3 +1,18 @@
+## [0.1.12-rel](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/compare/v0.1.11-rel...v0.1.12-rel) (2025-03-31)
+
+
+### Features
+
+* **jmDownload:** 使用缓存的图片加速下载 ([3fc84d2](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/3fc84d2132294e39c6cb1315c42cd972bd8d2b61))
+* **jmDownload:** 支持归档下载的图片/PDF ([342bca9](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/342bca93162a762034d5c9c6590e88a7f484898f))
+
+
+### Performance Improvements
+
+* **httpServer:** 内置 HTTP 服务器的 ico ([30ac69f](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/30ac69f4331963cd83089df90e3fef1500a71169))
+
+
+
 ## [0.1.11-rel](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/compare/v0.1.10-rel...v0.1.11-rel) (2025-03-30)
 
 
