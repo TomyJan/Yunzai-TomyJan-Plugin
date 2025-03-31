@@ -102,7 +102,9 @@ export class jmDownloadApp extends plugin {
     if (fs.existsSync(archiveDownloadPath)) {
       // 存档目录存在, 复制到下载缓存目录
       fs.cpSync(archiveDownloadPath, downloadPath, { recursive: true })
-      tjLogger.info(`从归档目录复制 JMComic 下载的图片以加速下载: ${archiveDownloadPath}`)
+      tjLogger.info(
+        `从归档目录复制 JMComic 下载的图片以加速下载: ${archiveDownloadPath}`
+      )
     } else {
       // 存档目录不存在, 创建下载缓存目录
       await fs.mkdirSync(downloadPath, { recursive: true })

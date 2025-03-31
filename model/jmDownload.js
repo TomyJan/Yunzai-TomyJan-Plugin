@@ -78,7 +78,9 @@ export default class jmDownload {
    * @param {string} id JMComic ID, 用于给归档命名. 因为下载成功的图片文件夹已经重命名过了提取会麻烦
    */
   static async delTempFile(type, path, valid, id) {
-    tjLogger.debug(`删除 JMComic 临时文件 ${path} , type=${type}, valid=${valid}`)
+    tjLogger.debug(
+      `删除 JMComic 临时文件 ${path} , type=${type}, valid=${valid}`
+    )
     // TODO: 预留 valid 参数, 为下一步归档下载的图片 / PDF 功能用, 注意如果要归档图片文件夹, 还需要判断最后一部分有没有 _ , 如果有归档后要删掉 _ 及之后的部分
     let archiveDownloadedImg = config.getConfig().JMComic.archiveDownloadedImg
     let archiveConvertedPdf = config.getConfig().JMComic.archiveConvertedPdf
@@ -86,7 +88,7 @@ export default class jmDownload {
       // 检查路径是否存在
       if (!fs.existsSync(path)) {
         tjLogger.warn(`删除 JMComic 临时文件 ${path} 失败, 文件(夹)不存在`)
-        return;
+        return
       }
 
       if (type === 1) {
@@ -116,16 +118,19 @@ export default class jmDownload {
               )
           })
         } else {
-          tjLogger.warn(`删除 JMComic 临时文件 ${path} 失败: 文件不存在或不是目录, type=${type}`)
+          tjLogger.warn(
+            `删除 JMComic 临时文件 ${path} 失败: 文件不存在或不是目录, type=${type}`
+          )
         }
-
       } else if (type === 2) {
         // 删除 PDF 文件
         if (fs.statSync(path).isFile()) {
           // 先判断是否需要归档
           if (archiveConvertedPdf) {
             const pdfPwd = config.getConfig().JMComic.pdfPassword
-            const archivePath = `${this.archiveConvertPathPrefix}/${id}${pdfPwd ? `_Password_${pdfPwd}` : ''}.pdf`
+            const archivePath = `${this.archiveConvertPathPrefix}/${id}${
+              pdfPwd ? `_Password_${pdfPwd}` : ''
+            }.pdf`
             fs.copyFileSync(path, archivePath, fs.constants.COPYFILE_FICLONE)
             tjLogger.info(`已归档 JMComic 转换的 PDF: ${archivePath}`)
           }
@@ -134,15 +139,17 @@ export default class jmDownload {
               tjLogger.warn(
                 `删除 JMComic 临时文件 ${path} 失败: ${err.message}`
               )
-          });
+          })
         } else {
-          tjLogger.warn(`删除 JMComic 临时文件 ${path} 失败: 文件不存在或不是文件, type=${type}`)
+          tjLogger.warn(
+            `删除 JMComic 临时文件 ${path} 失败: 文件不存在或不是文件, type=${type}`
+          )
         }
       } else {
         tjLogger(`删除 JMComic 临时文件 ${path} 失败, 不支持的 type: ${type}`)
       }
     } catch (error) {
-      console.warn(`删除 JMComic 临时文件 ${path} 失败: ${error.message}`);
+      console.warn(`删除 JMComic 临时文件 ${path} 失败: ${error.message}`)
     }
   }
 
