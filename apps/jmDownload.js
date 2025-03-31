@@ -96,8 +96,18 @@ export class jmDownloadApp extends plugin {
       await common.sleep(2500)
       tjLogger.debug(`JMComic ID: ${id} 已有相同任务在下载, 等待中...`)
     }
-    // 创建下载目录作为任务标记
-    await fs.mkdirSync(downloadPath, { recursive: true })
+
+    // 开始下载前, 先检查存档目录是否存在此 ID 的存档, 以便复制当缓存加速下载
+    const archiveDownloadPath = `${jmDownload.archiveDownloadPathPrefix}/${id}`
+    if (fs.existsSync(archiveDownloadPath)) {
+      // 存档目录存在, 复制到下载缓存目录
+      fs.cpSync(archiveDownloadPath, downloadPath, { recursive: true })
+      tjLogger.info(`从归档目录复制 JMComic 下载的图片以加速下载: ${archiveDownloadPath}`)
+    } else {
+      // 存档目录不存在, 创建下载缓存目录
+      await fs.mkdirSync(downloadPath, { recursive: true })
+      tjLogger.debug(`创建 JMComic 下载缓存目录: ${downloadPath}`)
+    }
     // 开始下载
     tjLogger.info(`开始下载 JMComic ID: ${id}`)
     command = `jmcomic ${id} --option="${_DataPath}/JMComic/option.yml"`

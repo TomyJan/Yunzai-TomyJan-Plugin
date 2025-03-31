@@ -119,7 +119,7 @@ export function supportGuoba() {
         {
           field: 'JMComic.archiveDownloadedImg',
           label: '归档图片',
-          helpMessage: '是否归档下载的图片',
+          helpMessage: '是否归档下载的图片, 若开启, 归档将同时将用作下载加速',
           bottomHelpMessage:
             '更改即时生效, 归档保存在 插件根目录/data/JMComic/archives/download/ 下',
           component: 'Switch',
