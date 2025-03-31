@@ -69,6 +69,55 @@ export default class jmDownload {
   }
 
   /**
+   * 删除指定的 JMComic 临时文件(夹)
+   * @param {number} type 类型, 1=图片目录, 2=PDF文件
+   * @param {string} path 文件(夹)的路径
+   * @param {Boolean} valid 文件是否有效, 功能预留参数
+   */
+  static async delTempFile(type, path, valid) {
+    tjLogger.debug(`删除 JMComic 临时文件 ${path} , type=${type}, valid=${valid}`)
+    // TODO: 预留 valid 参数, 为下一步归档下载的图片 / PDF 功能用, 注意如果要归档图片文件夹, 还需要判断最后一部分有没有 _ , 如果有归档后要删掉 _ 及之后的部分
+    try {
+      // 检查路径是否存在
+      if (!fs.existsSync(path)) {
+        tjLogger.warn(`删除 JMComic 临时文件 ${path} 失败, 文件(夹)不存在`)
+        return;
+      }
+
+      if (type === 1) {
+        // 删除图片文件夹
+        if (fs.statSync(path).isDirectory()) {
+          await fs.rm(path, { recursive: true, force: true }, (err) => {
+            if (err)
+              tjLogger.warn(
+                `删除 JMComic 临时文件 ${path} 失败: ${err.message}`
+              )
+          })
+        } else {
+          tjLogger.warn(`删除 JMComic 临时文件 ${path} 失败: 文件不存在或不是目录, type=${type}`)
+        }
+
+      } else if (type === 2) {
+        // 删除 PDF 文件
+        if (fs.statSync(path).isFile()) {
+          await fs.unlink(path, (err) => {
+            if (err)
+              tjLogger.warn(
+                `删除 JMComic 临时文件 ${path} 失败: ${err.message}`
+              )
+          });
+        } else {
+          tjLogger.warn(`删除 JMComic 临时文件 ${path} 失败: 文件不存在或不是文件, type=${type}`)
+        }
+      } else {
+        tjLogger(`删除 JMComic 临时文件 ${path} 失败, 不支持的 type: ${type}`)
+      }
+    } catch (error) {
+      console.warn(`删除 JMComic 临时文件 ${path} 失败: ${error.message}`);
+    }
+  }
+
+  /**
    * 发送 PDF 或下载链接
    * @param {string} pdfPath 要发送的 PDF 目录
    * @param {string} pdSize 转换好的 PDF 大小
@@ -91,7 +140,6 @@ export default class jmDownload {
         else sendFileRet = await e.friend.sendFile(pdfPath)
       } catch (err) {
         // 发送文件出问题
-
         tjLogger.error(`发送文件失败: ${err.message}`)
         if (err.message == 'group space not enough')
           err.message = '群文件空间不足'
@@ -123,8 +171,6 @@ export default class jmDownload {
       if (sendFileRet !== null && typeof sendFileRet == 'object') {
         // 返回了对象说明发送成功
         tjLogger.info(`发送文件成功: ${pdfPath}`)
-        fs.unlinkSync(pdfPath)
-        tjLogger.debug(`已删除临时文件: ${pdfPath}`)
         if (config.getConfig().JMComic.sendPdfPassword && pdfPassword) {
           tjLogger.debug(`发送密码 ${pdfPassword}, pdfPath=${pdfPath}`)
           e.reply(`文件发送成功, 密码: ${pdfPassword}`)

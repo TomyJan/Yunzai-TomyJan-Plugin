@@ -109,13 +109,7 @@ export class jmDownloadApp extends plugin {
 
     if (!commandResult.output) {
       // 运行出现错误
-      // 删除下载目录
-      fs.rm(downloadPath, { recursive: true, force: true }, (err) => {
-        if (err)
-          tjLogger.warn(
-            `删除下载的图片路径 ${downloadPath} 失败: ${err.message}`
-          )
-      })
+      jmDownload.delTempFile(1, downloadPath, false)
       await this.reply(
         `下载失败, 请检查 ID 是否正确. 错误信息: ${commandResult.err}`,
         true
@@ -123,13 +117,7 @@ export class jmDownloadApp extends plugin {
       return
     } else if (commandResult.output.includes('jmcomic.jm_exception')) {
       // 命令结果有 JMComic 的报错
-      // 删除下载目录
-      fs.rm(downloadPath, { recursive: true, force: true }, (err) => {
-        if (err)
-          tjLogger.warn(
-            `删除下载的图片路径 ${downloadPath} 失败: ${err.message}`
-          )
-      })
+      jmDownload.delTempFile(1, downloadPath, false)
       // 出错了, 取回 jmcomic 报错的内容
       const match = commandResult.output.match(
         /MissingAlbumPhotoException\('([^']+)/
@@ -165,8 +153,7 @@ export class jmDownloadApp extends plugin {
       downloadPath += `_${timeStamp}`
       // 如果pdfPath存在, 则先删除
       if (fs.existsSync(pdfPath)) {
-        fs.unlinkSync(pdfPath)
-        tjLogger.info(`已清理 JMComic 临时文件: ${pdfPath}`)
+        jmDownload.delTempFile(2, pdfPath, false)
       }
       // 开始将该路径中的图片合并成 PDF
       let convertResult = await imagesToPDF(
@@ -180,18 +167,12 @@ export class jmDownloadApp extends plugin {
           keywords: ['JMComic', `JMComic${id}`, `jm${id}`],
         }
       )
+      // 合成 PDF 结束后删除下载文件
+      jmDownload.delTempFile(1, downloadPath, true)
       tjLogger.debug(`图片转 PDF 结果: ${convertResult}`)
       if (convertResult == pdfPath) {
         // 计算 PDF 文件大小
         const pdfSize = getFileSizeInHumanReadableFormat(pdfPath)
-        // 转换成功删掉下载的图片
-        tjLogger.debug(`清理 JMComic 临时文件: ${downloadPath}`)
-        fs.rm(downloadPath, { recursive: true, force: true }, (err) => {
-          if (err)
-            tjLogger.warn(
-              `删除下载的图片路径 ${downloadPath} 失败: ${err.message}`
-            )
-        })
         let prepareMsg = `转 PDF 成功, 文件大小 ${pdfSize}, 准备${
           config.getConfig().JMComic.sendFilePolicy == 3
             ? `上传到内置服务器`
@@ -210,6 +191,8 @@ export class jmDownloadApp extends plugin {
           pdfPassword,
           this.e
         )
+        // 发送操作完后删掉 PDF
+        jmDownload.delTempFile(2, pdfPath, true)
         if (sendPdfRet) {
           // 返回非空, 说明处理失败
           this.reply(`发送 PDF 操作失败: ${sendPdfRet}`)
@@ -219,10 +202,12 @@ export class jmDownloadApp extends plugin {
         if (this.e.isPrivate)
           this.e.private.recallMsg(prepareSendFileMsg.message_id)
       } else {
+        jmDownload.delTempFile(2, pdfPath, false)
         this.reply(`图片转 PDF 失败, 错误信息: ${convertResult}`, true)
       }
     } else {
       // 这真的是未知错误了
+      jmDownload.delTempFile(1, downloadPath, false)
       let msg = await common.makeForwardMsg(
         this.e,
         [
