@@ -132,18 +132,40 @@ export class jmDownloadApp extends plugin {
       jmDownload.delTempFile(1, downloadPath, false, id)
       // 出错了, 取回 jmcomic 报错的内容
       const match = commandResult.output.match(
-        /MissingAlbumPhotoException\('([^']+)/
+        /jmcomic\.jm_exception\.[^']*Exception'?,\s*([^)]+)\)/
       )
       if (match) {
-        if (match[1]?.includes('请求的本子不存在'))
-          match[1] = '此 ID 不存在或登录可见'
-        tjLogger.info(`下载 JMComic ${id} 失败: ${match[1]}`)
+        let errorMessage = match[1].trim()
+
+        // 处理特殊情况
+        if (errorMessage.startsWith("'")) {
+          errorMessage = errorMessage.slice(1)
+        }
+        if (errorMessage.endsWith("'")) {
+          errorMessage = errorMessage.slice(0, -1)
+        }
+
+        // 尝试解析可能的 JSON 错误信息
+        try {
+          const errorObj = JSON.parse(errorMessage)
+          errorMessage = errorObj.errorMsg || errorMessage
+        } catch {
+          // 如果不是 JSON 格式,保持原样
+        }
+
+        // 处理特定错误消息
+        if (errorMessage.includes('请求的本子不存在')) {
+          errorMessage = '此 ID 不存在或登录可见'
+        }
+
+        tjLogger.warn(`下载 JMComic ${id} 失败: ${errorMessage}`)
         this.reply(
-          `下载失败, 错误信息: \n${match[1].replace(/\\n/g, '\n').trim()}`,
+          `下载失败, 错误信息: \n${errorMessage.replace(/\\n/g, '\n').trim()}`,
           true
         )
       } else {
-        tjLogger.info(`下载 JMComic ${id} 失败: 无法识别的错误`)
+        // 未能识别的错误,发送完整日志
+        tjLogger.warn(`下载 JMComic ${id} 失败: 无法识别的错误`)
         let msg = await common.makeForwardMsg(
           this.e,
           [
