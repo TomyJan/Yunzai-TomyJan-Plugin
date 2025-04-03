@@ -31,7 +31,9 @@ export class vvShuoApp extends plugin {
       return
     }
 
-    let content = this.e.msg.replace(/#|zvv|ZVV|vv|VV|张维为|维为|说|：|:/g, '').trim()
+    let content = this.e.msg
+      .replace(/#|zvv|ZVV|vv|VV|张维为|维为|说|：|:/g, '')
+      .trim()
     if (!content) {
       await this.reply('VV 要说什么?', true)
       return
@@ -42,14 +44,18 @@ export class vvShuoApp extends plugin {
     tjLogger.debug(`VV 说准备搜索: ${content}, 搜索地址: ${searchApiUrl}`)
 
     fetch(searchApiUrl)
-      .then(response => {
+      .then((response) => {
         if (!response.ok) {
-          tjLogger.error(`VV说API请求失败: ${response.status} ${response.statusText}`)
-          throw new Error(`VV 说不出话: ${response.status} ${response.statusText}`)
+          tjLogger.error(
+            `VV说API请求失败: ${response.status} ${response.statusText}`
+          )
+          throw new Error(
+            `VV 说不出话: ${response.status} ${response.statusText}`
+          )
         }
         return response.json()
       })
-      .then(jsonData => {
+      .then((jsonData) => {
         tjLogger.debug(`VV说API返回数据: ${JSON.stringify(jsonData)}`)
 
         if (jsonData.code !== 200) {
@@ -63,9 +69,11 @@ export class vvShuoApp extends plugin {
         }
 
         // 发送所有图片
-        return Promise.all(jsonData.data.map(imgUrl => this.reply(segment.image(imgUrl))))
+        return Promise.all(
+          jsonData.data.map((imgUrl) => this.reply(segment.image(imgUrl)))
+        )
       })
-      .catch(error => {
+      .catch((error) => {
         tjLogger.error(`VV说搜索出错: ${error.message}`)
         return this.reply(`${error.message}`, true)
       })
