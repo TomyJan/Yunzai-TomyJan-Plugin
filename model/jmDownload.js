@@ -173,7 +173,7 @@ export default class jmDownload {
       // 只传文件或优先传文件
       try {
         if (e.isGroup) sendFileRet = await e.group.fs.upload(pdfPath)
-        else sendFileRet = await e.friend.sendFile(pdfPath)
+        else sendFileRet = await e.private.sendFile(pdfPath)
       } catch (err) {
         // 发送文件出问题
         tjLogger.error(`发送文件失败: ${err.message}`)

@@ -90,7 +90,7 @@ export class jmDownloadApp extends plugin {
         tjLogger.warn(`等待下载目录释放超时: ${downloadPath}`)
         this.reply(`等待下载目录释放超时, 待会再试试吧~`, true)
         if (this.e.group) this.e.group.recallMsg(jmPrepareMsg.message_id)
-        if (this.e.friend) this.e.friend.recallMsg(jmPrepareMsg.message_id)
+        if (this.e.private) this.e.private.recallMsg(jmPrepareMsg.message_id)
         return
       }
       await common.sleep(2500)
@@ -117,7 +117,7 @@ export class jmDownloadApp extends plugin {
 
     // 下载完成, 撤回准备消息
     if (this.e.group) this.e.group.recallMsg(jmPrepareMsg.message_id)
-    if (this.e.friend) this.e.friend.recallMsg(jmPrepareMsg.message_id)
+    if (this.e.private) this.e.private.recallMsg(jmPrepareMsg.message_id)
 
     if (!commandResult.output) {
       // 运行出现错误
