@@ -95,7 +95,7 @@ export default class jmDownload {
         // 删除图片文件夹
         if (fs.statSync(path).isDirectory()) {
           // 先判断是否需要归档
-          if (archiveDownloadedImg) {
+          if (archiveDownloadedImg && valid) {
             const archivePath = `${this.archiveDownloadPathPrefix}/${id}`
 
             if (fs.existsSync(archivePath)) {
@@ -126,7 +126,7 @@ export default class jmDownload {
         // 删除 PDF 文件
         if (fs.statSync(path).isFile()) {
           // 先判断是否需要归档
-          if (archiveConvertedPdf) {
+          if (archiveConvertedPdf && valid) {
             const pdfPwd = config.getConfig().JMComic.pdfPassword
             const archivePath = `${this.archiveConvertPathPrefix}/${id}${
               pdfPwd ? `_Password_${pdfPwd}` : ''
