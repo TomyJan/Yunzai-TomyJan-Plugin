@@ -132,18 +132,13 @@ export class jmDownloadApp extends plugin {
       jmDownload.delTempFile(1, downloadPath, false, id)
       // 出错了, 取回 jmcomic 报错的内容
       const match = commandResult.output.match(
-        /jmcomic\.jm_exception\.[^']*Exception'?,\s*([^)]+)\)/
+        /jmcomic\.jm_exception\.[^\s(]+.*?,\s*[^(\s]+\s*\(([^)]+)\)/
       )
       if (match) {
         let errorMessage = match[1].trim()
 
-        // 处理特殊情况
-        if (errorMessage.startsWith("'")) {
-          errorMessage = errorMessage.slice(1)
-        }
-        if (errorMessage.endsWith("'")) {
-          errorMessage = errorMessage.slice(0, -1)
-        }
+        // 移除可能的单引号或双引号
+        errorMessage = errorMessage.replace(/^['"]|['"]$/g, '')
 
         // 尝试解析可能的 JSON 错误信息
         try {
