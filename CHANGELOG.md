@@ -1,3 +1,12 @@
+## [0.1.14-rel](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/compare/v0.1.13-rel...v0.1.14-rel) (2025-04-03)
+
+
+### Features
+
+* **vvShuo:** VV 说搜索 ([abcba73](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/abcba7375082777fd85308e13e76245bf32b6783))
+
+
+
 ## [0.1.13-rel](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/compare/v0.1.12-rel...v0.1.13-rel) (2025-04-03)
 
 

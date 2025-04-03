@@ -1,7 +1,7 @@
 {
   "!!!WARNING!!!": "这里的字段用于解析 pluginConstants 和生成 changelog, 不要轻易改动",
   "name": "Yunzai-TomyJan-Plugin",
-  "version": "0.1.14-dev",
+  "version": "0.1.14-rel",
   "author": "TomyJan",
   "description": "Yunzai-Bot plugin for TomyJan self use.",
   "type": "module",
