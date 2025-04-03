@@ -3,4 +3,7 @@
   list:
     - icon: jmcomic
       title: "#jm 12345"
-      desc: 下载JMComic漫画
+      desc: 下载 JMComic 漫画
+    - icon: vvshuo
+      title: "#vv说赢"
+      desc: 搜索 VV 的名言

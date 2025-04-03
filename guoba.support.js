@@ -136,6 +136,17 @@ export function supportGuoba() {
         },
         {
           component: 'Divider',
+          label: 'VV 说 设置',
+        },
+        {
+          field: 'vvShuo.enable',
+          label: '启用',
+          helpMessage: '是否启用 VV 说 功能',
+          bottomHelpMessage: '更改即时生效',
+          component: 'Switch',
+        },
+        {
+          component: 'Divider',
           label: 'HTTP 服务器设置',
         },
         {

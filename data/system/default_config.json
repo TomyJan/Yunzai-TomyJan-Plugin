@@ -11,6 +11,9 @@
     "archiveDownloadedImg": false,
     "archiveConvertedPdf": false
   },
+  "vvShuo": {
+    "enable": true
+  },
   "httpServer": {
     "enable": false,
     "listenPort": 5252,

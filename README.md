@@ -85,6 +85,9 @@ git -C ./plugins/Yunzai-TomyJan-Plugin/ pull
     "archiveDownloadedImg": false, // 是否归档下载的图片到 `./data/JMComic/archive/download/`, 若开启, 归档将同时将用作下载加速
     "archiveConvertedPdf": false // 是否归档转换后的 PDF 到 `./data/JMComic/archive/convert/`, 若为加密 PDF 则文件名会加上密码, 请确保设置的密码没有不可用于文件名的字符
   },
+  "vvShuo": { // VV 说 功能配置
+    "enable": false // 是否启用 VV 说 功能
+  },
   "httpServer": { // 插件内置 HTTP 服务器配置
     "enable": false, // 是否启用 HTTP 服务器, 默认关闭, 建议手动启用并修改相关配置
     "listenPort": 5252, // 监听端口, 默认 5252
@@ -104,6 +107,10 @@ git -C ./plugins/Yunzai-TomyJan-Plugin/ pull
 
 - `#jm 1112863` 下载 JMComic 漫画并转换为 PDF 发送, 发送失败可选临时上传到插件内置 HTTP 服务器供用户下载
   注意大概由于 ICQQ 协议问题, 文件有相当大的概率发送失败, 建议配置启用插件内置 HTTP 服务器作为备用方案
+
+### VV 说
+
+- `#vv说赢` 返回最匹配的两条 VV 表情包
 
 ## 关于
 
@@ -132,3 +139,4 @@ git -C ./plugins/Yunzai-TomyJan-Plugin/ pull
 ### 致谢
 
 - [hect0x7/JMComic-Crawler-Python](https://github.com/hect0x7/JMComic-Crawler-Python)
+- [MemeMeow-Studio/MemeMeow](https://github.com/MemeMeow-Studio/MemeMeow)
