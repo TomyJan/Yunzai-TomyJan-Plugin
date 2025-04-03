@@ -1,3 +1,19 @@
+## [0.1.13-rel](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/compare/v0.1.12-rel...v0.1.13-rel) (2025-04-03)
+
+
+### Bug Fixes
+
+* **jmDownload:** 私聊撤回方法错误 ([db2daa7](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/db2daa745ed76d35202a587f90f862c264851468))
+
+
+### Performance Improvements
+
+* **jmDownload:** `JMComic` 错误匹配逻辑 ([7426065](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/74260659a987d9299d8d4250f78b82a238593552))
+* **jmDownload:** `JMComic` 错误输出的匹配 ([2a5306b](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/2a5306b8c21ba99d17cef2bcec32ed9efc599ea8))
+* **jmDownload:** 是否归档的判断逻辑 ([a933e22](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/a933e220da4bbdb90b1029da4a9f933c59ea69c0))
+
+
+
 ## [0.1.12-rel](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/compare/v0.1.11-rel...v0.1.12-rel) (2025-03-31)
 
 
