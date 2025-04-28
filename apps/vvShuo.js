@@ -2,7 +2,6 @@ import plugin from '../../../lib/plugins/plugin.js'
 import tjLogger from '../components/logger.js'
 import config from '../components/config.js'
 import fetch from 'node-fetch'
-import { segment } from 'icqq'
 
 export class vvShuoApp extends plugin {
   constructor() {
