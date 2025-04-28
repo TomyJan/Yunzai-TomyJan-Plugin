@@ -1,3 +1,13 @@
+## [0.1.15-rel](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/compare/v0.1.14-rel...v0.1.15-rel) (2025-04-28)
+
+
+### Bug Fixes
+
+* **vvShuo:** 多余的导入 ([c226b09](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/c226b0940131c5cbdab3e9bba95f0bdedfa8107c))
+* **vvShuo:** 添加 logo ([9b5a751](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/9b5a751343615f894dbb0af1e48d996138059c27))
+
+
+
 ## [0.1.14-rel](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/compare/v0.1.13-rel...v0.1.14-rel) (2025-04-03)
 
 
