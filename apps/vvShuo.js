@@ -42,31 +42,55 @@ export class vvShuoApp extends plugin {
     }
 
     const contentNum = 2
-    const searchApiUrl = `https://api.zvv.quest/${ isEnhanced ? 'enhanced' : ''}search?q=${content}&n=${contentNum}`
-    tjLogger.debug(`VV 说${ isEnhanced ? '增强版' : ''}准备搜索: ${content}, 搜索地址: ${searchApiUrl}`)
+    const searchApiUrl = `https://api.zvv.quest/${
+      isEnhanced ? 'enhanced' : ''
+    }search?q=${content}&n=${contentNum}`
+    tjLogger.debug(
+      `VV 说${
+        isEnhanced ? '增强版' : ''
+      }准备搜索: ${content}, 搜索地址: ${searchApiUrl}`
+    )
 
     fetch(searchApiUrl)
       .then((response) => {
         if (!response.ok) {
           tjLogger.error(
-            `VV说${ isEnhanced ? '增强版' : ''}API请求失败: ${response.status} ${response.statusText}`
+            `VV说${isEnhanced ? '增强版' : ''}API请求失败: ${response.status} ${
+              response.statusText
+            }`
           )
           throw new Error(
-            `VV ${ isEnhanced ? '增强版 ' : ''}说不出话: ${response.status} ${response.statusText}`
+            `VV ${isEnhanced ? '增强版 ' : ''}说不出话: ${response.status} ${
+              response.statusText
+            }`
           )
         }
         return response.json()
       })
       .then((jsonData) => {
-        tjLogger.debug(`VV说${ isEnhanced ? '增强版' : ''}API返回数据: ${JSON.stringify(jsonData)}`)
+        tjLogger.debug(
+          `VV说${isEnhanced ? '增强版' : ''}API返回数据: ${JSON.stringify(
+            jsonData
+          )}`
+        )
 
         if (jsonData.code !== 200) {
-          tjLogger.error(`VV说${ isEnhanced ? '增强版' : ''}API返回错误: ${jsonData}`)
-          throw new Error(`VV 说${ isEnhanced ? '增强版' : ''}有问题: ${jsonData.msg || '但没说啥问题'}`)
+          tjLogger.error(
+            `VV说${isEnhanced ? '增强版' : ''}API返回错误: ${jsonData}`
+          )
+          throw new Error(
+            `VV 说${isEnhanced ? '增强版' : ''}有问题: ${
+              jsonData.msg || '但没说啥问题'
+            }`
+          )
         }
 
         if (!Array.isArray(jsonData.data) || jsonData.data.length === 0) {
-          tjLogger.error(`VV说${ isEnhanced ? '增强版' : ''}API返回的数据格式不正确或为空: ${jsonData}`)
+          tjLogger.error(
+            `VV说${
+              isEnhanced ? '增强版' : ''
+            }API返回的数据格式不正确或为空: ${jsonData}`
+          )
           throw new Error('VV 好像没说过这个')
         }
 
@@ -77,7 +101,9 @@ export class vvShuoApp extends plugin {
         )
       })
       .catch((error) => {
-        tjLogger.error(`VV说${ isEnhanced ? '增强版' : ''}搜索出错: ${error.message}`)
+        tjLogger.error(
+          `VV说${isEnhanced ? '增强版' : ''}搜索出错: ${error.message}`
+        )
         return this.reply(`${error.message}`, true)
       })
   }

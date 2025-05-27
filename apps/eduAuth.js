@@ -69,13 +69,21 @@ export class eduAuthApp extends plugin {
 
     // 确保数据结构正确
     if (!acList.data || !acList.data.data || !Array.isArray(acList.data.data)) {
-      await this.reply(`EDU 认证 获取 AC 列表返回数据异常: \n${JSON.stringify(acList.data)}`, true)
+      await this.reply(
+        `EDU 认证 获取 AC 列表返回数据异常: \n${JSON.stringify(acList.data)}`,
+        true
+      )
       return
     }
 
-    const acIndex = acList.data.data.findIndex((ac) => content.startsWith(ac.ipPrefix))
+    const acIndex = acList.data.data.findIndex((ac) =>
+      content.startsWith(ac.ipPrefix)
+    )
     if (acIndex === -1) {
-      await this.reply('EDU 认证 找不到对应 IP 段的 acName, 请检查 IP 是否正确', true)
+      await this.reply(
+        'EDU 认证 找不到对应 IP 段的 acName, 请检查 IP 是否正确',
+        true
+      )
       return
     }
 
@@ -85,13 +93,21 @@ export class eduAuthApp extends plugin {
       acIndex,
     })
     if (!submitResult.success) {
-      await this.reply(`EDU 认证 提交认证请求失败: ${submitResult.message}`, true)
+      await this.reply(
+        `EDU 认证 提交认证请求失败: ${submitResult.message}`,
+        true
+      )
       return
     }
 
     // 确保数据结构正确
     if (!submitResult.data) {
-      await this.reply(`EDU 认证 提交认证请求返回数据异常: \n${JSON.stringify(submitResult.data)}`, true)
+      await this.reply(
+        `EDU 认证 提交认证请求返回数据异常: \n${JSON.stringify(
+          submitResult.data
+        )}`,
+        true
+      )
       return
     }
 
@@ -109,7 +125,10 @@ export class eduAuthApp extends plugin {
         return
       }
       if (errorTimes >= maxErrorTimes) {
-        await this.reply('EDU 认证 连续查询认证结果失败次数过多, 可能是网络问题或服务端问题', true)
+        await this.reply(
+          'EDU 认证 连续查询认证结果失败次数过多, 可能是网络问题或服务端问题',
+          true
+        )
         return
       }
       queryTimes++
@@ -117,16 +136,26 @@ export class eduAuthApp extends plugin {
         ip: content,
       })
       if (!queryResult.success) {
-        tjLogger.warn(`EDU 认证 第 ${queryTimes} 次查询认证结果失败: ${queryResult.message}`)
+        tjLogger.warn(
+          `EDU 认证 第 ${queryTimes} 次查询认证结果失败: ${queryResult.message}`
+        )
         errorTimes++
         continue
       }
 
-      tjLogger.debug(`EDU 认证 第 ${queryTimes} 次查询认证结果成功: ${JSON.stringify(queryResult.data)}`)
+      tjLogger.debug(
+        `EDU 认证 第 ${queryTimes} 次查询认证结果成功: ${JSON.stringify(
+          queryResult.data
+        )}`
+      )
 
       // 确保数据结构正确
       if (!queryResult.data || !queryResult.data.data) {
-        tjLogger.warn(`EDU 认证 第 ${queryTimes} 次查询认证结果数据结构异常: ${JSON.stringify(queryResult.data)}`)
+        tjLogger.warn(
+          `EDU 认证 第 ${queryTimes} 次查询认证结果数据结构异常: ${JSON.stringify(
+            queryResult.data
+          )}`
+        )
         errorTimes++
         continue
       }

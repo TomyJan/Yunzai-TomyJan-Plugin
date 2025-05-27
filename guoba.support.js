@@ -162,9 +162,9 @@ export function supportGuoba() {
           helpMessage: 'EDU 认证 功能在哪些群组中启用',
           bottomHelpMessage: '更改即时生效',
           component: 'GSelectGroup',
-          "componentProps": {
-            "placeholder": "请选择白名单群"
-          }
+          componentProps: {
+            placeholder: '请选择白名单群',
+          },
         },
         {
           field: 'eduAuth.whitelist.private',
@@ -172,9 +172,9 @@ export function supportGuoba() {
           helpMessage: 'EDU 认证 功能在哪些私聊中启用',
           bottomHelpMessage: '更改即时生效',
           component: 'GSelectFriend',
-          "componentProps": {
-            "placeholder": "请选择白名单用户"
-          }
+          componentProps: {
+            placeholder: '请选择白名单用户',
+          },
         },
         {
           field: 'eduAuth.apiBaseUrl',
@@ -334,9 +334,11 @@ export function supportGuoba() {
           // 还不是最后一个键，继续进入下一层对象
           if (!currentObject[currentKey]) {
             // 如果下一个值是数组（通过看key是否为数字判断），则初始化为数组，否则为对象
-            const nextKey = keys[i + 1];
-            const isNextKeyNumeric = !isNaN(parseInt(nextKey, 10)) && nextKey.toString() === parseInt(nextKey, 10).toString();
-            currentObject[currentKey] = isNextKeyNumeric ? [] : {};
+            const nextKey = keys[i + 1]
+            const isNextKeyNumeric =
+              !isNaN(parseInt(nextKey, 10)) &&
+              nextKey.toString() === parseInt(nextKey, 10).toString()
+            currentObject[currentKey] = isNextKeyNumeric ? [] : {}
           }
           currentObject = currentObject[currentKey]
         }

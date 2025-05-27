@@ -50,16 +50,18 @@ export async function submitApiRequest(apiName, data) {
   // 设置请求头
   const headers = {
     'Content-Type': 'application/json',
-    'Cookie': `moe_user_id=${userId}; moe_time=${timestamp}; moe_sign=${sign}`
+    Cookie: `moe_user_id=${userId}; moe_time=${timestamp}; moe_sign=${sign}`,
   }
 
-  tjLogger.debug(`API 请求地址: ${url}, 方法: ${method}, 数据: ${JSON.stringify(data)}`)
+  tjLogger.debug(
+    `API 请求地址: ${url}, 方法: ${method}, 数据: ${JSON.stringify(data)}`
+  )
 
   try {
     const response = await fetch(url, {
       method,
       headers,
-      body: method === 'POST' ? JSON.stringify(data) : undefined
+      body: method === 'POST' ? JSON.stringify(data) : undefined,
     })
 
     if (!response.ok) {
