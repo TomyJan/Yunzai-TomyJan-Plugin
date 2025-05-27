@@ -1,3 +1,22 @@
+## [0.1.16-rel](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/compare/v0.1.15-rel...v0.1.16-rel) (2025-05-27)
+
+
+### Bug Fixes
+
+* 更新配置文件无法正确处理数组 ([dfc19dd](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/dfc19dd651e3b123b47ed8f87dca4d1ac81ed727))
+
+
+### Features
+
+* **eduAuth:** edu认证 ([49689ec](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/49689ec35113714941d1349145d1282a922d4168))
+
+
+### Performance Improvements
+
+* 更新一些图标 ([0cfbd20](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/0cfbd204037f8296365ac889be8971b874df1b8a))
+
+
+
 ## [0.1.15-rel](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/compare/v0.1.14-rel...v0.1.15-rel) (2025-04-28)
 
 
