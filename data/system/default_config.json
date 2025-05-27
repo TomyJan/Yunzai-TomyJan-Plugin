@@ -14,6 +14,15 @@
   "vvShuo": {
     "enable": true
   },
+  "eduAuth": {
+    "enable": false,
+    "whitelist": {
+      "group": [630657900],
+      "private": [2445387644]
+    },
+    "apiBaseUrl": "https://edu.amoe.cc/api/wifi/",
+    "apiKey": "123456|abcdefg"
+  },
   "httpServer": {
     "enable": false,
     "listenPort": 5252,

@@ -147,6 +147,51 @@ export function supportGuoba() {
         },
         {
           component: 'Divider',
+          label: 'EDU 认证设置',
+        },
+        {
+          field: 'eduAuth.enable',
+          label: '启用',
+          helpMessage: '是否启用 EDU 认证 功能',
+          bottomHelpMessage: '更改即时生效',
+          component: 'Switch',
+        },
+        {
+          field: 'eduAuth.whitelist.group',
+          label: '群组白名单',
+          helpMessage: 'EDU 认证 功能在哪些群组中启用',
+          bottomHelpMessage: '更改即时生效',
+          component: 'GSelectGroup',
+          "componentProps": {
+            "placeholder": "请选择白名单群"
+          }
+        },
+        {
+          field: 'eduAuth.whitelist.private',
+          label: '私聊白名单',
+          helpMessage: 'EDU 认证 功能在哪些私聊中启用',
+          bottomHelpMessage: '更改即时生效',
+          component: 'GSelectFriend',
+          "componentProps": {
+            "placeholder": "请选择白名单用户"
+          }
+        },
+        {
+          field: 'eduAuth.apiBaseUrl',
+          label: 'API基础链接',
+          helpMessage: '认证 API 的基础链接，带协议头和后缀/',
+          bottomHelpMessage: '更改即时生效',
+          component: 'Input',
+        },
+        {
+          field: 'eduAuth.apiKey',
+          label: 'API密钥',
+          helpMessage: '认证 API 的密钥',
+          bottomHelpMessage: '更改即时生效',
+          component: 'Input',
+        },
+        {
+          component: 'Divider',
           label: 'HTTP 服务器设置',
         },
         {
