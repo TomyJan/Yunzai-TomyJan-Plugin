@@ -54,7 +54,7 @@ export async function submitApiRequest(apiName, data) {
   }
 
   tjLogger.debug(
-    `API 请求地址: ${url}, 方法: ${method}, 数据: ${JSON.stringify(data)}`
+    `API 请求地址: ${url}, 方法: ${method}, 数据: ${JSON.stringify(data)}`,
   )
 
   try {

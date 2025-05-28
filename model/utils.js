@@ -99,7 +99,7 @@ export function generateFixedString(inputString, length = 40) {
   if (length > 64) {
     length = 64
     tjLogger.warn(
-      `使用 ${inputString} 生成长度 ${length} 超过最大值, 已自动调整为64`
+      `使用 ${inputString} 生成长度 ${length} 超过最大值, 已自动调整为64`,
     )
   }
   const sha256Hash = crypto.createHash('sha256')
@@ -110,7 +110,7 @@ export function generateFixedString(inputString, length = 40) {
   const fixedString = hash.substring(0, length)
 
   tjLogger.debug(
-    `使用 ${inputString} 生成长度为 ${length} 的固定字符串 ${fixedString}`
+    `使用 ${inputString} 生成长度为 ${length} 的固定字符串 ${fixedString}`,
   )
   return fixedString
 }
@@ -158,7 +158,7 @@ export function updateCardBg() {
           rsp.status,
           rsp.statusText,
           'url:',
-          location
+          location,
         )
         return fetch(location, { method: 'GET', timeout: 5000 })
       }
@@ -173,7 +173,7 @@ export function updateCardBg() {
           '更新卡片背景图片错误:',
           rsp.status,
           rsp.statusText,
-          rsp.url
+          rsp.url,
         )
       }
     })
@@ -223,7 +223,7 @@ export async function sendMsgFriend(uin, msg) {
       // eslint-disable-next-line no-undef
       `bot ${config.getConfig().botQQ || Bot.uin} 发送好友消息[${
         friend?.nickname
-      }](${uin})`
+      }](${uin})`,
     )
     // 如果 Bot 是 array 则使用配置的 Bot
     // eslint-disable-next-line no-undef
@@ -266,7 +266,7 @@ export async function runCommand(command) {
         }
 
         resolve({ output, err })
-      }
+      },
     )
   })
 }
@@ -288,7 +288,7 @@ export async function imagesToPDF(
   outputPath,
   pdfTitle,
   password,
-  metadata = {}
+  metadata = {},
 ) {
   tjLogger.debug('将目录下的图片转为 PDF:', inputDir, outputPath)
   const files = fs

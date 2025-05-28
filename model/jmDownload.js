@@ -29,7 +29,7 @@ export default class jmDownload {
     if (!commandResult.output) {
       this.commandExists = false
       tjLogger.error(
-        'JMComic 命令不存在, JM 下载功能将不可用, 请先按照教程安装 JMComic 并重启 Bot'
+        'JMComic 命令不存在, JM 下载功能将不可用, 请先按照教程安装 JMComic 并重启 Bot',
       )
     } else {
       this.commandExists = true
@@ -79,7 +79,7 @@ export default class jmDownload {
    */
   static async delTempFile(type, path, valid, id) {
     tjLogger.debug(
-      `删除 JMComic 临时文件 ${path} , type=${type}, valid=${valid}`
+      `删除 JMComic 临时文件 ${path} , type=${type}, valid=${valid}`,
     )
     // TODO: 预留 valid 参数, 为下一步归档下载的图片 / PDF 功能用, 注意如果要归档图片文件夹, 还需要判断最后一部分有没有 _ , 如果有归档后要删掉 _ 及之后的部分
     let archiveDownloadedImg = config.getConfig().JMComic.archiveDownloadedImg
@@ -114,12 +114,12 @@ export default class jmDownload {
           await fs.rm(path, { recursive: true, force: true }, (err) => {
             if (err)
               tjLogger.warn(
-                `删除 JMComic 临时文件 ${path} 失败: ${err.message}`
+                `删除 JMComic 临时文件 ${path} 失败: ${err.message}`,
               )
           })
         } else {
           tjLogger.warn(
-            `删除 JMComic 临时文件 ${path} 失败: 文件不存在或不是目录, type=${type}`
+            `删除 JMComic 临时文件 ${path} 失败: 文件不存在或不是目录, type=${type}`,
           )
         }
       } else if (type === 2) {
@@ -137,12 +137,12 @@ export default class jmDownload {
           await fs.unlink(path, (err) => {
             if (err)
               tjLogger.warn(
-                `删除 JMComic 临时文件 ${path} 失败: ${err.message}`
+                `删除 JMComic 临时文件 ${path} 失败: ${err.message}`,
               )
           })
         } else {
           tjLogger.warn(
-            `删除 JMComic 临时文件 ${path} 失败: 文件不存在或不是文件, type=${type}`
+            `删除 JMComic 临时文件 ${path} 失败: 文件不存在或不是文件, type=${type}`,
           )
         }
       } else {
@@ -166,7 +166,7 @@ export default class jmDownload {
     let sendFileRet
     let sendFilePolicy = config.getConfig().JMComic.sendFilePolicy
     tjLogger.debug(
-      `发送 PDF 策略: ${sendFilePolicy}, (1=只传文件, 2=优先文件, 3=只传链接)`
+      `发送 PDF 策略: ${sendFilePolicy}, (1=只传文件, 2=优先文件, 3=只传链接)`,
     )
 
     if (sendFilePolicy == 1 || sendFilePolicy == 2) {

@@ -71,18 +71,18 @@ export class eduAuthApp extends plugin {
     if (!acList.data || !acList.data.data || !Array.isArray(acList.data.data)) {
       await this.reply(
         `EDU 认证 获取 AC 列表返回数据异常: \n${JSON.stringify(acList.data)}`,
-        true
+        true,
       )
       return
     }
 
     const acIndex = acList.data.data.findIndex((ac) =>
-      content.startsWith(ac.ipPrefix)
+      content.startsWith(ac.ipPrefix),
     )
     if (acIndex === -1) {
       await this.reply(
         'EDU 认证 找不到对应 IP 段的 acName, 请检查 IP 是否正确',
-        true
+        true,
       )
       return
     }
@@ -95,7 +95,7 @@ export class eduAuthApp extends plugin {
     if (!submitResult.success) {
       await this.reply(
         `EDU 认证 提交认证请求失败: ${submitResult.message}`,
-        true
+        true,
       )
       return
     }
@@ -104,9 +104,9 @@ export class eduAuthApp extends plugin {
     if (!submitResult.data) {
       await this.reply(
         `EDU 认证 提交认证请求返回数据异常: \n${JSON.stringify(
-          submitResult.data
+          submitResult.data,
         )}`,
-        true
+        true,
       )
       return
     }
@@ -127,7 +127,7 @@ export class eduAuthApp extends plugin {
       if (errorTimes >= maxErrorTimes) {
         await this.reply(
           'EDU 认证 连续查询认证结果失败次数过多, 可能是网络问题或服务端问题',
-          true
+          true,
         )
         return
       }
@@ -137,7 +137,7 @@ export class eduAuthApp extends plugin {
       })
       if (!queryResult.success) {
         tjLogger.warn(
-          `EDU 认证 第 ${queryTimes} 次查询认证结果失败: ${queryResult.message}`
+          `EDU 认证 第 ${queryTimes} 次查询认证结果失败: ${queryResult.message}`,
         )
         errorTimes++
         continue
@@ -145,16 +145,16 @@ export class eduAuthApp extends plugin {
 
       tjLogger.debug(
         `EDU 认证 第 ${queryTimes} 次查询认证结果成功: ${JSON.stringify(
-          queryResult.data
-        )}`
+          queryResult.data,
+        )}`,
       )
 
       // 确保数据结构正确
       if (!queryResult.data || !queryResult.data.data) {
         tjLogger.warn(
           `EDU 认证 第 ${queryTimes} 次查询认证结果数据结构异常: ${JSON.stringify(
-            queryResult.data
-          )}`
+            queryResult.data,
+          )}`,
         )
         errorTimes++
         continue
@@ -167,7 +167,7 @@ export class eduAuthApp extends plugin {
           .replace(/<\/p>/g, '\n')
           .trim()
         tjLogger.info(
-          `EDU 认证 第 ${queryTimes} 次查询认证结果成功且停止认证: ${msg}`
+          `EDU 认证 第 ${queryTimes} 次查询认证结果成功且停止认证: ${msg}`,
         )
         await this.reply(msg, true)
         return

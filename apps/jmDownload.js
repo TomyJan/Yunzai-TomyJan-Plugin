@@ -78,7 +78,7 @@ export class jmDownloadApp extends plugin {
       pdfPassword ? `_Password` : ''
     }.pdf`
     tjLogger.debug(
-      `准备下载 JMComic ID: ${id}, qq=${this.e.user_id}, path=${downloadPath}, pdfPath=${pdfPath}, password=${pdfPassword}`
+      `准备下载 JMComic ID: ${id}, qq=${this.e.user_id}, path=${downloadPath}, pdfPath=${pdfPath}, password=${pdfPassword}`,
     )
 
     // 如果downloadPath存在, 说明有相同任务正在下载, 循环等待到目录不存在再继续
@@ -103,7 +103,7 @@ export class jmDownloadApp extends plugin {
       // 存档目录存在, 复制到下载缓存目录
       fs.cpSync(archiveDownloadPath, downloadPath, { recursive: true })
       tjLogger.info(
-        `从归档目录复制 JMComic 下载的图片以加速下载: ${archiveDownloadPath}`
+        `从归档目录复制 JMComic 下载的图片以加速下载: ${archiveDownloadPath}`,
       )
     } else {
       // 存档目录不存在, 创建下载缓存目录
@@ -124,7 +124,7 @@ export class jmDownloadApp extends plugin {
       jmDownload.delTempFile(1, downloadPath, false, id)
       await this.reply(
         `下载失败, 请检查 ID 是否正确. 错误信息: ${commandResult.err}`,
-        true
+        true,
       )
       return
     } else if (commandResult.output.includes('jmcomic.jm_exception')) {
@@ -132,7 +132,7 @@ export class jmDownloadApp extends plugin {
       jmDownload.delTempFile(1, downloadPath, false, id)
       // 出错了, 取回 jmcomic 报错的内容
       const match = commandResult.output.match(
-        /jmcomic\.jm_exception\.[^\s(]+.*?,\s*[^(\s]+\s*\(([^)]+)\)/
+        /jmcomic\.jm_exception\.[^\s(]+.*?,\s*[^(\s]+\s*\(([^)]+)\)/,
       )
       if (match) {
         let errorMessage = match[1].trim()
@@ -156,7 +156,7 @@ export class jmDownloadApp extends plugin {
         tjLogger.warn(`下载 JMComic ${id} 失败: ${errorMessage}`)
         this.reply(
           `下载失败, 错误信息: \n${errorMessage.replace(/\\n/g, '\n').trim()}`,
-          true
+          true,
         )
       } else {
         // 未能识别的错误,发送完整日志
@@ -168,7 +168,7 @@ export class jmDownloadApp extends plugin {
             commandResult.output.replace(/\\n/g, '\n').trim(),
             '请向机器人主人或插件开发者反馈此问题',
           ],
-          'JM 下载失败'
+          'JM 下载失败',
         )
         await this.reply(msg, true)
         return
@@ -194,7 +194,7 @@ export class jmDownloadApp extends plugin {
           author: pluginAuthor,
           subject: `JMComic${id}`,
           keywords: ['JMComic', `JMComic${id}`, `jm${id}`],
-        }
+        },
       )
       // 合成 PDF 结束后删除下载文件
       jmDownload.delTempFile(1, downloadPath, true, id)
@@ -218,7 +218,7 @@ export class jmDownloadApp extends plugin {
           pdfPath,
           pdfSize,
           pdfPassword,
-          this.e
+          this.e,
         )
         // 发送操作完后删掉 PDF
         jmDownload.delTempFile(2, pdfPath, true, id)
@@ -244,7 +244,7 @@ export class jmDownloadApp extends plugin {
           commandResult.output.replace(/\\n/g, '\n').trim(),
           '请向机器人主人或插件开发者反馈此问题',
         ],
-        'JM 下载失败'
+        'JM 下载失败',
       )
       await this.reply(msg, true)
     }

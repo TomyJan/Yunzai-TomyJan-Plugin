@@ -279,7 +279,7 @@ export function supportGuoba() {
         updateConfigFile()
         sendMsgFriend(
           cfg.masterQQ[0],
-          `[TJ插件] 配置文件有更新, 建议检查是否有新的项目需要配置!`
+          `[TJ插件] 配置文件有更新, 建议检查是否有新的项目需要配置!`,
         )
       }
     } catch (error) {

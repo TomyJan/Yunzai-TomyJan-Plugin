@@ -48,7 +48,7 @@ export class vvShuoApp extends plugin {
     tjLogger.debug(
       `VV 说${
         isEnhanced ? '增强版' : ''
-      }准备搜索: ${content}, 搜索地址: ${searchApiUrl}`
+      }准备搜索: ${content}, 搜索地址: ${searchApiUrl}`,
     )
 
     fetch(searchApiUrl)
@@ -57,12 +57,12 @@ export class vvShuoApp extends plugin {
           tjLogger.error(
             `VV说${isEnhanced ? '增强版' : ''}API请求失败: ${response.status} ${
               response.statusText
-            }`
+            }`,
           )
           throw new Error(
             `VV ${isEnhanced ? '增强版 ' : ''}说不出话: ${response.status} ${
               response.statusText
-            }`
+            }`,
           )
         }
         return response.json()
@@ -70,18 +70,18 @@ export class vvShuoApp extends plugin {
       .then((jsonData) => {
         tjLogger.debug(
           `VV说${isEnhanced ? '增强版' : ''}API返回数据: ${JSON.stringify(
-            jsonData
-          )}`
+            jsonData,
+          )}`,
         )
 
         if (jsonData.code !== 200) {
           tjLogger.error(
-            `VV说${isEnhanced ? '增强版' : ''}API返回错误: ${jsonData}`
+            `VV说${isEnhanced ? '增强版' : ''}API返回错误: ${jsonData}`,
           )
           throw new Error(
             `VV 说${isEnhanced ? '增强版' : ''}有问题: ${
               jsonData.msg || '但没说啥问题'
-            }`
+            }`,
           )
         }
 
@@ -89,7 +89,7 @@ export class vvShuoApp extends plugin {
           tjLogger.error(
             `VV说${
               isEnhanced ? '增强版' : ''
-            }API返回的数据格式不正确或为空: ${jsonData}`
+            }API返回的数据格式不正确或为空: ${jsonData}`,
           )
           throw new Error('VV 好像没说过这个')
         }
@@ -97,12 +97,12 @@ export class vvShuoApp extends plugin {
         // 发送所有图片
         return Promise.all(
           // eslint-disable-next-line no-undef
-          jsonData.data.map((imgUrl) => this.reply(segment.image(imgUrl)))
+          jsonData.data.map((imgUrl) => this.reply(segment.image(imgUrl))),
         )
       })
       .catch((error) => {
         tjLogger.error(
-          `VV说${isEnhanced ? '增强版' : ''}搜索出错: ${error.message}`
+          `VV说${isEnhanced ? '增强版' : ''}搜索出错: ${error.message}`,
         )
         return this.reply(`${error.message}`, true)
       })

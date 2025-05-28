@@ -31,7 +31,7 @@ export async function checkUpdateTask() {
     tjLogger.warn(`检查更新任务失败`)
     await sendMsgFriend(
       cfg.masterQQ[0],
-      `[TJ插件] 自动检查更新失败\n请检查网络或前往项目地址检查版本信息\nhttps://github.com/TomyJan/Yunzai-TomyJan-Plugin`
+      `[TJ插件] 自动检查更新失败\n请检查网络或前往项目地址检查版本信息\nhttps://github.com/TomyJan/Yunzai-TomyJan-Plugin`,
     )
     return false
   }
@@ -43,13 +43,13 @@ export async function checkUpdateTask() {
     tjLogger.info(`检查更新任务: 解析版本信息失败`)
     await sendMsgFriend(
       cfg.masterQQ[0],
-      `[TJ插件] 自动检查更新\n解析版本信息失败\n请检查网络或前往项目地址检查版本信息\nhttps://github.com/TomyJan/Yunzai-TomyJan-Plugin`
+      `[TJ插件] 自动检查更新\n解析版本信息失败\n请检查网络或前往项目地址检查版本信息\nhttps://github.com/TomyJan/Yunzai-TomyJan-Plugin`,
     )
     return false
   }
 
   tjLogger.info(
-    `检查更新任务: 获取到最新版本 ${remoteVersion}, 本地版本 ${pluginVer}`
+    `检查更新任务: 获取到最新版本 ${remoteVersion}, 本地版本 ${pluginVer}`,
   )
   if (remoteVersion != pluginVer) {
     // 推送并缓存
@@ -67,7 +67,7 @@ export async function checkUpdateTask() {
         '读取 versionCache:',
         versionCache,
         ', 解析到缓存的版本:',
-        versionCache?.remoteVersion
+        versionCache?.remoteVersion,
       )
     } catch (err) {
       tjLogger.error('读取 versionCache.json 时出现错误:', err.message)
@@ -91,7 +91,7 @@ export async function checkUpdateTask() {
     await sendMsgFriend(
       cfg.masterQQ[0],
       `[TJ插件] 自动检查更新\n发现新版: ${remoteVersion}\n本地版本: ${pluginVer}\n更新日志: https://kuro.amoe.cc/repo/raw/TomyJan/Yunzai-TomyJan-Plugin/master/CHANGELOG.md?type=preview\n建议尽快更新~` +
-        (isCacheSucceed ? '' : '\n缓存新版本信息失败, 该信息可能会重复推送')
+        (isCacheSucceed ? '' : '\n缓存新版本信息失败, 该信息可能会重复推送'),
     )
   }
 
@@ -121,7 +121,7 @@ export async function checkUpdateTask() {
         let rsp = await fetch(source.url)
         if (!rsp.ok) {
           tjLogger.warn(
-            `从 ${source.name} 获取更新信息失败: ${rsp.status} ${rsp.statusText}`
+            `从 ${source.name} 获取更新信息失败: ${rsp.status} ${rsp.statusText}`,
           )
           continue
         }
