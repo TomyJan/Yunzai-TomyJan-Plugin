@@ -165,6 +165,10 @@ export class eduAuthApp extends plugin {
         const msg = queryResult.data.msg
           .replace(/<p>/g, '')
           .replace(/<\/p>/g, '\n')
+          .trim()
+        tjLogger.info(
+          `EDU 认证 第 ${queryTimes} 次查询认证结果成功且停止认证: ${msg}`
+        )
         await this.reply(msg, true)
         return
       }
