@@ -77,7 +77,7 @@ git -C ./plugins/Yunzai-TomyJan-Plugin/ pull
     "logLevel": "info", // 日志等级, 可选值: trace, debug, info, warn, error, fatal
     "saveToFile": false // 是否保存日志到文件
   },
-    "JMComic": { // JMComic 功能配置
+  "JMComic": { // JMComic 功能配置
     "enable": true, // 是否启用 JMComic 功能
     "pdfPassword": "", // PDF 密码, 为空则不加密, 如果同时开启下方归档 PDF 功能, 请请确保设置的密码没有不可用于文件名的字符
     "sendPdfPassword": false, // 是否发送 PDF 密码, 仅在 `pdfPassword` 不为空时生效
@@ -86,12 +86,21 @@ git -C ./plugins/Yunzai-TomyJan-Plugin/ pull
     "archiveConvertedPdf": false // 是否归档转换后的 PDF 到 `./data/JMComic/archive/convert/`, 若为加密 PDF 则文件名会加上密码, 请确保设置的密码没有不可用于文件名的字符
   },
   "vvShuo": { // VV 说 功能配置
-    "enable": false // 是否启用 VV 说 功能
+    "enable": true // 是否启用 VV 说 功能
+  },
+  "eduAuth": { // EDU Auth 功能配置
+    "enable": false, // 是否启用 EDU Auth 功能
+    "whitelist": { // 白名单配置, 仅允许白名单内的 QQ 群成员/ QQ 号私聊使用 EDU Auth 功能
+      "group": [630657900], // 白名单群号, 允许白名单群内的所有成员使用
+      "private": [2445387644] // 白名单 QQ 号, 允许白名单内的私聊使用
+    },
+    "apiBaseUrl": "https://edu.amoe.cc/api/wifi/", // EDU Auth API 基础 URL
+    "apiKey": "123456|abcdefg" // EDU Auth API 密钥, 格式为 `账号ID|密钥`, 请前往 [EDU Auth](https://edu.amoe.cc/user) 获取
   },
   "httpServer": { // 插件内置 HTTP 服务器配置
-    "enable": false, // 是否启用 HTTP 服务器, 默认关闭, 建议手动启用并修改相关配置
-    "listenPort": 5252, // 监听端口, 默认 5252
-    "accessUrl": "http://127.0.0.1:5252/" // 访问 URL, 默认 http://127.0.0.1:5252/
+    "enable": false, // 是否启用 HTTP 服务器, 建议手动启用并修改相关配置
+    "listenPort": 5252, // 监听端口
+    "accessUrl": "http://127.0.0.1:5252/" // 访问 URL
   },
   "useRandomBgInCard": true, // 卡片是否使用随机背景图
   "attemptSendNonFriend": true, // 即使非好友也尝试推送消息
@@ -111,6 +120,10 @@ git -C ./plugins/Yunzai-TomyJan-Plugin/ pull
 ### VV 说
 
 - `#vv说赢` 返回最匹配的两条 VV 表情包
+
+### EDU Auth
+
+- `#edu 100.xx.xx.xx` 进行某些认证, 内部服务, 别问
 
 ## 关于
 
