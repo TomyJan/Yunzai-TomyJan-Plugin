@@ -79,7 +79,7 @@ export class vvShuoApp extends plugin {
             `VV说${isEnhanced ? '增强版' : ''}API返回错误: ${jsonData}`,
           )
           throw new Error(
-            `VV 说${isEnhanced ? '增强版' : ''}有问题: ${
+            `VV 说${isEnhanced ? '增强版' : ''}有问题${jsonData.code ? `(${jsonData.code})` : ''}: ${
               jsonData.msg || '但没说啥问题'
             }`,
           )
