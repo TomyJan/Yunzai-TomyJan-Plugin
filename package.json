@@ -31,7 +31,7 @@
     "child_process": "^1.0.2",
     "crypto": "^1.0.1",
     "date-fns": "^4.1.0",
-    "iconv-lite": "^0.6.3",
+    "iconv-lite": "^0.7.0",
     "node-fetch": "^3.3.2",
     "pdf-lib-plus-encrypt": "^1.1.0",
     "sharp": "^0.34.3"
