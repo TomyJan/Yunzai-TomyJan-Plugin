@@ -1,3 +1,23 @@
+## [0.1.17-rel](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/compare/v0.1.16-rel...v0.1.17-rel) (2025-11-20)
+
+
+### Bug Fixes
+
+* 缺少依赖 ([64cbc67](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/64cbc671058b5d06980fc387ada2a33f66da5b15))
+
+
+### Features
+
+* **vvShuo:** 增强版 ([8fe30f1](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/8fe30f1227f8dd72bfe86d11e2970e6bc2f71165))
+
+
+### Performance Improvements
+
+* **eduAuth:** trim tip ([708f57e](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/708f57e63ed7b64fe952763bcb7ff666d94e839b))
+* **vvShuo:** API报错返回 ([f8da8c3](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/f8da8c391f9b7e7116f0ed78c7eb66ab708e0f4b))
+
+
+
 ## [0.1.16-rel](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/compare/v0.1.15-rel...v0.1.16-rel) (2025-05-27)
 
 
