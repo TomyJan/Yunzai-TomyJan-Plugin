@@ -149,7 +149,7 @@ export class jmDownloadApp extends plugin {
         }
 
         // 处理特定错误消息
-        if (errorMessage.includes('请求的本子不存在')) {
+        if (commandResult.output.includes('请求的本子不存在')) {
           errorMessage = '此 ID 不存在或登录可见'
         }
 
