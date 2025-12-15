@@ -1,7 +1,7 @@
 {
   "!!!WARNING!!!": "这里的字段用于解析 pluginConstants 和生成 changelog, 不要轻易改动",
   "name": "Yunzai-TomyJan-Plugin",
-  "version": "0.1.18-dev",
+  "version": "0.1.18-rel",
   "author": "TomyJan",
   "description": "Yunzai-Bot plugin for TomyJan self use.",
   "type": "module",
@@ -31,7 +31,6 @@
     "child_process": "^1.0.2",
     "date-fns": "^4.1.0",
     "iconv-lite": "^0.7.0",
-    "node-fetch": "^3.3.2",
     "pdf-lib-plus-encrypt": "^1.1.0",
     "sharp": "^0.34.5"
   },

@@ -1,3 +1,12 @@
+## [0.1.18-rel](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/compare/v0.1.17-rel...v0.1.18-rel) (2025-12-15)
+
+
+### Bug Fixes
+
+* **jmDownload:** 本子不存在的匹配错误 ([035bbd2](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/035bbd2c2b393c8a9d70566d9d4d063c4506029d))
+
+
+
 ## [0.1.17-rel](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/compare/v0.1.16-rel...v0.1.17-rel) (2025-11-20)
 
 
