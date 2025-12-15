@@ -18,7 +18,7 @@ importers:
         specifier: ^4.1.0
         version: 4.1.0
       iconv-lite:
-        specifier: ^0.7.0
+        specifier: ^0.7.1
         version: 0.7.1
       pdf-lib-plus-encrypt:
         specifier: ^1.1.0
@@ -34,7 +34,7 @@ importers:
         specifier: ^7.1.1
         version: 7.1.1(conventional-commits-filter@5.0.0)
       conventional-changelog-angular:
-        specifier: ^8.0.0
+        specifier: ^8.1.0
         version: 8.1.0
       conventional-changelog-cli:
         specifier: ^5.0.0
@@ -49,7 +49,7 @@ importers:
         specifier: ^16.5.0
         version: 16.5.0
       prettier:
-        specifier: ^3.6.2
+        specifier: ^3.7.4
         version: 3.7.4
 
 packages:
