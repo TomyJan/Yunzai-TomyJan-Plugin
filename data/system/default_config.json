@@ -16,12 +16,10 @@
   },
   "eduAuth": {
     "enable": false,
-    "whitelist": {
-      "group": [630657900],
-      "private": [2445387644]
-    },
-    "apiBaseUrl": "https://edu.amoe.cc/api/wifi/",
-    "apiKey": "123456|abcdefg"
+    "apiBaseUrl": "https://edu.amoe.cc/api/v2/thirdParty",
+    "apiKey": "your-api-key",
+    "userGroup": 725571000,
+    "adminGroup": 725571000
   },
   "httpServer": {
     "enable": false,

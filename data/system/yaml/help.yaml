@@ -7,6 +7,20 @@
     - icon: vvshuo
       title: "#vv赢 #vvol鸣潮"
       desc: 搜索 VV 的名言
+- group: EDU 认证
+  list:
     - icon: eduauth
       title: "#edu 100.x.x.x"
-      desc: EDU 认证
+      desc: 提交 WiFi 认证
+    - icon: eduauth
+      title: "#edu上报群员"
+      desc: "[主人] 上报群成员"
+    - icon: eduauth
+      title: "#edu检查用户"
+      desc: "[主人] 检查用户状态"
+    - icon: eduauth
+      title: "#edu踢无效用户"
+      desc: "[主人] 踢出无效用户"
+    - icon: eduauth
+      title: "#edu刷新缓存"
+      desc: "[主人] 刷新用户缓存"
