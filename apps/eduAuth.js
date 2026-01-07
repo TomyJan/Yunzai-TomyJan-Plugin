@@ -61,6 +61,44 @@ export class eduAuthApp extends plugin {
   }
 
   /**
+   * 格式化认证结果消息
+   * @param {boolean} success - 是否成功
+   * @param {string} message - 基础消息
+   * @param {object} taskInfo - 任务信息
+   * @returns {string} - 格式化后的消息
+   */
+  formatAuthResultMessage(success, message, taskInfo = {}) {
+    const lines = [success ? `✅ ${message}` : `❌ ${message}`]
+
+    const { attempts, provider, queuedTimeMs, executionTimeMs } = taskInfo
+
+    if (attempts) {
+      lines.push(`共尝试 ${attempts} 次`)
+    }
+
+    if (provider) {
+      lines.push(`本次认证服务由 ${provider} 提供`)
+    }
+
+    if (queuedTimeMs || executionTimeMs) {
+      const timeDetails = []
+      if (queuedTimeMs) {
+        timeDetails.push(`排队 ${(queuedTimeMs / 1000).toFixed(1)}s`)
+      }
+      if (executionTimeMs) {
+        timeDetails.push(`执行 ${(executionTimeMs / 1000).toFixed(1)}s`)
+      }
+      lines.push(timeDetails.join(' | '))
+    }
+
+    if (success) {
+      lines.push('稍等几秒或重连 WiFi 即可上网')
+    }
+
+    return lines.join('\n')
+  }
+
+  /**
    * EDU 认证提交
    */
   async eduAuthSubmit() {
@@ -131,24 +169,18 @@ export class eduAuthApp extends plugin {
 
     // 如果已经是最终状态
     if (taskInfo.status === 'success') {
-      await this.reply(
-        `✅ 认证成功！`
-          + taskInfo.attempts ? `共尝试 ${taskInfo.attempts} 次` : ``
-          + taskInfo.provider ? `\n本次认证服务由 ${taskInfo.provider} 提供` : ``
-          + taskInfo.queuedTimeMs || taskInfo.executionTimeMs
-            ? `\n`
-              + taskInfo.queuedTimeMs ? `排队 ${(taskInfo.queuedTimeMs / 1000).toFixed(1)}s` : ``
-              + taskInfo.queuedTimeMs && taskInfo.executionTimeMs ? ` | ` : ``
-              + taskInfo.executionTimeMs ? `执行 ${(taskInfo.executionTimeMs / 1000).toFixed(1)}s` : ``
-            : ``
-          + `\n稍等几秒或重连 WiFi 即可上网`,
-        true,
-      )
+      const msg = this.formatAuthResultMessage(true, '认证成功！', taskInfo)
+      await this.reply(msg, true)
       return
     }
 
     if (taskInfo.status === 'failed') {
-      await this.reply(`提交认证任务失败: ${getTaskCodeMessage(taskInfo.taskCode)}`, true)
+      const msg = this.formatAuthResultMessage(
+        false,
+        getTaskCodeMessage(taskInfo.taskCode),
+        taskInfo,
+      )
+      await this.reply(msg, true)
       return
     }
 
@@ -166,35 +198,12 @@ export class eduAuthApp extends plugin {
     const finalResult = await waitForAuthResult(taskId)
     tjLogger.info(`[EDU] 用户 ${userQQ} 认证结果: ${finalResult.success ? '成功' : '失败'} - ${finalResult.message}`)
 
-    if (finalResult.success) {
-      let msg = `✅ ${finalResult.message}`
-      if (finalResult.data) {
-        // const { queuedTimeMs, executionTimeMs, attempts } = finalResult.data
-        // const details = []
-        // if (queuedTimeMs) details.push(`排队: ${(queuedTimeMs / 1000).toFixed(1)}s`)
-        // if (executionTimeMs)
-        //   details.push(`执行: ${(executionTimeMs / 1000).toFixed(1)}s`)
-        // if (attempts) details.push(`尝试: ${attempts}次`)
-        // if (details.length) msg += `\n${details.join(' | ')}`
-        const details = []
-        const { queuedTimeMs, executionTimeMs, attempts, provider } = finalResult.data
-        if (attempts) details.push(`共尝试 ${attempts} 次`)
-        if (provider) details.push(`本次认证服务由 ${provider} 提供`)
-        if (queuedTimeMs || executionTimeMs) {
-          const timeDetails = []
-          if (queuedTimeMs)
-            timeDetails.push(`排队 ${(queuedTimeMs / 1000).toFixed(1)}s`)
-          if (executionTimeMs)
-            timeDetails.push(`执行 ${(executionTimeMs / 1000).toFixed(1)}s`)
-          details.push(timeDetails.join(' | '))
-        }
-        details.push('稍等几秒或重连 WiFi 即可上网')
-        if (details.length) msg += `\n${details.join('\n')}`
-      }
-      await this.reply(msg, true)
-    } else {
-      await this.reply(`❌ ${finalResult.message}`, true)
-    }
+    const resultMsg = this.formatAuthResultMessage(
+      finalResult.success,
+      finalResult.message,
+      finalResult.data || {},
+    )
+    await this.reply(resultMsg, true)
   }
 
   /**
