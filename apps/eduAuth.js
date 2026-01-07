@@ -185,7 +185,7 @@ export class eduAuthApp extends plugin {
     }
 
     // 显示队列信息
-    let queueMsg = '任务已提交'
+    let queueMsg = '任务已提交, 正在认证中...'
     if (taskInfo.isExisting) {
       queueMsg = '任务已存在，将继续查询进度'
     }
