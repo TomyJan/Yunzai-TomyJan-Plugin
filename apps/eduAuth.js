@@ -26,10 +26,6 @@ export class eduAuthApp extends plugin {
       priority: 1000,
       rule: [
         {
-          reg: '^#?(edu|EDU)(认证|登录|登陆)?[：: ]?(.*)$',
-          fnc: 'eduAuthSubmit',
-        },
-        {
           reg: '^#?(edu|EDU)(上报|同步)((用户|群成?员)?(列表)?)?$',
           fnc: 'eduReportMembers',
         },
@@ -44,6 +40,10 @@ export class eduAuthApp extends plugin {
         {
           reg: '^#?(edu|EDU)(刷新缓存|更新缓存)$',
           fnc: 'eduRefreshCache',
+        },
+        {
+          reg: '^#?(edu|EDU)(认证|登录|登陆)?[：: ]?(.*)$',
+          fnc: 'eduAuthSubmit',
         },
       ],
     })
