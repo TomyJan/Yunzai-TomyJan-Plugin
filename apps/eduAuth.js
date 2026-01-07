@@ -85,7 +85,7 @@ export class eduAuthApp extends plugin {
     }
 
     if (queuedTimeMs || executionTimeMs) {
-      lines.push('\n')
+      lines.push('')
       const timeDetails = []
       if (queuedTimeMs) {
         timeDetails.push(`排队 ${(queuedTimeMs / 1000).toFixed(1)}s`)
