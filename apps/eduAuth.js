@@ -455,9 +455,14 @@ export class eduAuthApp extends plugin {
 
       for (const user of allInvalidUsers) {
         try {
-          await group.kickMember(Number(user.qq))
-          kickedCount++
-          tjLogger.info(`[EDU] 已踢出用户 ${user.qq}: ${user.reason}`)
+          const kickResult = await group.kickMember(Number(user.qq))
+          if (kickResult) {
+            kickedCount++
+            tjLogger.info(`[EDU] 已踢出用户 ${user.qq}: ${user.reason}`)
+          } else {
+            failedCount++
+            tjLogger.warn(`[EDU] 踢出用户 ${user.qq} 失败: 操作返回失败`)
+          }
         } catch (error) {
           failedCount++
           tjLogger.warn(`[EDU] 踢出用户 ${user.qq} 失败: ${error.message}`)
@@ -589,13 +594,23 @@ async function handleGroupRequest(e) {
   if (userResult.success && isUserValid(userResult.data)) {
     // 有效用户，自动批准
     try {
-      await e.approve(true)
-      tjLogger.info(`[EDU] 自动批准用户 ${userQQ} 加群`)
-      notifyMsg =
-        `✅ 新加群申请 - 已自动批准\n` +
-        `QQ: ${userQQ}\n` +
-        `用户: ${userResult.data.username || '未知'}\n` +
-        `申请消息: ${e.comment || '无'}`
+      const approveResult = await e.approve(true)
+      if (approveResult) {
+        tjLogger.info(`[EDU] 自动批准用户 ${userQQ} 加群`)
+        notifyMsg =
+          `✅ 新加群申请 - 已自动批准\n` +
+          `QQ: ${userQQ}\n` +
+          `用户: ${userResult.data.username || '未知'}\n` +
+          `申请消息: ${e.comment || '无'}`
+      } else {
+        tjLogger.error(`[EDU] 自动批准用户 ${userQQ} 失败: 操作返回失败`)
+        notifyMsg =
+          `❌ 新加群申请 - 待手动审核\n` +
+          `QQ: ${userQQ}\n` +
+          `用户: ${userResult.data.username || '未知'}\n` +
+          `申请消息: ${e.comment || '无'}\n` +
+          `用户有效, 但自动批准失败, 请手动审核`
+      }
     } catch (error) {
       tjLogger.error(`[EDU] 自动批准失败: ${error.message}`)
       notifyMsg =
