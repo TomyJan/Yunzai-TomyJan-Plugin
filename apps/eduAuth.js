@@ -70,9 +70,7 @@ export class eduAuthApp extends plugin {
   formatAuthResultMessage(success, message, taskInfo = {}) {
     const { attempts, provider, queuedTimeMs, executionTimeMs } = taskInfo
 
-    const lines = [
-      `${success ? `✅` : `❌`} ${message}`,
-    ]
+    const lines = [`${success ? `✅` : `❌`} ${message}`]
 
     if (attempts) {
       lines.push(`共尝试 ${attempts} 次`)
