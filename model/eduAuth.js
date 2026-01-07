@@ -299,15 +299,16 @@ export async function checkTask(taskId) {
  * @returns {string} - 状态描述
  */
 export function getTaskCodeMessage(taskCode) {
+  // 此处的 messages 请与 ChinaNet-EDU-Login-Web packages/web/src/utils/format.ts 中 getStatusText 同步
   const messages = {
     0: '认证成功',
     1: '排队中',
     2: '认证中',
-    10: 'IP 格式错误',
-    11: 'IP 段不支持',
+    10: '提交失败：IP 格式错误',
+    11: '提交失败：校区暂不支持',
     20: '认证失败: 暂无可用端点',
     21: '认证失败: 已达尝试上限',
-    22: '认证失败: 参数不匹配',
+    22: '认证失败：电信系统返回未知错误',
     23: '认证失败: 任务超时',
     24: '系统错误',
   }
