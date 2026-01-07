@@ -38,7 +38,7 @@ export class eduAuthApp extends plugin {
           fnc: 'eduKickInvalid',
         },
         {
-          reg: '^#?(edu|EDU)(刷新缓存|更新缓存)$',
+          reg: '^#?(edu|EDU)(刷新|更新)(缓存)?$',
           fnc: 'eduRefreshCache',
         },
         {
@@ -331,7 +331,7 @@ export class eduAuthApp extends plugin {
         forwardMsgs.push({
           user_id: botQQ,
           nickname: '❌ 无效在群内用户',
-          message: list,
+          message: '❌ 无效在群内用户\n' + list,
         })
       }
 
@@ -341,7 +341,7 @@ export class eduAuthApp extends plugin {
         forwardMsgs.push({
           user_id: botQQ,
           nickname: '📭 有效未加群用户',
-          message: list,
+          message: '📭 有效未加群用户\n' + list,
         })
       }
 
@@ -356,7 +356,7 @@ export class eduAuthApp extends plugin {
         forwardMsgs.push({
           user_id: botQQ,
           nickname: '👻 群内未注册用户',
-          message: list + extra,
+          message: '👻 群内未注册用户\n' + list + extra,
         })
       }
 
