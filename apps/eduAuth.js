@@ -71,8 +71,12 @@ export class eduAuthApp extends plugin {
     const { attempts, provider, queuedTimeMs, executionTimeMs } = taskInfo
 
     const lines = [
-      `${success ? `✅` : `❌`} ${message}${attempts ? `共尝试 ${attempts} 次` : ''}`,
+      `${success ? `✅` : `❌`} ${message}`,
     ]
+
+    if (attempts) {
+      lines.push(`共尝试 ${attempts} 次`)
+    }
 
     if (provider) {
       lines.push(`本次认证服务由 ${provider} 提供`)
