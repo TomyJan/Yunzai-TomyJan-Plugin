@@ -1,3 +1,29 @@
+# [0.2.0-rel](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/compare/v0.1.18-rel...v0.2.0-rel) (2026-01-07)
+
+
+### Bug Fixes
+
+* **eduAuth:** edu指令匹配优先级 ([159c82c](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/159c82c23025fdfaf749ce3ddf245930a719b53d))
+
+
+### Features
+
+* 重构适配新版 MoeEDU ([34de43f](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/34de43feccd05adc558d0f447d382c481886817c))
+* **eduAuth:** 群成员变动上报及审核通知 ([cb03710](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/cb03710109a739446a781519363d7a0ab4d2c9ac))
+
+
+### Performance Improvements
+
+* **eduAuth:** 菜单项文案 ([b2caa30](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/b2caa30a532feb1af35ef8f2d5c46c071bbeed08))
+* **eduAuth:** 任务结果文案 ([fe50274](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/fe5027448c5d5d3085d1167591befcebc606e5f2))
+* **eduAuth:** 任务提交文案 ([113b456](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/113b456fd59b3a97c264eb800ecad01cc7890130))
+* **eduAuth:** 任务状态文案 ([bde2ff2](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/bde2ff25673a19b6b9766d2a28ecf328c00fef25))
+* **eduAuth:** 踢出无效和未注册用户 ([216d08c](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/216d08c6754d22bf80ef2a7d5f369821e906ad5d))
+* **eduAuth:** 踢人和放人需判断返回值 ([ec47ad0](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/ec47ad0365215c47549ee1a68f8023ac14a30308))
+* **eduAuth:** 用户检查回复文案 ([6372094](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/6372094eb5b7f0ce8b24b61da38e4cd805b02452))
+
+
+
 ## [0.1.18-rel](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/compare/v0.1.17-rel...v0.1.18-rel) (2025-12-15)
 
 
