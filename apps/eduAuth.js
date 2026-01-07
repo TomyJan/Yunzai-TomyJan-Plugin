@@ -70,7 +70,9 @@ export class eduAuthApp extends plugin {
   formatAuthResultMessage(success, message, taskInfo = {}) {
     const { attempts, provider, queuedTimeMs, executionTimeMs } = taskInfo
 
-    const lines = [`${success ? `✅` : `❌`} ${message}${attempts ? `共尝试 ${attempts} 次` : ''}`]
+    const lines = [
+      `${success ? `✅` : `❌`} ${message}${attempts ? `共尝试 ${attempts} 次` : ''}`,
+    ]
 
     if (provider) {
       lines.push(`本次认证服务由 ${provider} 提供`)
@@ -118,7 +120,9 @@ export class eduAuthApp extends plugin {
       /\b100\.(?:25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)\.(?:25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)\.(?:25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)\b/
     const match = content.match(ipRegex)
     if (!match) {
-      tjLogger.debug(`[EDU] 用户 ${this.e.user_id} 提交的 IP 格式不正确: ${content}`)
+      tjLogger.debug(
+        `[EDU] 用户 ${this.e.user_id} 提交的 IP 格式不正确: ${content}`,
+      )
       await this.reply('你要不看看你发的 IP 对不对呢?', true)
       return
     }
@@ -138,7 +142,9 @@ export class eduAuthApp extends plugin {
     }
 
     const userInfo = userResult.data
-    tjLogger.debug(`[EDU] 用户 ${userQQ} 信息: status=${userInfo.status}, expireAt=${userInfo.expireAt}`)
+    tjLogger.debug(
+      `[EDU] 用户 ${userQQ} 信息: status=${userInfo.status}, expireAt=${userInfo.expireAt}`,
+    )
 
     // 检查用户是否有效
     if (!isUserValid(userInfo)) {
@@ -149,20 +155,26 @@ export class eduAuthApp extends plugin {
     }
 
     // 提交认证任务
-    tjLogger.info(`[EDU] 用户 ${userQQ} (userId: ${userInfo.id}) 开始提交认证任务`)
+    tjLogger.info(
+      `[EDU] 用户 ${userQQ} (userId: ${userInfo.id}) 开始提交认证任务`,
+    )
     await this.reply(`用户验证通过，正在提交认证任务...\nIP: ${authIp}`, true)
 
     const submitResult = await submitAuth(userInfo.id, authIp)
 
     if (!submitResult.success) {
-      tjLogger.warn(`[EDU] 用户 ${userQQ} 提交认证失败: ${submitResult.message}`)
+      tjLogger.warn(
+        `[EDU] 用户 ${userQQ} 提交认证失败: ${submitResult.message}`,
+      )
       await this.reply(`提交认证任务失败: ${submitResult.message}`, true)
       return
     }
 
     const taskInfo = submitResult.data
     const taskId = taskInfo.taskId
-    tjLogger.info(`[EDU] 用户 ${userQQ} 任务已提交, taskId: ${taskId}, status: ${taskInfo.status}`)
+    tjLogger.info(
+      `[EDU] 用户 ${userQQ} 任务已提交, taskId: ${taskId}, status: ${taskInfo.status}`,
+    )
 
     // 如果已经是最终状态
     if (taskInfo.status === 'success') {
@@ -193,7 +205,9 @@ export class eduAuthApp extends plugin {
 
     // 等待认证结果
     const finalResult = await waitForAuthResult(taskId)
-    tjLogger.info(`[EDU] 用户 ${userQQ} 认证结果: ${finalResult.success ? '成功' : '失败'} - ${finalResult.message}`)
+    tjLogger.info(
+      `[EDU] 用户 ${userQQ} 认证结果: ${finalResult.success ? '成功' : '失败'} - ${finalResult.message}`,
+    )
 
     const resultMsg = this.formatAuthResultMessage(
       finalResult.success,
@@ -524,7 +538,12 @@ async function handleGroupMemberChange(e) {
   const adminGroup = eduConfig.adminGroup
   if (!userGroup || e.group_id !== userGroup) return
 
-  const changeType = e.sub_type === 'increase' ? '加入' : e.sub_type === 'decrease' ? '退出' : `未知(${e.sub_type})`
+  const changeType =
+    e.sub_type === 'increase'
+      ? '加入'
+      : e.sub_type === 'decrease'
+        ? '退出'
+        : `未知(${e.sub_type})`
   tjLogger.info(`[EDU] 群成员变动: ${e.user_id} ${changeType}`)
 
   // 延迟一秒后上报，避免频繁调用
