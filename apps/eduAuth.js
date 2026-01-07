@@ -519,23 +519,52 @@ async function handleGroupMemberChange(e) {
   if (!eduConfig?.enable) return
 
   const userGroup = eduConfig.userGroup
+  const adminGroup = eduConfig.adminGroup
   if (!userGroup || e.group_id !== userGroup) return
 
-  tjLogger.info(`[EDU] 群成员变动: ${e.user_id} ${e.sub_type}`)
+  const changeType = e.sub_type === 'increase' ? '加入' : e.sub_type === 'decrease' ? '退出' : `未知(${e.sub_type})`
+  tjLogger.info(`[EDU] 群成员变动: ${e.user_id} ${changeType}`)
 
   // 延迟一秒后上报，避免频繁调用
   setTimeout(async () => {
+    let reportResult = null
+    let reportError = null
+
     try {
       // eslint-disable-next-line no-undef
       const group = Bot.pickGroup(userGroup)
       const memberMap = await group.getMemberMap()
 
-      if (!memberMap) return
-
-      const qqList = Array.from(memberMap.keys()).map(String)
-      await reportGroupMembers(qqList)
+      if (!memberMap) {
+        reportError = '获取群成员列表失败'
+      } else {
+        const qqList = Array.from(memberMap.keys()).map(String)
+        reportResult = await reportGroupMembers(qqList)
+      }
     } catch (error) {
       tjLogger.error(`[EDU] 群成员变动上报失败: ${error.message}`)
+      reportError = error.message
+    }
+
+    // 在管理群通知变动事件和上报结果
+    if (adminGroup) {
+      try {
+        // eslint-disable-next-line no-undef
+        const adminGroupObj = Bot.pickGroup(adminGroup)
+        let notifyMsg = `📢 群成员变动\n${e.user_id} ${changeType} 了群`
+
+        if (reportError) {
+          notifyMsg += `\n\n❌ 上报失败: ${reportError}`
+        } else if (reportResult?.success) {
+          notifyMsg += `\n\n✅ 上报成功`
+        } else {
+          notifyMsg += `\n\n❌ 上报失败: ${reportResult?.message || '未知错误'}`
+        }
+
+        await adminGroupObj.sendMsg(notifyMsg)
+      } catch (error) {
+        tjLogger.error(`[EDU] 发送管理群通知失败: ${error.message}`)
+      }
     }
   }, 1000)
 }
@@ -558,13 +587,27 @@ async function handleGroupRequest(e) {
   // 查询用户信息（先查缓存，无则从 API 获取）
   const userResult = await getUser(userQQ)
 
+  let notifyMsg = ''
+
   if (userResult.success && isUserValid(userResult.data)) {
     // 有效用户，自动批准
     try {
       await e.approve(true)
       tjLogger.info(`[EDU] 自动批准用户 ${userQQ} 加群`)
+      notifyMsg =
+        `✅ 新加群申请 - 已自动批准\n` +
+        `QQ: ${userQQ}\n` +
+        `用户: ${userResult.data.username || '未知'}\n` +
+        `申请消息: ${e.comment || '无'}`
     } catch (error) {
       tjLogger.error(`[EDU] 自动批准失败: ${error.message}`)
+      notifyMsg =
+        `❌ 新加群申请 - 待手动审核\n` +
+        `QQ: ${userQQ}\n` +
+        `用户: ${userResult.data.username || '未知'}\n` +
+        `申请消息: ${e.comment || '无'}\n` +
+        `错误: ${error.message}\n\n` +
+        `用户有效, 但自动批准失败, 请手动审核`
     }
   } else {
     // 无效用户，发送提示到管理群
@@ -572,20 +615,22 @@ async function handleGroupRequest(e) {
       ? getInvalidReason(userResult.data)
       : userResult.message
 
-    if (adminGroup) {
-      try {
-        // eslint-disable-next-line no-undef
-        const adminGroupObj = Bot.pickGroup(adminGroup)
-        await adminGroupObj.sendMsg(
-          `⚠️ EDU 加群申请\n` +
-            `QQ: ${userQQ}\n` +
-            `状态: ${reason}\n` +
-            `申请消息: ${e.comment || '无'}\n\n` +
-            `无法验证用户状态, 请手动审核`,
-        )
-      } catch (error) {
-        tjLogger.error(`[EDU] 发送管理群通知失败: ${error.message}`)
-      }
+    notifyMsg =
+      `⚠️ 新加群申请 - 待手动审核\n` +
+      `QQ: ${userQQ}\n` +
+      `状态: ${reason}\n` +
+      `申请消息: ${e.comment || '无'}\n\n` +
+      `无法验证用户状态, 请手动审核`
+  }
+
+  // 统一发送管理群通知
+  if (adminGroup && notifyMsg) {
+    try {
+      // eslint-disable-next-line no-undef
+      const adminGroupObj = Bot.pickGroup(adminGroup)
+      await adminGroupObj.sendMsg(notifyMsg)
+    } catch (error) {
+      tjLogger.error(`[EDU] 发送管理群通知失败: ${error.message}`)
     }
   }
 }
