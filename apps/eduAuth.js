@@ -420,22 +420,34 @@ export class eduAuthApp extends plugin {
         return
       }
 
-      const invalidUsers = result.data.invalidInGroup
+      // 合并无效用户和未注册用户
+      const invalidUsers = result.data.invalidInGroup.map((u) => ({
+        qq: u.qq,
+        reason: u.reason,
+      }))
+      const unregisteredUsers = result.data.unregisteredInGroup.map((u) => ({
+        qq: u.qq,
+        reason: '未注册',
+      }))
+      const allInvalidUsers = [...invalidUsers, ...unregisteredUsers]
 
-      if (invalidUsers.length === 0) {
+      if (allInvalidUsers.length === 0) {
         await this.reply('没有需要踢出的无效用户', true)
         return
       }
 
       await this.reply(
-        `发现 ${invalidUsers.length} 个无效用户，开始踢出...`,
+        `发现 ${allInvalidUsers.length} 个需踢出用户\n` +
+          `- 无效用户: ${invalidUsers.length}\n` +
+          `- 未注册用户: ${unregisteredUsers.length}\n` +
+          `开始踢出...`,
         true,
       )
 
       let kickedCount = 0
       let failedCount = 0
 
-      for (const user of invalidUsers) {
+      for (const user of allInvalidUsers) {
         try {
           await group.kickMember(Number(user.qq))
           kickedCount++
