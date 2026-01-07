@@ -68,19 +68,20 @@ export class eduAuthApp extends plugin {
    * @returns {string} - 格式化后的消息
    */
   formatAuthResultMessage(success, message, taskInfo = {}) {
-    const lines = [success ? `✅ ${message}` : `❌ ${message}`]
-
     const { attempts, provider, queuedTimeMs, executionTimeMs } = taskInfo
 
-    if (attempts) {
-      lines.push(`共尝试 ${attempts} 次`)
-    }
+    const lines = [`${success ? `✅` : `❌`} ${message}${attempts ? `共尝试 ${attempts} 次` : ''}`]
 
     if (provider) {
       lines.push(`本次认证服务由 ${provider} 提供`)
     }
 
+    if (success) {
+      lines.push('稍等几秒或重连 WiFi 即可上网')
+    }
+
     if (queuedTimeMs || executionTimeMs) {
+      lines.push('\n')
       const timeDetails = []
       if (queuedTimeMs) {
         timeDetails.push(`排队 ${(queuedTimeMs / 1000).toFixed(1)}s`)
@@ -89,10 +90,6 @@ export class eduAuthApp extends plugin {
         timeDetails.push(`执行 ${(executionTimeMs / 1000).toFixed(1)}s`)
       }
       lines.push(timeDetails.join(' | '))
-    }
-
-    if (success) {
-      lines.push('稍等几秒或重连 WiFi 即可上网')
     }
 
     return lines.join('\n')

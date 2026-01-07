@@ -345,7 +345,7 @@ export async function waitForAuthResult(taskId, onProgress = null) {
     if (taskInfo.status === 'success') {
       return {
         success: true,
-        message: `认证成功！运营商: ${taskInfo.provider || '未知'}`,
+        message: `认证成功！`,
         data: taskInfo,
       }
     }
