@@ -542,10 +542,10 @@ async function handleGroupMemberChange(e) {
 
   const changeType =
     e.sub_type === 'increase'
-      ? '加入'
+      ? '加入了群'
       : e.sub_type === 'decrease'
-        ? '退出'
-        : `未知(${e.sub_type})`
+        ? '退出了群'
+        : `未知操作(${e.sub_type})`
   tjLogger.info(`[EDU] 群成员变动: ${e.user_id} ${changeType}`)
 
   // 延迟一秒后上报，避免频繁调用
@@ -578,31 +578,49 @@ async function handleGroupMemberChange(e) {
 
         // eslint-disable-next-line no-undef
         const adminGroupObj = Bot.pickGroup(adminGroup)
-        let notifyMsg = `QQ: ${e.user_id} ${changeType}\n`
 
-        // 显示用户状态和过期时间
-        if (userResult.success && userResult.data) {
-          const u = userResult.data
-          const isValid = u.status === 'active'
-          const status = isValid ? '有效' : '过期'
-          notifyMsg += `状态: ${status}\n`
+        // 构造通知消息
+        let notifyMsg = `👥 用户群群成员变动\nQQ: ${e.user_id} ${changeType}\n\n`
 
-          if (u.expireAt) {
-            notifyMsg += `过期: ${u.expireAt}`
-          } else {
-            notifyMsg += `过期: 永久`
-          }
+        // 上报结果
+        if (reportError) {
+          notifyMsg += `❌ 上报失败: ${reportError}\n\n`
+        } else if (reportResult?.success) {
+          notifyMsg += `✅ 上报成功\n\n`
         } else {
-          notifyMsg += `状态: 系统中无用户`
+          notifyMsg += `❌ 上报失败: ${reportResult?.message || '未知错误'}\n\n`
         }
 
-        notifyMsg += '\n\n'
-        if (reportError) {
-          notifyMsg += `❌ ${reportError}`
-        } else if (reportResult?.success) {
-          notifyMsg += `✅ 上报成功`
+        // 用户信息
+        if (!userResult.success) {
+          notifyMsg += `⚠️ 获取用户信息失败`
+        } else if (!userResult.data) {
+          notifyMsg += `ℹ️ 系统中无此用户信息, 请注意`
         } else {
-          notifyMsg += `❌ ${reportResult?.message || '上报失败'}`
+          const u = userResult.data
+
+          // 用户身份 (根据角色)
+          const roleName = u.role?.name || '普通用户'
+          notifyMsg += `🎭 用户身份: ${roleName}\n`
+
+          // 用户状态
+          const statusMap = {
+            pending: '⏳ 待审核',
+            active: '✅ 正常',
+            expired: '⏰ 过期',
+            banned: '🚫 已被封禁',
+          }
+          const statusText = statusMap[u.status] || `❓ ${u.status}`
+          notifyMsg += `📊 用户状态: ${statusText}\n`
+
+          // 到期时间
+          if (u.expireAt) {
+            const expireDate = new Date(u.expireAt)
+            const formatted = `${expireDate.getFullYear()}.${String(expireDate.getMonth() + 1).padStart(2, '0')}.${String(expireDate.getDate()).padStart(2, '0')} ${String(expireDate.getHours()).padStart(2, '0')}:${String(expireDate.getMinutes()).padStart(2, '0')}`
+            notifyMsg += `⏱️ 到期时间: ${formatted}`
+          } else {
+            notifyMsg += `⏱️ 到期时间: 永久`
+          }
         }
 
         await adminGroupObj.sendMsg(notifyMsg)
