@@ -572,16 +572,37 @@ async function handleGroupMemberChange(e) {
     // 在管理群通知变动事件和上报结果
     if (adminGroup) {
       try {
+        // 获取用户系统信息
+        const userQQ = String(e.user_id)
+        const userResult = await getUser(userQQ)
+
         // eslint-disable-next-line no-undef
         const adminGroupObj = Bot.pickGroup(adminGroup)
-        let notifyMsg = `📢 群成员变动\n${e.user_id} ${changeType} 了群`
+        let notifyMsg = `QQ: ${e.user_id} ${changeType}\n`
 
-        if (reportError) {
-          notifyMsg += `\n\n❌ 上报失败: ${reportError}`
-        } else if (reportResult?.success) {
-          notifyMsg += `\n\n✅ 上报成功`
+        // 显示用户状态和过期时间
+        if (userResult.success && userResult.data) {
+          const u = userResult.data
+          const isValid = u.status === 'active'
+          const status = isValid ? '有效' : '过期'
+          notifyMsg += `状态: ${status}\n`
+          
+          if (u.expireAt) {
+            notifyMsg += `过期: ${u.expireAt}`
+          } else {
+            notifyMsg += `过期: 永久`
+          }
         } else {
-          notifyMsg += `\n\n❌ 上报失败: ${reportResult?.message || '未知错误'}`
+          notifyMsg += `状态: 系统中无用户`
+        }
+
+        notifyMsg += '\n\n'
+        if (reportError) {
+          notifyMsg += `❌ ${reportError}`
+        } else if (reportResult?.success) {
+          notifyMsg += `✅ 上报成功`
+        } else {
+          notifyMsg += `❌ ${reportResult?.message || '上报失败'}`
         }
 
         await adminGroupObj.sendMsg(notifyMsg)
