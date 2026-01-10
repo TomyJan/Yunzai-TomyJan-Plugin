@@ -586,7 +586,7 @@ async function handleGroupMemberChange(e) {
           const isValid = u.status === 'active'
           const status = isValid ? '有效' : '过期'
           notifyMsg += `状态: ${status}\n`
-          
+
           if (u.expireAt) {
             notifyMsg += `过期: ${u.expireAt}`
           } else {
@@ -666,9 +666,10 @@ async function handleGroupRequest(e) {
       }
     } else {
       // 无效用户，发送提示到管理群
-      const reason = userResult.success && userResult.data
-        ? getInvalidReason(userResult.data)
-        : userResult.message
+      const reason =
+        userResult.success && userResult.data
+          ? getInvalidReason(userResult.data)
+          : userResult.message
 
       notifyMsg =
         `⚠️ 新加群申请 - 待手动审核\n` +
