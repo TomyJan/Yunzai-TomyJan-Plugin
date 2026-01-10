@@ -597,74 +597,78 @@ async function handleGroupMemberChange(e) {
  * @param {object} e - 事件对象
  */
 async function handleGroupRequest(e) {
-  const eduConfig = config.getConfig().eduAuth
-  if (!eduConfig?.enable) return
+  try {
+    const eduConfig = config.getConfig().eduAuth
+    if (!eduConfig?.enable) return
 
-  const userGroup = eduConfig.userGroup
-  const adminGroup = eduConfig.adminGroup
-  if (!userGroup || e.group_id !== userGroup) return
+    const userGroup = eduConfig.userGroup
+    const adminGroup = eduConfig.adminGroup
+    if (!userGroup || e.group_id !== userGroup) return
 
-  const userQQ = String(e.user_id)
-  tjLogger.info(`[EDU] 收到加群申请: ${userQQ}`)
+    const userQQ = String(e.user_id)
+    tjLogger.info(`[EDU] 收到加群申请: ${userQQ}`)
 
-  // 查询用户信息（先查缓存，无则从 API 获取）
-  const userResult = await getUser(userQQ)
+    // 查询用户信息（先查缓存，无则从 API 获取）
+    const userResult = await getUser(userQQ)
 
-  let notifyMsg = ''
+    let notifyMsg = ''
 
-  if (userResult.success && isUserValid(userResult.data)) {
-    // 有效用户，自动批准
-    try {
-      const approveResult = await e.approve(true)
-      if (approveResult) {
-        tjLogger.info(`[EDU] 自动批准用户 ${userQQ} 加群`)
-        notifyMsg =
-          `✅ 新加群申请 - 已自动批准\n` +
-          `QQ: ${userQQ}\n` +
-          `用户: ${userResult.data.username || '未知'}\n` +
-          `申请消息: ${e.comment || '无'}`
-      } else {
-        tjLogger.error(`[EDU] 自动批准用户 ${userQQ} 失败: 操作返回失败`)
+    if (userResult.success && userResult.data && isUserValid(userResult.data)) {
+      // 有效用户，自动批准
+      try {
+        const approveResult = await e.approve(true)
+        if (approveResult) {
+          tjLogger.info(`[EDU] 自动批准用户 ${userQQ} 加群`)
+          notifyMsg =
+            `✅ 新加群申请 - 已自动批准\n` +
+            `QQ: ${userQQ}\n` +
+            `用户: ${userResult.data.username || '未知'}\n` +
+            `申请消息: ${e.comment || '无'}`
+        } else {
+          tjLogger.error(`[EDU] 自动批准用户 ${userQQ} 失败: 操作返回失败`)
+          notifyMsg =
+            `❌ 新加群申请 - 待手动审核\n` +
+            `QQ: ${userQQ}\n` +
+            `用户: ${userResult.data.username || '未知'}\n` +
+            `申请消息: ${e.comment || '无'}\n` +
+            `用户有效, 但自动批准失败, 请手动审核`
+        }
+      } catch (error) {
+        tjLogger.error(`[EDU] 自动批准失败: ${error.message}`)
         notifyMsg =
           `❌ 新加群申请 - 待手动审核\n` +
           `QQ: ${userQQ}\n` +
           `用户: ${userResult.data.username || '未知'}\n` +
           `申请消息: ${e.comment || '无'}\n` +
+          `错误: ${error.message}\n\n` +
           `用户有效, 但自动批准失败, 请手动审核`
       }
-    } catch (error) {
-      tjLogger.error(`[EDU] 自动批准失败: ${error.message}`)
+    } else {
+      // 无效用户，发送提示到管理群
+      const reason = userResult.success && userResult.data
+        ? getInvalidReason(userResult.data)
+        : userResult.message
+
       notifyMsg =
-        `❌ 新加群申请 - 待手动审核\n` +
+        `⚠️ 新加群申请 - 待手动审核\n` +
         `QQ: ${userQQ}\n` +
-        `用户: ${userResult.data.username || '未知'}\n` +
-        `申请消息: ${e.comment || '无'}\n` +
-        `错误: ${error.message}\n\n` +
-        `用户有效, 但自动批准失败, 请手动审核`
+        `状态: ${reason}\n` +
+        `申请消息: ${e.comment || '无'}\n\n` +
+        `无法验证用户状态, 请手动审核`
     }
-  } else {
-    // 无效用户，发送提示到管理群
-    const reason = userResult.success
-      ? getInvalidReason(userResult.data)
-      : userResult.message
 
-    notifyMsg =
-      `⚠️ 新加群申请 - 待手动审核\n` +
-      `QQ: ${userQQ}\n` +
-      `状态: ${reason}\n` +
-      `申请消息: ${e.comment || '无'}\n\n` +
-      `无法验证用户状态, 请手动审核`
-  }
-
-  // 统一发送管理群通知
-  if (adminGroup && notifyMsg) {
-    try {
-      // eslint-disable-next-line no-undef
-      const adminGroupObj = Bot.pickGroup(adminGroup)
-      await adminGroupObj.sendMsg(notifyMsg)
-    } catch (error) {
-      tjLogger.error(`[EDU] 发送管理群通知失败: ${error.message}`)
+    // 统一发送管理群通知
+    if (adminGroup && notifyMsg) {
+      try {
+        // eslint-disable-next-line no-undef
+        const adminGroupObj = Bot.pickGroup(adminGroup)
+        await adminGroupObj.sendMsg(notifyMsg)
+      } catch (error) {
+        tjLogger.error(`[EDU] 发送管理群通知失败: ${error.message}`)
+      }
     }
+  } catch (error) {
+    tjLogger.error(`[EDU] 处理加群申请异常: ${error.message}`)
   }
 }
 
