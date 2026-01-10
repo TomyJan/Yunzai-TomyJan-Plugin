@@ -600,7 +600,7 @@ async function handleGroupMemberChange(e) {
           const u = userResult.data
 
           // 用户身份 (根据角色)
-          const roleName = u.role?.name || '普通用户'
+          const roleName = u.role?.name || '获取失败'
           notifyMsg += `🎭 用户身份: ${roleName}\n`
 
           // 用户状态
