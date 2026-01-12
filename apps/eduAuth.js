@@ -593,9 +593,9 @@ async function handleGroupMemberChange(e) {
 
         // 用户信息
         if (!userResult.success) {
-          notifyMsg += `⚠️ 获取用户信息失败`
+          notifyMsg += `⚠️ ${userResult?.message || `获取用户信息失败`}`
         } else if (!userResult.data) {
-          notifyMsg += `ℹ️ 系统中无此用户信息, 请注意`
+          notifyMsg += `ℹ️ 获取到的该用户信息为空`
         } else {
           const u = userResult.data
 
