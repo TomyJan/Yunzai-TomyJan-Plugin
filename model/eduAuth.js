@@ -67,7 +67,9 @@ async function apiRequest(endpoint, data = {}) {
   }
 
   // 构建完整 URL 和路径
-  const baseUrl = apiBaseUrl.endsWith('/') ? apiBaseUrl.slice(0, -1) : apiBaseUrl
+  const baseUrl = apiBaseUrl.endsWith('/')
+    ? apiBaseUrl.slice(0, -1)
+    : apiBaseUrl
   const url = `${baseUrl}/${endpoint}`
 
   // 解析 URL 获取路径部分
@@ -80,7 +82,14 @@ async function apiRequest(endpoint, data = {}) {
 
   // 获取唯一时间戳并生成签名
   const timestamp = getUniqueTimestamp()
-  const sign = generateSign(MOE_KEY_ID, apiKey, timestamp, method, urlPath, body)
+  const sign = generateSign(
+    MOE_KEY_ID,
+    apiKey,
+    timestamp,
+    method,
+    urlPath,
+    body,
+  )
 
   const headers = {
     'Content-Type': 'application/json',
