@@ -9,14 +9,37 @@ import { sleepAsync } from './utils.js'
 // 用户缓存文件路径
 const USER_CACHE_FILE = path.join(dataPath, 'system/eduUserCache.json')
 
+// 第三方 API 固定 Key ID
+const MOE_KEY_ID = 'moe_thirdParty'
+
+// 上次使用的时间戳，用于防重放
+let lastTimestamp = 0
+
+/**
+ * 获取唯一的毫秒级时间戳（避免重复）
+ * @returns {string} - 毫秒级时间戳
+ */
+function getUniqueTimestamp() {
+  let timestamp = Date.now()
+  do {
+    timestamp = Date.now()
+  } while (timestamp <= lastTimestamp)
+  lastTimestamp = timestamp
+  return timestamp.toString()
+}
+
 /**
  * 计算 MD5 签名
- * @param {string} apiKey - API Key
- * @param {number} timestamp - 时间戳
+ * @param {string} keyId - Key ID
+ * @param {string} keySecret - API Key (密钥)
+ * @param {string} timestamp - 毫秒级时间戳
+ * @param {string} method - HTTP 方法 (大写)
+ * @param {string} urlPath - 请求路径
+ * @param {string} body - 请求体 (压缩 JSON)
  * @returns {string} - MD5 签名
  */
-function generateSign(apiKey, timestamp) {
-  const raw = `${apiKey}|${timestamp}`
+function generateSign(keyId, keySecret, timestamp, method, urlPath, body) {
+  const raw = `${keyId}${keySecret}${timestamp}${method.toUpperCase()}${urlPath}${body}`
   return crypto.createHash('md5').update(raw).digest('hex')
 }
 
@@ -43,27 +66,37 @@ async function apiRequest(endpoint, data = {}) {
     return { success: false, message: 'API 配置不完整' }
   }
 
-  const timestamp = Math.floor(Date.now() / 1000)
-  const sign = generateSign(apiKey, timestamp)
+  // 构建完整 URL 和路径
+  const baseUrl = apiBaseUrl.endsWith('/') ? apiBaseUrl.slice(0, -1) : apiBaseUrl
+  const url = `${baseUrl}/${endpoint}`
 
-  const url = apiBaseUrl.endsWith('/')
-    ? `${apiBaseUrl}${endpoint}`
-    : `${apiBaseUrl}/${endpoint}`
+  // 解析 URL 获取路径部分
+  const urlObj = new URL(url)
+  const urlPath = urlObj.pathname
+
+  // 准备请求体（压缩 JSON，无空白字符）
+  const body = JSON.stringify(data)
+  const method = 'POST'
+
+  // 获取唯一时间戳并生成签名
+  const timestamp = getUniqueTimestamp()
+  const sign = generateSign(MOE_KEY_ID, apiKey, timestamp, method, urlPath, body)
 
   const headers = {
     'Content-Type': 'application/json',
-    'X-Moe-Time': timestamp.toString(),
+    'X-Moe-Key-Id': MOE_KEY_ID,
+    'X-Moe-Time': timestamp,
     'X-Moe-Sign': sign,
   }
 
   tjLogger.debug(`[EDU] API 请求: ${url}`)
-  tjLogger.debug(`[EDU] 请求数据: ${JSON.stringify(data)}`)
+  tjLogger.debug(`[EDU] 请求数据: ${body}`)
 
   try {
     const response = await fetch(url, {
-      method: 'POST',
+      method,
       headers,
-      body: JSON.stringify(data),
+      body,
     })
 
     if (!response.ok) {
