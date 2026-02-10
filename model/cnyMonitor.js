@@ -106,9 +106,7 @@ function recordError(msg) {
   const now = Date.now()
   cnyState.errors.push({ ts: now, msg })
   // 清理窗口外的旧记录
-  cnyState.errors = cnyState.errors.filter(
-    (e) => now - e.ts < ERROR_WINDOW_MS,
-  )
+  cnyState.errors = cnyState.errors.filter((e) => now - e.ts < ERROR_WINDOW_MS)
   // 频繁错误告警 (5分钟内冷却)
   if (
     cnyState.errors.length >= ERROR_ALERT_THRESHOLD &&
@@ -121,7 +119,9 @@ function recordError(msg) {
       `最近: ${msg}\n` +
       `请检查 Cookie 或网络状态`
     sendMsgFriend(cfg.masterQQ[0], alertMsg)
-    tjLogger.warn(`CNY: 频繁错误告警已推送主人 (${cnyState.errors.length}次/5min)`)
+    tjLogger.warn(
+      `CNY: 频繁错误告警已推送主人 (${cnyState.errors.length}次/5min)`,
+    )
   }
 }
 
@@ -808,9 +808,7 @@ export function getStatus() {
     ? Math.floor((now - cnyState.startTime) / 1000)
     : 0
   // 清理过期错误 & 统计
-  cnyState.errors = cnyState.errors.filter(
-    (e) => now - e.ts < ERROR_WINDOW_MS,
-  )
+  cnyState.errors = cnyState.errors.filter((e) => now - e.ts < ERROR_WINDOW_MS)
   const recentErrors = cnyState.errors
   const lastError =
     recentErrors.length > 0 ? recentErrors[recentErrors.length - 1] : null
