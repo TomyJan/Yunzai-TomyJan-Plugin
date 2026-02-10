@@ -28,8 +28,8 @@
     "scanPages": 15,
     "scanInterval": 10,
     "monitorInterval": 3,
-    "pushDiffThreshold": 40000,
-    "pushTimeThreshold": 240,
+    "pushDiffStages": [40000, 30000, 20000, 10000, 5000],
+    "pushTimeStages": [300, 180, 120, 60, 30],
     "hfDiffThreshold": 50000,
     "hfProgressPct": 80,
     "parallelWorkers": 15

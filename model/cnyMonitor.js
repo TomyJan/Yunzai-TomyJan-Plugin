@@ -126,6 +126,26 @@ function recordError(msg) {
 }
 
 /**
+ * 解析阶段配置 (兼容数组和逗号分隔字符串, 降序排列)
+ * @param {Array|string} raw 配置原始值
+ * @param {number[]} defaults 默认阶段
+ * @returns {number[]} 降序排列的阶段数组
+ */
+function parseStageCfg(raw, defaults) {
+  let arr = defaults
+  if (Array.isArray(raw) && raw.length > 0) {
+    arr = raw.map(Number).filter((n) => n > 0)
+  } else if (typeof raw === 'string' && raw.trim()) {
+    arr = raw
+      .split(/[,，\s]+/)
+      .map(Number)
+      .filter((n) => n > 0)
+  }
+  // 降序排列: 从大到小, 先检查最宽松阶段
+  return arr.sort((a, b) => b - a)
+}
+
+/**
  * 分批并行执行异步任务
  * @param {Array} items 待处理项
  * @param {Function} fn 异步处理函数
@@ -436,16 +456,37 @@ function updateRoom(rm, res, rid) {
   const diff = rm.target - rm.current
   const pct = (rm.current / Math.max(rm.target, 1)) * 100
   const subTaskId = targetStep.bonusInfo?.sub_task_id || rm.target
-  const pushKey = `fortune:${rid}:${subTaskId}`
-
-  if (cnyState.pushedSet.has(pushKey)) return
-
   const est = rm.estTime
-  const pushDiff = cfg.pushDiffThreshold ?? 40000
-  const pushTime = cfg.pushTimeThreshold ?? 240
 
-  const shouldPush = diff <= pushDiff || (isFinite(est) && est <= pushTime)
+  // 多阶段差值推送
+  const diffStages = parseStageCfg(cfg.pushDiffStages, [40000, 30000, 20000, 10000, 5000])
+  for (const stage of diffStages) {
+    if (diff > stage) continue
+    const pushKey = `fortune:${rid}:${subTaskId}:diff${stage}`
+    if (cnyState.pushedSet.has(pushKey)) continue
+    cnyState.pushedSet.add(pushKey)
+    const msg = buildFortunePushMsg(rm, rid)
+    pushToGroups(msg)
+    tjLogger.info(`CNY: 房间 ${rid}(${rm.name}) 达到差值阶段 ≤${stage}, 已推送`)
+    break // 每轮只推一个新阶段
+  }
 
+  // 多阶段时间推送
+  if (isFinite(est)) {
+    const timeStages = parseStageCfg(cfg.pushTimeStages, [300, 180, 120, 60, 30])
+    for (const stage of timeStages) {
+      if (est > stage) continue
+      const pushKey = `fortune:${rid}:${subTaskId}:time${stage}`
+      if (cnyState.pushedSet.has(pushKey)) continue
+      cnyState.pushedSet.add(pushKey)
+      const msg = buildFortunePushMsg(rm, rid)
+      pushToGroups(msg)
+      tjLogger.info(`CNY: 房间 ${rid}(${rm.name}) 达到时间阶段 ≤${stage}s, 已推送`)
+      break
+    }
+  }
+
+  // 高频监控进入条件: 用最大阶段值作为门槛
   const hfDiff = cfg.hfDiffThreshold ?? 50000
   const hfPct = cfg.hfProgressPct ?? 80
   const scanInterval = cfg.scanInterval ?? 60
@@ -455,13 +496,7 @@ function updateRoom(rm, res, rid) {
     diff <= hfDiff ||
     (isFinite(est) && est <= scanInterval * 1.2)
 
-  if (shouldPush) {
-    cnyState.pushedSet.add(pushKey)
-    const msg = buildFortunePushMsg(rm, rid)
-    pushToGroups(msg)
-    tjLogger.info(`CNY: 房间 ${rid}(${rm.name}) 达到福气值推送条件, 已推送`)
-    cnyState.hfSet.delete(rid)
-  } else if (shouldHf) {
+  if (shouldHf) {
     cnyState.hfSet.add(rid)
   }
 }
@@ -474,15 +509,12 @@ function updateRoom(rm, res, rid) {
  * 检查定时任务是否满足推送条件
  */
 function checkTimedTaskPush() {
-  const cfg = getCfg()
-  const pushDiff = cfg.pushDiffThreshold ?? 40000
-  const pushTime = cfg.pushTimeThreshold ?? 240
+  const cfgVal = getCfg()
+  const diffStages = parseStageCfg(cfgVal.pushDiffStages, [40000, 30000, 20000, 10000, 5000])
+  const timeStages = parseStageCfg(cfgVal.pushTimeStages, [300, 180, 120, 60, 30])
   const now = Date.now() / 1000
 
   for (const [tkey, task] of Object.entries(cnyState.timedTasks)) {
-    const pushKey = `timed:${tkey}`
-    if (cnyState.pushedSet.has(pushKey)) continue
-
     const timeLeft = task.bonusTime - now
     // 跳过已过期的
     if (timeLeft < -60) continue
@@ -491,17 +523,36 @@ function checkTimedTaskPush() {
     const currentFortune = rm?.current || 0
     const fortuneDiff = task.limit - currentFortune
 
-    const shouldPush =
-      (fortuneDiff >= 0 && fortuneDiff <= pushDiff) ||
-      (timeLeft > 0 && timeLeft <= pushTime)
+    // 多阶段差值推送
+    if (fortuneDiff >= 0) {
+      for (const stage of diffStages) {
+        if (fortuneDiff > stage) continue
+        const pushKey = `timed:${tkey}:diff${stage}`
+        if (cnyState.pushedSet.has(pushKey)) continue
+        cnyState.pushedSet.add(pushKey)
+        const msg = buildTimedPushMsg(task, currentFortune, timeLeft)
+        pushToGroups(msg)
+        tjLogger.info(
+          `CNY: 定时 ${task.roomName} - ${task.bonusName} 达到差值阶段 ≤${stage}, 已推送`,
+        )
+        break
+      }
+    }
 
-    if (shouldPush) {
-      cnyState.pushedSet.add(pushKey)
-      const msg = buildTimedPushMsg(task, currentFortune, timeLeft)
-      pushToGroups(msg)
-      tjLogger.info(
-        `CNY: 定时任务 ${task.roomName} - ${task.bonusName} 达到推送条件, 已推送`,
-      )
+    // 多阶段时间推送
+    if (timeLeft > 0) {
+      for (const stage of timeStages) {
+        if (timeLeft > stage) continue
+        const pushKey = `timed:${tkey}:time${stage}`
+        if (cnyState.pushedSet.has(pushKey)) continue
+        cnyState.pushedSet.add(pushKey)
+        const msg = buildTimedPushMsg(task, currentFortune, timeLeft)
+        pushToGroups(msg)
+        tjLogger.info(
+          `CNY: 定时 ${task.roomName} - ${task.bonusName} 达到时间阶段 ≤${stage}s, 已推送`,
+        )
+        break
+      }
     }
   }
 }
