@@ -30,6 +30,9 @@
       title: "#cny状态"
       desc: "CNY 活动监控状态"
     - icon: bili
+      title: "#cny列表 [10]"
+      desc: "查看即将到的10个奖品"
+    - icon: bili
       title: "#cny定时"
       desc: "查看 CNY 定时奖品"
     - icon: bili

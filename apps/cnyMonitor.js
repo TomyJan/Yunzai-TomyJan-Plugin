@@ -3,6 +3,7 @@ import config from '../components/config.js'
 import {
   getRoomInfo,
   getTimedTasks,
+  getNearestPrizes,
   getStatus,
   isPushGroup,
   fmtTimestamp,
@@ -28,6 +29,10 @@ export class cnyMonitorApp extends plugin {
         {
           reg: '^#?cny\\s*(time|定时|定时奖?品?)$',
           fnc: 'cnyTimedList',
+        },
+        {
+          reg: '^#?cny\\s*(list|列表|奖品)\\s*(\\d*)$',
+          fnc: 'cnyList',
         },
         {
           reg: '^#?cny\\s*(\\d+)$',
@@ -75,6 +80,63 @@ export class cnyMonitorApp extends plugin {
       `⏰ 定时任务: ${st.timedCount}`,
       `📨 已推送: ${st.pushedCount}`,
     ]
+
+    await this.reply(lines.join('\n'), false)
+    return true
+  }
+
+  /**
+   * 指令: #cny list [数量] / #cny列表 / #cny奖品
+   * 列出最近的奖品 (按紧迫度排序)
+   */
+  async cnyList() {
+    if (!this.checkPushGroup()) return false
+
+    const cfg = config.getConfig()?.cnyMonitor
+    if (!cfg?.enable) {
+      await this.reply('CNY 监控功能未启用', true)
+      return true
+    }
+
+    const st = getStatus()
+    if (!st.running) {
+      await this.reply('❌ CNY 监控未在运行', true)
+      return true
+    }
+
+    const match = this.e.msg.match(/^#?cny\s*(?:list|列表|奖品)\s*(\d*)$/)
+    const limit = Math.min(Math.max(parseInt(match?.[1]) || 10, 1), 50)
+
+    const entries = getNearestPrizes(limit)
+    if (entries.length === 0) {
+      await this.reply('暂无奖品数据, 请等待扫描完成', true)
+      return true
+    }
+
+    const lines = [`🎁 最近奖品列表 (共${entries.length}条)`]
+
+    for (let i = 0; i < entries.length; i++) {
+      const e = entries[i]
+      const idx = `${i + 1}.`
+      const tag = e.type === 'timed' ? '⏰' : '🎯'
+
+      let estStr
+      if (e.type === 'timed') {
+        estStr = `开抢: ${fmtTimestamp(e.bonusTime)}`
+      } else {
+        estStr = isFinite(e.estTime)
+          ? `预估: ${fmtSeconds(e.estTime)}`
+          : '预估: --:--'
+      }
+
+      lines.push('')
+      lines.push(
+        `${idx} ${tag} ${e.roomName} (${e.roomId})`,
+      )
+      lines.push(
+        `   ${e.bonusName} (x${e.bonusNum}) | 差${e.diff.toLocaleString()} ${e.pct}% | ${estStr}`,
+      )
+    }
 
     await this.reply(lines.join('\n'), false)
     return true
