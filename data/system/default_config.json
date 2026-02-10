@@ -21,6 +21,19 @@
     "userGroup": 725571000,
     "adminGroup": 725571000
   },
+  "cnyMonitor": {
+    "enable": false,
+    "cookie": "",
+    "pushGroups": "",
+    "scanPages": 15,
+    "scanInterval": 10,
+    "monitorInterval": 3,
+    "pushDiffThreshold": 40000,
+    "pushTimeThreshold": 240,
+    "hfDiffThreshold": 50000,
+    "hfProgressPct": 80,
+    "parallelWorkers": 15
+  },
   "httpServer": {
     "enable": false,
     "listenPort": 5252,

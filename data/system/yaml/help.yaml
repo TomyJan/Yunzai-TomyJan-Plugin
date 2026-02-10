@@ -24,3 +24,14 @@
     - icon: eduauth
       title: "#edu刷新缓存"
       desc: "[管理群] 刷新用户缓存"
+- group: CNY 春节活动监控
+  list: 
+    - icon: bili
+      title: "#cny状态"
+      desc: "CNY 活动监控状态"
+    - icon: bili
+      title: "#cny定时"
+      desc: "查看 CNY 定时奖品"
+    - icon: bili
+      title: "#cny 255"
+      desc: "指定直播间奖品列表"
