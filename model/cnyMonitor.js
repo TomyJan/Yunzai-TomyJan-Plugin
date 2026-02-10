@@ -381,8 +381,7 @@ function updateRoom(rm, res, rid) {
   const pushDiff = cfg.pushDiffThreshold ?? 40000
   const pushTime = cfg.pushTimeThreshold ?? 240
 
-  const shouldPush =
-    diff <= pushDiff || (isFinite(est) && est <= pushTime)
+  const shouldPush = diff <= pushDiff || (isFinite(est) && est <= pushTime)
 
   const hfDiff = cfg.hfDiffThreshold ?? 50000
   const hfPct = cfg.hfProgressPct ?? 80
@@ -503,11 +502,7 @@ async function slowScan() {
 
       if (!cnyState.rooms[rid]) {
         cnyState.rooms[rid] = {
-          name:
-            tabNames[rid] ||
-            res.streamer ||
-            res.title ||
-            rid,
+          name: tabNames[rid] || res.streamer || res.title || rid,
           current: 0,
           target: 0,
           history: [],

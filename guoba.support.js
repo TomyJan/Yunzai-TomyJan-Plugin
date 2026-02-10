@@ -198,8 +198,7 @@ export function supportGuoba() {
         {
           field: 'cnyMonitor.cookie',
           label: 'B站Cookie',
-          helpMessage:
-            'B站完整 Cookie, F12 控制台复制, 用于请求活动 API',
+          helpMessage: 'B站完整 Cookie, F12 控制台复制, 用于请求活动 API',
           bottomHelpMessage: '更改重启生效',
           component: 'InputPassword',
         },

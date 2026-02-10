@@ -115,9 +115,7 @@ export class cnyMonitorApp extends plugin {
       const timeStr = fmtTimestamp(task.bonusTime)
       const timeLeft = task.bonusTime - now
       const leftStr =
-        timeLeft > 0
-          ? `还有${Math.ceil(timeLeft / 60)}分钟`
-          : '已过期'
+        timeLeft > 0 ? `还有${Math.ceil(timeLeft / 60)}分钟` : '已过期'
       const thresholdMet = task.currentFortune >= task.limit
       const statusEmoji = thresholdMet ? '✅' : '❌'
 
@@ -177,16 +175,9 @@ export class cnyMonitorApp extends plugin {
         const timeStr = step.isTimed
           ? ` [开抢: ${fmtTimestamp(step.bonusTime)}]`
           : ''
-        const status =
-          diff <= 0
-            ? '✅ 已达标'
-            : `还差 ${diff.toLocaleString()}`
-        lines.push(
-          `${tag} ${step.bonusName} (x${step.bonusNum})${timeStr}`,
-        )
-        lines.push(
-          `   门槛: ${step.limit.toLocaleString()} | ${status}`,
-        )
+        const status = diff <= 0 ? '✅ 已达标' : `还差 ${diff.toLocaleString()}`
+        lines.push(`${tag} ${step.bonusName} (x${step.bonusNum})${timeStr}`)
+        lines.push(`   门槛: ${step.limit.toLocaleString()} | ${status}`)
       }
     } else {
       lines.push('暂无奖品数据')
