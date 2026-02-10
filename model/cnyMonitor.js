@@ -459,7 +459,10 @@ function updateRoom(rm, res, rid) {
   const est = rm.estTime
 
   // 多阶段差值推送
-  const diffStages = parseStageCfg(cfg.pushDiffStages, [40000, 30000, 20000, 10000, 5000])
+  const diffStages = parseStageCfg(
+    cfg.pushDiffStages,
+    [40000, 30000, 20000, 10000, 5000],
+  )
   for (const stage of diffStages) {
     if (diff > stage) continue
     const pushKey = `fortune:${rid}:${subTaskId}:diff${stage}`
@@ -473,7 +476,10 @@ function updateRoom(rm, res, rid) {
 
   // 多阶段时间推送
   if (isFinite(est)) {
-    const timeStages = parseStageCfg(cfg.pushTimeStages, [300, 180, 120, 60, 30])
+    const timeStages = parseStageCfg(
+      cfg.pushTimeStages,
+      [300, 180, 120, 60, 30],
+    )
     for (const stage of timeStages) {
       if (est > stage) continue
       const pushKey = `fortune:${rid}:${subTaskId}:time${stage}`
@@ -481,7 +487,9 @@ function updateRoom(rm, res, rid) {
       cnyState.pushedSet.add(pushKey)
       const msg = buildFortunePushMsg(rm, rid)
       pushToGroups(msg)
-      tjLogger.info(`CNY: 房间 ${rid}(${rm.name}) 达到时间阶段 ≤${stage}s, 已推送`)
+      tjLogger.info(
+        `CNY: 房间 ${rid}(${rm.name}) 达到时间阶段 ≤${stage}s, 已推送`,
+      )
       break
     }
   }
@@ -510,8 +518,14 @@ function updateRoom(rm, res, rid) {
  */
 function checkTimedTaskPush() {
   const cfgVal = getCfg()
-  const diffStages = parseStageCfg(cfgVal.pushDiffStages, [40000, 30000, 20000, 10000, 5000])
-  const timeStages = parseStageCfg(cfgVal.pushTimeStages, [300, 180, 120, 60, 30])
+  const diffStages = parseStageCfg(
+    cfgVal.pushDiffStages,
+    [40000, 30000, 20000, 10000, 5000],
+  )
+  const timeStages = parseStageCfg(
+    cfgVal.pushTimeStages,
+    [300, 180, 120, 60, 30],
+  )
   const now = Date.now() / 1000
 
   for (const [tkey, task] of Object.entries(cnyState.timedTasks)) {
