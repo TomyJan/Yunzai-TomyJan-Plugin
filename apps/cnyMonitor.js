@@ -171,7 +171,16 @@ export class cnyMonitorApp extends plugin {
     tasks.sort((a, b) => a.bonusTime - b.bonusTime)
 
     const now = Date.now() / 1000
-    const lines = [`⏰ 定时奖品列表 (共${tasks.length}个)`]
+    // eslint-disable-next-line no-undef
+    const botQQ = config.getConfig().botQQ || Bot?.uin || 10000
+
+    const forwardMsgs = [
+      {
+        user_id: botQQ,
+        nickname: '⏰ 定时奖品列表',
+        message: `⏰ 定时奖品列表 (共${tasks.length}个)`,
+      },
+    ]
 
     for (const task of tasks) {
       const timeStr = fmtTimestamp(task.bonusTime)
@@ -181,16 +190,24 @@ export class cnyMonitorApp extends plugin {
       const thresholdMet = task.currentFortune >= task.limit
       const statusEmoji = thresholdMet ? '✅' : '❌'
 
-      lines.push('')
-      lines.push(`📺 ${task.roomName} (${task.roomId})`)
-      lines.push(`🎁 ${task.bonusName} (x${task.bonusNum})`)
-      lines.push(`📅 开抢: ${timeStr} (${leftStr})`)
-      lines.push(
+      const lines = [
+        `📺 ${task.roomName} (${task.roomId})`,
+        `🎁 ${task.bonusName} (x${task.bonusNum})`,
+        `📅 开抢: ${timeStr} (${leftStr})`,
         `📊 门槛: ${task.limit.toLocaleString()} (当前: ${task.currentFortune.toLocaleString()}) ${statusEmoji}`,
-      )
+        `🔗 https://live.bilibili.com/${task.roomId}`,
+      ]
+
+      forwardMsgs.push({
+        user_id: botQQ,
+        nickname: `⏰ ${task.bonusName}`,
+        message: lines.join('\n'),
+      })
     }
 
-    await this.reply(lines.join('\n'), false)
+    // eslint-disable-next-line no-undef
+    const forwardMsg = await Bot.makeForwardMsg(forwardMsgs)
+    await this.reply(forwardMsg)
     return true
   }
 
