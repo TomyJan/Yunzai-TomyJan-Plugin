@@ -130,9 +130,7 @@ export class cnyMonitorApp extends plugin {
       }
 
       lines.push('')
-      lines.push(
-        `${idx} ${tag} ${e.roomName} (${e.roomId})`,
-      )
+      lines.push(`${idx} ${tag} ${e.roomName} (${e.roomId})`)
       lines.push(
         `   ${e.bonusName} (x${e.bonusNum}) | 差${e.diff.toLocaleString()} ${e.pct}% | ${estStr}`,
       )
