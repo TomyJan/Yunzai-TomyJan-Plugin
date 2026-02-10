@@ -1,6 +1,8 @@
 import fetch from 'node-fetch'
 import tjLogger from '../components/logger.js'
 import config from '../components/config.js'
+import { sendMsgFriend } from './utils.js'
+import cfg from '../../../lib/config/config.js'
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 //  API 常量
@@ -16,6 +18,11 @@ const UA =
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 //  共享状态 (单例)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+/** 错误记录窗口 (5分钟) */
+const ERROR_WINDOW_MS = 5 * 60 * 1000
+/** 5分钟内错误数 >= 此值时推送主人 */
+const ERROR_ALERT_THRESHOLD = 20
 
 class CnyState {
   constructor() {
@@ -33,6 +40,10 @@ class CnyState {
     this.startTime = 0
     this._slowTimer = null
     this._hfTimer = null
+    /** @type {Array<{ts: number, msg: string}>} 最近错误记录 */
+    this.errors = []
+    /** 上次错误告警推送时间戳 */
+    this._lastErrorAlertTs = 0
   }
 
   reset() {
@@ -42,6 +53,7 @@ class CnyState {
     this.pushedSet = new Set()
     this.scanRound = 0
     this.scanning = false
+    this.errors = []
   }
 }
 
@@ -83,6 +95,33 @@ function getHeaders() {
     'User-Agent': UA,
     Cookie: cookie,
     Referer: 'https://live.bilibili.com/',
+  }
+}
+
+/**
+ * 记录一条错误并检查是否需要告警
+ * @param {string} msg 错误摘要
+ */
+function recordError(msg) {
+  const now = Date.now()
+  cnyState.errors.push({ ts: now, msg })
+  // 清理窗口外的旧记录
+  cnyState.errors = cnyState.errors.filter(
+    (e) => now - e.ts < ERROR_WINDOW_MS,
+  )
+  // 频繁错误告警 (5分钟内冷却)
+  if (
+    cnyState.errors.length >= ERROR_ALERT_THRESHOLD &&
+    now - cnyState._lastErrorAlertTs > ERROR_WINDOW_MS
+  ) {
+    cnyState._lastErrorAlertTs = now
+    const alertMsg =
+      `[TJ插件] CNY监控异常告警\n` +
+      `近5分钟错误${cnyState.errors.length}次\n` +
+      `最近: ${msg}\n` +
+      `请检查 Cookie 或网络状态`
+    sendMsgFriend(cfg.masterQQ[0], alertMsg)
+    tjLogger.warn(`CNY: 频繁错误告警已推送主人 (${cnyState.errors.length}次/5min)`)
   }
 }
 
@@ -170,25 +209,37 @@ async function fetchTabPage(page) {
       headers: getHeaders(),
       timeout: 8000,
     })
+    if (!resp.ok) {
+      const errMsg = `TabPage(${page}) HTTP ${resp.status}`
+      tjLogger.debug(`CNY: ${errMsg}`)
+      recordError(errMsg)
+      return {}
+    }
     const d = await resp.json()
+    if (d.code !== 0) {
+      const errMsg = `TabPage(${page}) code=${d.code}`
+      tjLogger.debug(`CNY: ${errMsg}`)
+      recordError(errMsg)
+      return {}
+    }
     const out = {}
-    if (d.code === 0) {
-      for (const sec of d.data?.tab_sections || []) {
-        if (sec.section_type !== 'tab_section_chat_room_list') continue
-        for (const rm of sec.chat_room_list?.live_chat_rooms || []) {
-          const jump = rm.jump_url || ''
-          const m =
-            jump.match(/live\.bilibili\.com\/(\d+)/) ||
-            jump.match(/room_id=(\d+)/)
-          if (m) {
-            out[m[1]] = rm.title || rm.name || m[1]
-          }
+    for (const sec of d.data?.tab_sections || []) {
+      if (sec.section_type !== 'tab_section_chat_room_list') continue
+      for (const rm of sec.chat_room_list?.live_chat_rooms || []) {
+        const jump = rm.jump_url || ''
+        const m =
+          jump.match(/live\.bilibili\.com\/(\d+)/) ||
+          jump.match(/room_id=(\d+)/)
+        if (m) {
+          out[m[1]] = rm.title || rm.name || m[1]
         }
       }
     }
     return out
   } catch (e) {
-    tjLogger.debug(`CNY: fetchTabPage(${page}) 失败: ${e.message}`)
+    const errMsg = `TabPage(${page}) ${e.message}`
+    tjLogger.debug(`CNY: ${errMsg}`)
+    recordError(errMsg)
     return {}
   }
 }
@@ -204,8 +255,18 @@ async function fetchRoomFortune(roomId) {
       headers: getHeaders(),
       timeout: 8000,
     })
+    if (!resp.ok) {
+      const errMsg = `Fortune(${roomId}) HTTP ${resp.status}`
+      tjLogger.debug(`CNY: ${errMsg}`)
+      recordError(errMsg)
+      return null
+    }
     const d = await resp.json()
-    if (d.code !== 0) return null
+    if (d.code !== 0) {
+      // code!=0 不一定是错误 (可能房间无活动), 仅 -101 等 Cookie 失效算错误
+      if (d.code === -101) recordError(`Fortune(${roomId}) Cookie失效`)
+      return null
+    }
     const td = d.data
     const current = parseInt(td.fortune_value)
     const title = td.title || ''
@@ -228,7 +289,9 @@ async function fetchRoomFortune(roomId) {
     if (steps.length === 0) return null
     return { roomId, title, streamer, current, steps }
   } catch (e) {
-    tjLogger.debug(`CNY: fetchRoomFortune(${roomId}) 失败: ${e.message}`)
+    const errMsg = `Fortune(${roomId}) ${e.message}`
+    tjLogger.debug(`CNY: ${errMsg}`)
+    recordError(errMsg)
     return null
   }
 }
@@ -452,25 +515,20 @@ function checkTimedTaskPush() {
  */
 async function slowScan() {
   if (!cnyState.running) return
-  const cfg = getCfg()
+  const cfgData = getCfg()
   cnyState.scanRound++
   cnyState.scanning = true
 
   tjLogger.debug(`CNY: 开始第 ${cnyState.scanRound} 轮全站扫描`)
 
   try {
-    // 阶段 1: 并行获取房间列表
-    const pages = cfg.scanPages || 15
-    const pageNums = Array.from({ length: pages }, (_, i) => i + 1)
-    const tabResults = await parallelMap(
-      pageNums,
-      (p) => fetchTabPage(p),
-      cfg.parallelWorkers || 15,
-    )
-
+    // 阶段 1: 逐页获取房间列表 (串行, 避免请求过快)
+    const pages = cfgData.scanPages || 15
     const tabNames = {}
-    for (const r of tabResults) {
-      if (r.status === 'fulfilled') Object.assign(tabNames, r.value)
+    for (let p = 1; p <= pages; p++) {
+      if (!cnyState.running) break
+      const pageResult = await fetchTabPage(p)
+      Object.assign(tabNames, pageResult)
     }
 
     const roomIds = Object.keys(tabNames)
@@ -488,7 +546,7 @@ async function slowScan() {
     const fortuneResults = await parallelMap(
       roomIds,
       (rid) => fetchRoomFortune(rid),
-      cfg.parallelWorkers || 15,
+      cfgData.parallelWorkers || 15,
     )
 
     for (let i = 0; i < roomIds.length; i++) {
@@ -529,6 +587,7 @@ async function slowScan() {
     checkTimedTaskPush()
   } catch (e) {
     tjLogger.error(`CNY: 慢速扫描异常: ${e.message}`)
+    recordError(`扫描异常: ${e.message}`)
   }
 
   cnyState.scanning = false
@@ -744,9 +803,17 @@ export function getNearestPrizes(limit = 10) {
  * @returns {object}
  */
 export function getStatus() {
+  const now = Date.now()
   const uptime = cnyState.running
-    ? Math.floor((Date.now() - cnyState.startTime) / 1000)
+    ? Math.floor((now - cnyState.startTime) / 1000)
     : 0
+  // 清理过期错误 & 统计
+  cnyState.errors = cnyState.errors.filter(
+    (e) => now - e.ts < ERROR_WINDOW_MS,
+  )
+  const recentErrors = cnyState.errors
+  const lastError =
+    recentErrors.length > 0 ? recentErrors[recentErrors.length - 1] : null
   return {
     running: cnyState.running,
     scanRound: cnyState.scanRound,
@@ -756,6 +823,13 @@ export function getStatus() {
     timedCount: Object.keys(cnyState.timedTasks).length,
     pushedCount: cnyState.pushedSet.size,
     uptime,
+    errorCount5m: recentErrors.length,
+    lastError: lastError
+      ? {
+          time: new Date(lastError.ts).toLocaleTimeString('zh-CN'),
+          msg: lastError.msg,
+        }
+      : null,
   }
 }
 
