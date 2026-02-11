@@ -423,8 +423,8 @@ function updateRoom(rm, res, rid) {
   rm.isFortuneTarget = fortuneStep !== null
   rm.allSteps = steps
   rm.history.push([Date.now() / 1000, res.current])
-  // 保留最近 10 条历史
-  if (rm.history.length > 10) rm.history.shift()
+  // 保留最近 15 条历史
+  if (rm.history.length > 15) rm.history.shift()
   rm.estTime = fortuneStep
     ? calcEstTime(rm.history, rm.current, rm.target)
     : Infinity
