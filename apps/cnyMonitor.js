@@ -79,11 +79,7 @@ export class cnyMonitorApp extends plugin {
       `👁️ 高频监控: ${st.hfCount}`,
       `⏰ 定时任务: ${st.timedCount}`,
       `📨 已推送: ${st.pushedCount}`,
-      `⚠️ 近5分钟错误: ${st.errorCount5m}`,
     ]
-    if (st.lastError) {
-      lines.push(`   最近: ${st.lastError.time} ${st.lastError.msg}`)
-    }
 
     await this.reply(lines.join('\n'), false)
     return true
