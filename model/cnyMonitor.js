@@ -285,7 +285,7 @@ function buildFortunePushMsg(room, rid) {
   return [
     '⚠️【新春奖品预警】',
     `📺 房间: ${room.name}`,
-    `🎁 奖品: ${room.bonusName} (x${room.bonusNum})`,
+    `🎁 目标: ${room.bonusName} (x${room.bonusNum})`,
     `📉 还差: ${diff.toLocaleString()} (${room.current.toLocaleString()}/${room.target.toLocaleString()})`,
     `⏰ 预估: ${estStr}`,
     `🔗 https://live.bilibili.com/${rid}`,
@@ -309,7 +309,7 @@ function buildTimedPushMsg(task, currentFortune, timeLeft) {
   return [
     '⏰【定时奖品预警】',
     `📺 房间: ${task.roomName}`,
-    `🎁 奖品: ${task.bonusName} (x${task.bonusNum})`,
+    `🎁 目标: ${task.bonusName} (x${task.bonusNum})`,
     `📅 开抢: ${timeStr} (${leftStr})`,
     `📊 门槛: ${task.limit.toLocaleString()} (当前: ${currentFortune.toLocaleString()}) ${statusStr}`,
     `🔗 https://live.bilibili.com/${task.roomId}`,
@@ -681,62 +681,6 @@ export function getTimedTasks() {
     ...task,
     currentFortune: cnyState.rooms[task.roomId]?.current || 0,
   }))
-}
-
-/**
- * 获取最近的奖品列表 (按紧迫度排序)
- * @param {number} limit 返回数量
- * @returns {Array<object>}
- */
-export function getNearestPrizes(limit = 10) {
-  const entries = []
-  const now = Date.now() / 1000
-
-  // 福气值类条目
-  for (const [rid, rm] of Object.entries(cnyState.rooms)) {
-    if (!rm.isFortuneTarget || rm.target <= 0) continue
-    const diff = rm.target - rm.current
-    if (diff <= 0) continue
-    entries.push({
-      type: 'fortune',
-      roomId: rid,
-      roomName: rm.name,
-      bonusName: rm.bonusName,
-      bonusNum: rm.bonusNum,
-      current: rm.current,
-      target: rm.target,
-      diff,
-      pct: ((rm.current / Math.max(rm.target, 1)) * 100).toFixed(1),
-      estTime: rm.estTime,
-      urgency: isFinite(rm.estTime) ? rm.estTime : Infinity,
-    })
-  }
-
-  // 定时类条目
-  for (const [, task] of Object.entries(cnyState.timedTasks)) {
-    const timeLeft = task.bonusTime - now
-    if (timeLeft < -60) continue
-    const rm = cnyState.rooms[task.roomId]
-    const currentFortune = rm?.current || 0
-    entries.push({
-      type: 'timed',
-      roomId: task.roomId,
-      roomName: task.roomName,
-      bonusName: task.bonusName,
-      bonusNum: task.bonusNum,
-      current: currentFortune,
-      target: task.limit,
-      diff: task.limit - currentFortune,
-      pct: ((currentFortune / Math.max(task.limit, 1)) * 100).toFixed(1),
-      estTime: Math.max(0, timeLeft),
-      urgency: Math.max(0, timeLeft),
-      bonusTime: task.bonusTime,
-    })
-  }
-
-  // 按紧迫度升序
-  entries.sort((a, b) => a.urgency - b.urgency)
-  return entries.slice(0, limit)
 }
 
 /**
