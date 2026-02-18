@@ -7,7 +7,6 @@ import {
   pluginThemeColor,
 } from '../data/system/pluginConstants.js'
 import { sendMsgFriend } from './utils.js'
-import { startCnyMonitor } from './cnyMonitor.js'
 import cfg from '../../../lib/config/config.js'
 // import config from '../components/config.js'
 
@@ -22,9 +21,6 @@ export async function initAutoTask() {
   schedule.scheduleJob('0 0 6/12 * * ? ', function () {
     checkUpdateTask()
   })
-
-  tjLogger.info(pluginThemeColor(`载入 CNY 春节活动监控`))
-  startCnyMonitor()
 }
 
 export async function checkUpdateTask() {
