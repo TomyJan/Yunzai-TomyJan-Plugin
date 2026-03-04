@@ -178,29 +178,90 @@ export function getUserFromCache(qq) {
 }
 
 /**
+ * 获取用户的详细状态
+ * @param {object|null} userInfo - 用户信息
+ * @returns {string} - 用户状态: 'active', 'grace_period', 'expired', 'pending', 'banned', 'unknown'
+ */
+export function getUserStatus(userInfo) {
+  if (!userInfo) return 'unknown'
+
+  // 待审核
+  if (userInfo.status === 'pending') return 'pending'
+  // 已封禁
+  if (userInfo.status === 'banned') return 'banned'
+  // 异常状态
+  if (userInfo.status !== 'active') return 'unknown'
+
+  // 检查过期情况
+  if (userInfo.expireAt) {
+    const expireTime = new Date(userInfo.expireAt).getTime()
+    const now = Date.now()
+
+    if (expireTime < now) {
+      // 已过期，检查宽限期
+      const graceAuthCount = userInfo.role?.graceAuthCount || 0
+      const graceUsed = userInfo.graceUsed || 0
+
+      if (graceAuthCount > 0 && graceUsed < graceAuthCount) {
+        // 还在宽限期内
+        return 'grace_period'
+      } else {
+        // 已过期
+        return 'expired'
+      }
+    }
+  }
+
+  // 正常活跃用户
+  return 'active'
+}
+
+/**
+ * 获取用户的宽限期信息
+ * @param {object} userInfo - 用户信息
+ * @returns {object} - { isInGracePeriod: boolean, daysRemaining?: number, usesRemaining?: number, expiredDaysAgo?: number }
+ */
+export function getGracePeriodInfo(userInfo) {
+  if (!userInfo || !userInfo.expireAt) {
+    return { isInGracePeriod: false }
+  }
+
+  const expireTime = new Date(userInfo.expireAt).getTime()
+  const now = Date.now()
+  const msPerDay = 24 * 60 * 60 * 1000
+
+  if (expireTime >= now) {
+    // 未过期
+    const daysRemaining = Math.ceil((expireTime - now) / msPerDay)
+    return {
+      isInGracePeriod: false,
+      daysRemaining,
+    }
+  }
+
+  // 已过期
+  const graceAuthCount = userInfo.role?.graceAuthCount || 0
+  const graceUsed = userInfo.graceUsed || 0
+  const usesRemaining = Math.max(0, graceAuthCount - graceUsed)
+  const expiredDaysAgo = Math.floor((now - expireTime) / msPerDay)
+
+  return {
+    isInGracePeriod: usesRemaining > 0,
+    usesRemaining,
+    expiredDaysAgo,
+    graceAuthCount,
+    graceUsed,
+  }
+}
+
+/**
  * 判断用户是否有效（可认证）
  * @param {object} userInfo - 用户信息
  * @returns {boolean}
  */
 export function isUserValid(userInfo) {
-  if (!userInfo) return false
-  if (userInfo.status !== 'active') return false
-
-  // 检查是否过期
-  if (userInfo.expireAt) {
-    const expireTime = new Date(userInfo.expireAt).getTime()
-    const now = Date.now()
-    if (expireTime < now) {
-      // 已过期，检查宽限次数
-      const graceAuthCount = userInfo.role?.graceAuthCount || 0
-      const graceUsed = userInfo.graceUsed || 0
-      if (graceUsed >= graceAuthCount) {
-        return false // 宽限次数用尽
-      }
-    }
-  }
-
-  return true
+  const status = getUserStatus(userInfo)
+  return status === 'active' || status === 'grace_period'
 }
 
 /**
@@ -209,24 +270,25 @@ export function isUserValid(userInfo) {
  * @returns {string} - 无效原因描述
  */
 export function getInvalidReason(userInfo) {
-  if (!userInfo) return '未注册或未绑定QQ'
-  if (userInfo.status === 'pending') return '待审核'
-  if (userInfo.status === 'banned') return '已封禁'
-  if (userInfo.status !== 'active') return `状态异常(${userInfo.status})`
+  const status = getUserStatus(userInfo)
 
-  if (userInfo.expireAt) {
-    const expireTime = new Date(userInfo.expireAt).getTime()
-    const now = Date.now()
-    if (expireTime < now) {
-      const graceAuthCount = userInfo.role?.graceAuthCount || 0
-      const graceUsed = userInfo.graceUsed || 0
-      if (graceUsed >= graceAuthCount) {
-        return '已过期且宽限次数用尽'
-      }
+  switch (status) {
+    case 'unknown':
+      return userInfo ? '未知状态' : '未注册或未绑定QQ'
+    case 'pending':
+      return '待审核'
+    case 'banned':
+      return '已封禁'
+    case 'expired': {
+      const graceInfo = getGracePeriodInfo(userInfo)
+      return `已过期 (${graceInfo.expiredDaysAgo}天前)`
     }
+    case 'grace_period':
+      return '宽限期内'
+    case 'active':
+    default:
+      return '正常'
   }
-
-  return '未知原因'
 }
 
 // ==================== API 封装 ====================
@@ -429,32 +491,68 @@ export async function analyzeUserStatus(groupMembers) {
   const groupMemberSet = new Set(groupMembers.map((m) => String(m.user_id)))
 
   const result = {
-    activeUsers: [], // 正常用户（在群内且有效）
-    invalidInGroup: [], // 无效但还在群内的用户
-    notInGroup: [], // 有效但未加群的用户
+    normalUsers: [], // 正常用户（在群内且有效）
+    gracePeriodUsers: [], // 宽限期内的用户（在群内）
+    expiredUsers: [], // 已过期的用户（在群内）
+    pendingUsers: [], // 待审核用户（在群内）
+    bannedUsers: [], // 已封禁用户（在群内）
+    invalidInGroup: [], // 其他无效用户（在群内）
+    validNotInGroup: [], // 有效但未加群的用户
+    unregisteredInGroup: [], // 群内未注册用户
     unkQQUser: refreshResult.unkQQUser || 0, // 未绑定 QQ 的用户数
   }
 
   // 遍历所有已绑定 QQ 的用户
   for (const [qq, userInfo] of Object.entries(allUsers)) {
     const isInGroup = groupMemberSet.has(qq)
-    const isValid = isUserValid(userInfo)
+    const status = getUserStatus(userInfo)
 
-    if (isInGroup && isValid) {
-      result.activeUsers.push({ qq, ...userInfo })
-    } else if (isInGroup && !isValid) {
-      result.invalidInGroup.push({
-        qq,
-        ...userInfo,
-        reason: getInvalidReason(userInfo),
-      })
-    } else if (!isInGroup && isValid) {
-      result.notInGroup.push({ qq, ...userInfo })
+    if (isInGroup) {
+      // 在群内，按细致的状态分类
+      switch (status) {
+        case 'active':
+          result.normalUsers.push({ qq, ...userInfo })
+          break
+        case 'grace_period': {
+          const graceInfo = getGracePeriodInfo(userInfo)
+          result.gracePeriodUsers.push({
+            qq,
+            ...userInfo,
+            graceInfo,
+          })
+          break
+        }
+        case 'expired': {
+          const graceInfo = getGracePeriodInfo(userInfo)
+          result.expiredUsers.push({
+            qq,
+            ...userInfo,
+            graceInfo,
+          })
+          break
+        }
+        case 'pending':
+          result.pendingUsers.push({ qq, ...userInfo })
+          break
+        case 'banned':
+          result.bannedUsers.push({ qq, ...userInfo })
+          break
+        default:
+          result.invalidInGroup.push({
+            qq,
+            ...userInfo,
+            reason: getInvalidReason(userInfo),
+          })
+      }
+    } else {
+      // 不在群内，检查是否有效
+      if (status === 'active' || status === 'grace_period') {
+        result.validNotInGroup.push({ qq, ...userInfo, status })
+      }
     }
   }
 
   // 检查群内未注册用户
-  result.unregisteredInGroup = []
   for (const member of groupMembers) {
     const qq = String(member.user_id)
     if (!allUsers[qq]) {
@@ -466,4 +564,135 @@ export async function analyzeUserStatus(groupMembers) {
   }
 
   return { success: true, data: result }
+}
+
+/**
+ * 格式化用户状态报告（用于显示）
+ * @param {object} analysisResult - analyzeUserStatus 返回的结果对象
+ * @returns {string} - 格式化的报告文本
+ */
+export function formatUserStatusReport(analysisResult) {
+  if (!analysisResult.success || !analysisResult.data) {
+    return '获取用户状态失败'
+  }
+
+  const data = analysisResult.data
+  const lines = []
+
+  // 统计各类用户数量
+  const totalNormal = data.normalUsers.length
+  const totalGrace = data.gracePeriodUsers.length
+  const totalExpired = data.expiredUsers.length
+  const totalPending = data.pendingUsers.length
+  const totalBanned = data.bannedUsers.length
+  const totalInvalidOther = data.invalidInGroup.length
+  const totalValidNotInGroup = data.validNotInGroup.length
+  const totalUnregistered = data.unregisteredInGroup.length
+  const totalUnkQQ = data.unkQQUser
+
+  // 标题和概览
+  lines.push('📊 用户状态概览')
+  lines.push(`✅ 正常用户: ${totalNormal}`)
+
+  if (totalGrace > 0) {
+    lines.push(`⏳ 宽限期内: ${totalGrace}`)
+  }
+
+  if (totalExpired > 0) {
+    lines.push(`⚠️ 过期用户: ${totalExpired}`)
+  }
+
+  if (totalInvalidOther > 0) {
+    lines.push(`❌ 其他无效: ${totalInvalidOther}`)
+  }
+
+  if (totalPending > 0) {
+    lines.push(`🔍 待审核: ${totalPending}`)
+  }
+
+  if (totalBanned > 0) {
+    lines.push(`🚫 已封禁: ${totalBanned}`)
+  }
+
+  if (totalValidNotInGroup > 0) {
+    lines.push(`📭 有效未加群: ${totalValidNotInGroup}`)
+  }
+
+  if (totalUnregistered > 0) {
+    lines.push(`👻 群内未注册: ${totalUnregistered}`)
+  }
+
+  if (totalUnkQQ > 0) {
+    lines.push(`❓ 未绑定QQ: ${totalUnkQQ}`)
+  }
+
+  // 宽限期内用户详情
+  if (data.gracePeriodUsers.length > 0) {
+    lines.push('')
+    lines.push('⏳ 宽限期内用户')
+    for (const user of data.gracePeriodUsers) {
+      const graceInfo = user.graceInfo
+      const remainingUses = graceInfo.usesRemaining || 0
+      lines.push(`  ${user.qq} - 剩 ${remainingUses} 次认证`)
+    }
+  }
+
+  // 过期用户详情
+  if (data.expiredUsers.length > 0) {
+    lines.push('')
+    lines.push('⚠️ 过期用户')
+    for (const user of data.expiredUsers) {
+      const graceInfo = user.graceInfo
+      const daysAgo = graceInfo.expiredDaysAgo || 0
+      lines.push(`  ${user.qq} - ${daysAgo} 天前过期`)
+    }
+  }
+
+  // 待审核用户详情
+  if (data.pendingUsers.length > 0) {
+    lines.push('')
+    lines.push('🔍 待审核用户')
+    for (const user of data.pendingUsers) {
+      lines.push(`  ${user.qq}`)
+    }
+  }
+
+  // 已封禁用户详情
+  if (data.bannedUsers.length > 0) {
+    lines.push('')
+    lines.push('🚫 已封禁用户')
+    for (const user of data.bannedUsers) {
+      lines.push(`  ${user.qq}`)
+    }
+  }
+
+  // 其他无效用户详情
+  if (data.invalidInGroup.length > 0) {
+    lines.push('')
+    lines.push('❌ 其他无效用户')
+    for (const user of data.invalidInGroup) {
+      lines.push(`  ${user.qq} - ${user.reason || '未知原因'}`)
+    }
+  }
+
+  // 有效但未加群用户详情
+  if (data.validNotInGroup.length > 0) {
+    lines.push('')
+    lines.push('📭 有效但未加群用户')
+    for (const user of data.validNotInGroup) {
+      const marker = user.status === 'grace_period' ? '⏳' : '✅'
+      lines.push(`  ${marker} ${user.qq}`)
+    }
+  }
+
+  // 未注册用户详情
+  if (data.unregisteredInGroup.length > 0) {
+    lines.push('')
+    lines.push('👻 群内未注册用户')
+    for (const user of data.unregisteredInGroup) {
+      lines.push(`  ${user.qq} (${user.nickname})`)
+    }
+  }
+
+  return lines.join('\n')
 }
