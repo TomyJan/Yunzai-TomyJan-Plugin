@@ -270,15 +270,19 @@ export function getGracePeriodInfo(userInfo) {
   // 已过期
   const role = userInfo.role
   const graceAuthCount = (role && role.graceAuthCount) || 0
+  const graceDays = (role && role.graceDays) || 0
   const graceUsed = userInfo.graceUsed || 0
   const usesRemaining = Math.max(0, graceAuthCount - graceUsed)
   const expiredDaysAgo = Math.floor((now - expireTime) / msPerDay)
+  const graceDaysRemaining = Math.max(0, graceDays - expiredDaysAgo)
 
   return {
     isInGracePeriod: usesRemaining > 0,
     usesRemaining,
     expiredDaysAgo,
     graceAuthCount,
+    graceDays,
+    graceDaysRemaining,
     graceUsed,
   }
 }
@@ -682,115 +686,17 @@ export function formatUserStatusReport(analysisResult) {
     0
   const totalUnkQQ = data.unkQQUser || 0
 
-  // 标题和概览
-  lines.push('📊 用户状态概览')
-  lines.push(`✅ 正常用户: ${totalNormal}`)
-
-  if (totalGrace > 0) {
-    lines.push(`⏳ 宽限期内: ${totalGrace}`)
-  }
-
-  if (totalExpired > 0) {
-    lines.push(`⚠️ 过期用户: ${totalExpired}`)
-  }
-
-  if (totalInvalidOther > 0) {
-    lines.push(`❌ 其他无效: ${totalInvalidOther}`)
-  }
-
-  if (totalPending > 0) {
-    lines.push(`🔍 待审核: ${totalPending}`)
-  }
-
-  if (totalBanned > 0) {
-    lines.push(`🚫 已封禁: ${totalBanned}`)
-  }
-
-  if (totalValidNotInGroup > 0) {
-    lines.push(`📭 有效未加群: ${totalValidNotInGroup}`)
-  }
-
-  if (totalUnregistered > 0) {
-    lines.push(`👻 群内未注册: ${totalUnregistered}`)
-  }
-
-  if (totalUnkQQ > 0) {
-    lines.push(`❓ 未绑定QQ: ${totalUnkQQ}`)
-  }
-
-  // 宽限期内用户详情
-  if (
-    Array.isArray(data.gracePeriodUsers) &&
-    data.gracePeriodUsers.length > 0
-  ) {
-    lines.push('')
-    lines.push('⏳ 宽限期内用户')
-    for (const user of data.gracePeriodUsers) {
-      const graceInfo = user.graceInfo
-      const remainingUses = (graceInfo && graceInfo.usesRemaining) || 0
-      lines.push(`  ${user.qq} - 剩 ${remainingUses} 次认证`)
-    }
-  }
-
-  // 过期用户详情
-  if (Array.isArray(data.expiredUsers) && data.expiredUsers.length > 0) {
-    lines.push('')
-    lines.push('⚠️ 过期用户')
-    for (const user of data.expiredUsers) {
-      const graceInfo = user.graceInfo
-      const daysAgo = (graceInfo && graceInfo.expiredDaysAgo) || 0
-      lines.push(`  ${user.qq} - ${daysAgo} 天前过期`)
-    }
-  }
-
-  // 待审核用户详情
-  if (Array.isArray(data.pendingUsers) && data.pendingUsers.length > 0) {
-    lines.push('')
-    lines.push('🔍 待审核用户')
-    for (const user of data.pendingUsers) {
-      lines.push(`  ${user.qq}`)
-    }
-  }
-
-  // 已封禁用户详情
-  if (Array.isArray(data.bannedUsers) && data.bannedUsers.length > 0) {
-    lines.push('')
-    lines.push('🚫 已封禁用户')
-    for (const user of data.bannedUsers) {
-      lines.push(`  ${user.qq}`)
-    }
-  }
-
-  // 其他无效用户详情
-  if (Array.isArray(data.invalidInGroup) && data.invalidInGroup.length > 0) {
-    lines.push('')
-    lines.push('❌ 其他无效用户')
-    for (const user of data.invalidInGroup) {
-      lines.push(`  ${user.qq} - ${user.reason || '未知原因'}`)
-    }
-  }
-
-  // 有效但未加群用户详情
-  if (Array.isArray(data.validNotInGroup) && data.validNotInGroup.length > 0) {
-    lines.push('')
-    lines.push('📭 有效但未加群用户')
-    for (const user of data.validNotInGroup) {
-      const marker = user.status === 'grace_period' ? '⏳' : '✅'
-      lines.push(`  ${marker} ${user.qq}`)
-    }
-  }
-
-  // 未注册用户详情
-  if (
-    Array.isArray(data.unregisteredInGroup) &&
-    data.unregisteredInGroup.length > 0
-  ) {
-    lines.push('')
-    lines.push('👻 群内未注册用户')
-    for (const user of data.unregisteredInGroup) {
-      lines.push(`  ${user.qq} (${user.nickname})`)
-    }
-  }
+  // 标题和概览（始终显示所有类别）
+  lines.push('📊 用户状态概览\n')
+  if (totalNormal > 0 ) lines.push(`✅ 正常用户: ${totalNormal}`)
+  if (totalGrace > 0) lines.push(`⏳ 宽限期内: ${totalGrace}`)
+  if (totalExpired > 0) lines.push(`⚠️ 过期用户: ${totalExpired}`)
+  if (totalInvalidOther > 0) lines.push(`❌ 其他无效: ${totalInvalidOther}`)
+  if (totalPending > 0) lines.push(`🔍 待审核: ${totalPending}`)
+  if (totalBanned > 0) lines.push(`🚫 已封禁: ${totalBanned}`)
+  if (totalValidNotInGroup > 0) lines.push(`📭 有效未加群: ${totalValidNotInGroup}`)
+  if (totalUnregistered > 0) lines.push(`👻 群内未注册: ${totalUnregistered}`)
+  if (totalUnkQQ > 0) lines.push(`❓ 未绑定QQ: ${totalUnkQQ}`)
 
   return lines.join('\n')
 }

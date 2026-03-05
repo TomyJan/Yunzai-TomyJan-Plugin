@@ -351,8 +351,10 @@ export class eduAuthApp extends plugin {
       if (data.gracePeriodUsers && data.gracePeriodUsers.length > 0) {
         const list = data.gracePeriodUsers
           .map((u) => {
-            const remaining = (u.graceInfo && u.graceInfo.usesRemaining) || 0
-            return `${u.qq} - 剩 ${remaining} 次认证`
+            const gi = u.graceInfo || {}
+            const daysLeft = gi.graceDaysRemaining ?? '?'
+            const usesLeft = gi.usesRemaining ?? '?'
+            return `${u.qq} - 剩 ${daysLeft} 天 / ${usesLeft} 次`
           })
           .join('\n')
         forwardMsgs.push({
