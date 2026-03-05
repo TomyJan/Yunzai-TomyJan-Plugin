@@ -11,6 +11,7 @@ import {
   reportGroupMembers,
   refreshUserCache,
   analyzeUserStatus,
+  formatUserStatusReport,
 } from '../model/eduAuth.js'
 
 export class eduAuthApp extends plugin {
@@ -303,9 +304,11 @@ export class eduAuthApp extends plugin {
     try {
       // eslint-disable-next-line no-undef
       const group = Bot.pickGroup(userGroup)
+      tjLogger.debug(`[EDU] 正在获取群 ${userGroup} 的成员列表...`)
       const memberMap = await group.getMemberMap()
 
       if (!memberMap) {
+        tjLogger.error('[EDU] 获取群成员列表失败: memberMap 为空')
         await this.reply('获取群成员列表失败', true)
         return
       }
@@ -316,8 +319,12 @@ export class eduAuthApp extends plugin {
           nickname: info.nickname || info.card || String(user_id),
         }),
       )
+      tjLogger.debug(`[EDU] 获取到 ${groupMembers.length} 个群成员`)
 
       const result = await analyzeUserStatus(groupMembers)
+      tjLogger.debug(
+        `[EDU] analyzeUserStatus 返回: success=${result.success}, hasData=${!!result.data}`,
+      )
 
       if (!result.success) {
         await this.reply(`分析失败: ${result.message}`, true)
@@ -331,35 +338,85 @@ export class eduAuthApp extends plugin {
       // eslint-disable-next-line no-undef
       const botQQ = config.getConfig().botQQ || Bot.uin
 
-      // 概览
+      // 使用 formatUserStatusReport 生成概览
+      const overview = formatUserStatusReport(result)
+      tjLogger.debug(`[EDU] 状态报告:\n${overview}`)
       forwardMsgs.push({
         user_id: botQQ,
         nickname: 'EDU用户检查',
-        message: [
-          `📊 用户状态概览\n`,
-          `✅ 正常用户: ${data.activeUsers.length}\n`,
-          `❌ 无效在群内: ${data.invalidInGroup.length}\n`,
-          `📭 有效未加群: ${data.notInGroup.length}\n`,
-          `❓ 未绑定QQ: ${data.unkQQUser}\n`,
-          `👻 群内未注册: ${data.unregisteredInGroup.length}`,
-        ].join(''),
+        message: overview,
       })
 
-      // 无效但在群内的用户
-      if (data.invalidInGroup.length > 0) {
-        const list = data.invalidInGroup
-          .map((u) => `${u.qq} - ${u.reason}`)
+      // 宽限期内用户详情
+      if (data.gracePeriodUsers && data.gracePeriodUsers.length > 0) {
+        const list = data.gracePeriodUsers
+          .map((u) => {
+            const remaining = (u.graceInfo && u.graceInfo.usesRemaining) || 0
+            return `${u.qq} - 剩 ${remaining} 次认证`
+          })
           .join('\n')
         forwardMsgs.push({
           user_id: botQQ,
-          nickname: '❌ 无效在群内用户',
-          message: '❌ 无效在群内用户\n' + list,
+          nickname: '⏳ 宽限期内用户',
+          message: '⏳ 宽限期内用户\n' + list,
+        })
+      }
+
+      // 过期用户详情
+      if (data.expiredUsers && data.expiredUsers.length > 0) {
+        const list = data.expiredUsers
+          .map((u) => {
+            const daysAgo = (u.graceInfo && u.graceInfo.expiredDaysAgo) || 0
+            return `${u.qq} - ${daysAgo} 天前过期`
+          })
+          .join('\n')
+        forwardMsgs.push({
+          user_id: botQQ,
+          nickname: '⚠️ 过期用户',
+          message: '⚠️ 过期用户\n' + list,
+        })
+      }
+
+      // 待审核用户详情
+      if (data.pendingUsers && data.pendingUsers.length > 0) {
+        const list = data.pendingUsers.map((u) => u.qq).join('\n')
+        forwardMsgs.push({
+          user_id: botQQ,
+          nickname: '🔍 待审核用户',
+          message: '🔍 待审核用户\n' + list,
+        })
+      }
+
+      // 已封禁用户详情
+      if (data.bannedUsers && data.bannedUsers.length > 0) {
+        const list = data.bannedUsers.map((u) => u.qq).join('\n')
+        forwardMsgs.push({
+          user_id: botQQ,
+          nickname: '🚫 已封禁用户',
+          message: '🚫 已封禁用户\n' + list,
+        })
+      }
+
+      // 其他无效但在群内的用户
+      if (data.invalidInGroup && data.invalidInGroup.length > 0) {
+        const list = data.invalidInGroup
+          .map((u) => `${u.qq} - ${u.reason || '未知原因'}`)
+          .join('\n')
+        forwardMsgs.push({
+          user_id: botQQ,
+          nickname: '❌ 其他无效用户',
+          message: '❌ 其他无效用户\n' + list,
         })
       }
 
       // 有效但未加群的用户
-      if (data.notInGroup.length > 0) {
-        const list = data.notInGroup.map((u) => u.qq).join('\n')
+      if (data.validNotInGroup && data.validNotInGroup.length > 0) {
+        const list = data.validNotInGroup
+          .map((u) => {
+            const marker = u.status === 'grace_period' ? '⏳' : '✅'
+            return `${marker} ${u.qq}`
+          })
+          .join('\n')
         forwardMsgs.push({
           user_id: botQQ,
           nickname: '📭 有效未加群用户',
@@ -368,7 +425,7 @@ export class eduAuthApp extends plugin {
       }
 
       // 群内未注册用户（取前50个）
-      if (data.unregisteredInGroup.length > 0) {
+      if (data.unregisteredInGroup && data.unregisteredInGroup.length > 0) {
         const showList = data.unregisteredInGroup.slice(0, 50)
         const list = showList.map((u) => `${u.qq} (${u.nickname})`).join('\n')
         const extra =
@@ -388,6 +445,7 @@ export class eduAuthApp extends plugin {
       await this.reply(forwardMsg)
     } catch (error) {
       tjLogger.error(`[EDU] 检查用户失败: ${error.message}`)
+      tjLogger.error(`[EDU] 错误堆栈: ${error.stack}`)
       await this.reply(`检查用户失败: ${error.message}`, true)
     }
   }
@@ -442,16 +500,34 @@ export class eduAuthApp extends plugin {
         return
       }
 
-      // 合并无效用户和未注册用户
-      const invalidUsers = result.data.invalidInGroup.map((u) => ({
+      // 合并所有需要踢出的用户（过期+封禁+其他无效+未注册）
+      const expiredUsers = (result.data.expiredUsers || []).map((u) => ({
         qq: u.qq,
-        reason: u.reason,
+        reason: `已过期 (${(u.graceInfo && u.graceInfo.expiredDaysAgo) || 0}天前)`,
       }))
-      const unregisteredUsers = result.data.unregisteredInGroup.map((u) => ({
+      const bannedUsers = (result.data.bannedUsers || []).map((u) => ({
         qq: u.qq,
-        reason: '未注册',
+        reason: '已封禁',
       }))
-      const allInvalidUsers = [...invalidUsers, ...unregisteredUsers]
+      const invalidUsers = (result.data.invalidInGroup || []).map((u) => ({
+        qq: u.qq,
+        reason: u.reason || '未知原因',
+      }))
+      const unregisteredUsers = (result.data.unregisteredInGroup || []).map(
+        (u) => ({
+          qq: u.qq,
+          reason: '未注册',
+        }),
+      )
+      const allInvalidUsers = [
+        ...expiredUsers,
+        ...bannedUsers,
+        ...invalidUsers,
+        ...unregisteredUsers,
+      ]
+      tjLogger.info(
+        `[EDU] 待踢出: 过期${expiredUsers.length} 封禁${bannedUsers.length} 无效${invalidUsers.length} 未注册${unregisteredUsers.length}`,
+      )
 
       if (allInvalidUsers.length === 0) {
         await this.reply('没有需要踢出的无效用户', true)
@@ -460,8 +536,10 @@ export class eduAuthApp extends plugin {
 
       await this.reply(
         `发现 ${allInvalidUsers.length} 个需踢出用户\n` +
-          `- 无效用户: ${invalidUsers.length}\n` +
-          `- 未注册用户: ${unregisteredUsers.length}\n` +
+          `- 过期用户: ${expiredUsers.length}\n` +
+          `- 已封禁: ${bannedUsers.length}\n` +
+          `- 其他无效: ${invalidUsers.length}\n` +
+          `- 未注册: ${unregisteredUsers.length}\n` +
           `开始踢出...`,
         true,
       )
