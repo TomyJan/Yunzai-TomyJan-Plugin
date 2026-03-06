@@ -6,6 +6,37 @@ import path from 'path'
 import { dataPath } from '../data/system/pluginConstants.js'
 import { sleepAsync } from './utils.js'
 
+/**
+ * 将 API 返回的 UTC 时间字符串解析为 Date 对象
+ * 上游 API 返回的时间为 UTC，若字符串无时区标识则自动按 UTC 解析
+ * @param {string} dateStr - UTC 时间字符串
+ * @returns {Date}
+ */
+function parseUTCDate(dateStr) {
+  if (!dateStr) return new Date(NaN)
+  if (/Z|[+-]\d{2}:\d{2}$/.test(dateStr)) {
+    return new Date(dateStr)
+  }
+  return new Date(dateStr + 'Z')
+}
+
+/**
+ * 将 Date 对象格式化为 UTC+8 时间字符串
+ * @param {Date} date - Date 对象
+ * @param {boolean} includeTime - 是否包含时分
+ * @returns {string}
+ */
+export function formatDateUTC8(date, includeTime = true) {
+  const utc8 = new Date(date.getTime() + 8 * 60 * 60 * 1000)
+  const y = utc8.getUTCFullYear()
+  const m = String(utc8.getUTCMonth() + 1).padStart(2, '0')
+  const d = String(utc8.getUTCDate()).padStart(2, '0')
+  if (!includeTime) return `${y}.${m}.${d}`
+  const h = String(utc8.getUTCHours()).padStart(2, '0')
+  const min = String(utc8.getUTCMinutes()).padStart(2, '0')
+  return `${y}.${m}.${d} ${h}:${min}`
+}
+
 // 用户缓存文件路径
 const USER_CACHE_FILE = path.join(dataPath, 'system/eduUserCache.json')
 
@@ -211,7 +242,7 @@ export function getUserStatus(userInfo) {
     return 'active'
   }
 
-  const expireTime = new Date(expireAtStr).getTime()
+  const expireTime = parseUTCDate(expireAtStr).getTime()
   if (isNaN(expireTime)) {
     // 日期格式错误
     return 'unknown'
@@ -254,7 +285,7 @@ export function getGracePeriodInfo(userInfo) {
     return { isInGracePeriod: false, daysRemaining: Infinity }
   }
 
-  const expireTime = new Date(expireAtStr).getTime()
+  const expireTime = parseUTCDate(expireAtStr).getTime()
   const now = Date.now()
   const msPerDay = 24 * 60 * 60 * 1000
 

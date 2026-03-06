@@ -12,6 +12,7 @@ import {
   refreshUserCache,
   analyzeUserStatus,
   formatUserStatusReport,
+  formatDateUTC8,
 } from '../model/eduAuth.js'
 
 export class eduAuthApp extends plugin {
@@ -695,8 +696,7 @@ async function handleGroupMemberChange(e) {
 
           // 到期时间
           if (u.expireAt) {
-            const expireDate = new Date(u.expireAt)
-            const formatted = `${expireDate.getFullYear()}.${String(expireDate.getMonth() + 1).padStart(2, '0')}.${String(expireDate.getDate()).padStart(2, '0')} ${String(expireDate.getHours()).padStart(2, '0')}:${String(expireDate.getMinutes()).padStart(2, '0')}`
+            const formatted = formatDateUTC8(new Date(u.expireAt))
             notifyMsg += `⏱️ 到期时间: ${formatted}`
           } else {
             notifyMsg += `⏱️ 到期时间: 永久`
