@@ -256,10 +256,11 @@ export function getUserStatus(userInfo) {
 
   // 已过期，检查宽限期
   const role = userInfo.role
+  const graceDays = (role && role.graceDays) || 0
   const graceAuthCount = (role && role.graceAuthCount) || 0
   const graceUsed = userInfo.graceUsed || 0
 
-  if (graceAuthCount > 0 && graceUsed < graceAuthCount) {
+  if (graceAuthCount > 0 && graceUsed < graceAuthCount && expireTime + graceDays * 24 * 60 * 60 * 1000 > now) {
     // 还在宽限期内
     return 'grace_period'
   } else {
@@ -308,7 +309,7 @@ export function getGracePeriodInfo(userInfo) {
   const graceDaysRemaining = Math.max(0, graceDays - expiredDaysAgo)
 
   return {
-    isInGracePeriod: usesRemaining > 0,
+    isInGracePeriod: usesRemaining > 0 && graceDaysRemaining > 0,
     usesRemaining,
     expiredDaysAgo,
     graceAuthCount,
