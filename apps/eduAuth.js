@@ -190,7 +190,7 @@ export class eduAuthApp extends plugin {
     if (taskInfo.status === 'failed') {
       const msg = this.formatAuthResultMessage(
         false,
-        getTaskCodeMessage(taskInfo.taskCode),
+        taskInfo.message || getTaskCodeMessage(taskInfo.taskCode),
         taskInfo,
       )
       await this.reply(msg, true)

@@ -491,6 +491,8 @@ export function getTaskCodeMessage(taskCode) {
     22: '认证失败：电信系统返回未知错误',
     23: '认证失败: 任务超时',
     24: '系统错误',
+    25: '此 IP 近期已认证成功，请检查',
+    26: '此 IP 近期认证失败过多，请检查',
   }
   return messages[taskCode] || `未知状态(${taskCode})`
 }
@@ -534,7 +536,7 @@ export async function waitForAuthResult(taskId, onProgress = null) {
     if (taskInfo.status === 'failed') {
       return {
         success: false,
-        message: getTaskCodeMessage(taskInfo.taskCode),
+        message: taskInfo.message || getTaskCodeMessage(taskInfo.taskCode),
         data: taskInfo,
       }
     }
