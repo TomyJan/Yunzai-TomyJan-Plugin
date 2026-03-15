@@ -727,28 +727,52 @@ async function handleGroupRequest(e) {
     const userQQ = String(e.user_id)
     tjLogger.info(`[EDU] 收到加群申请: ${userQQ}`)
 
-    // 查询用户信息（先查缓存，无则从 API 获取）
-    const userResult = await getUser(userQQ)
+    // 始终从 API 获取用户信息（不查缓存）
+    const userResult = await getUser(userQQ, { forceApi: true })
 
     let notifyMsg = ''
+
+    // 构造统一风格的用户信息段
+    function buildUserInfo(u) {
+      let msg = ''
+      // 用户身份 (根据角色)
+      const roleName = u?.role?.displayName || '获取失败'
+      msg += `🎭 用户身份: ${roleName}\n`
+      // 用户状态
+      const statusMap = {
+        pending: '⏳ 待审核',
+        active: '✅ 正常',
+        expired: '⏰ 过期',
+        banned: '🚫 已被封禁',
+      }
+      const statusText = statusMap[u?.status] || `❓ ${u?.status || '未知'}`
+      msg += `📊 用户状态: ${statusText}\n`
+      // 到期时间
+      if (u?.expireAt) {
+        msg += `⏱️ 到期时间: ${formatDateUTC8(new Date(u.expireAt))}`
+      } else {
+        msg += `⏱️ 到期时间: 永久`
+      }
+      return msg
+    }
 
     if (userResult.success && userResult.data && isUserValid(userResult.data)) {
       // 有效用户，自动批准
       try {
         const approveResult = await e.approve(true)
-        if (approveResult) {
+        if (approveResult === null) {
           tjLogger.info(`[EDU] 自动批准用户 ${userQQ} 加群`)
           notifyMsg =
             `✅ 新加群申请 - 已自动批准\n` +
             `QQ: ${userQQ}\n` +
-            `用户: ${userResult.data.username || '未知'}\n` +
+            buildUserInfo(userResult.data) + '\n' +
             `申请消息: ${e.comment || '无'}`
         } else {
           tjLogger.error(`[EDU] 自动批准用户 ${userQQ} 失败: 操作返回失败`)
           notifyMsg =
             `❌ 新加群申请 - 待手动审核\n` +
             `QQ: ${userQQ}\n` +
-            `用户: ${userResult.data.username || '未知'}\n` +
+            buildUserInfo(userResult.data) + '\n' +
             `申请消息: ${e.comment || '无'}\n` +
             `用户有效, 但自动批准失败, 请手动审核`
         }
@@ -757,7 +781,7 @@ async function handleGroupRequest(e) {
         notifyMsg =
           `❌ 新加群申请 - 待手动审核\n` +
           `QQ: ${userQQ}\n` +
-          `用户: ${userResult.data.username || '未知'}\n` +
+          buildUserInfo(userResult.data) + '\n' +
           `申请消息: ${e.comment || '无'}\n` +
           `错误: ${error.message}\n\n` +
           `用户有效, 但自动批准失败, 请手动审核`
@@ -772,6 +796,7 @@ async function handleGroupRequest(e) {
       notifyMsg =
         `⚠️ 新加群申请 - 待手动审核\n` +
         `QQ: ${userQQ}\n` +
+        (userResult.data ? buildUserInfo(userResult.data) + '\n' : '') +
         `状态: ${reason}\n` +
         `申请消息: ${e.comment || '无'}\n\n` +
         `无法验证用户状态, 请手动审核`
