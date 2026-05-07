@@ -390,6 +390,16 @@ export class eduAuthApp extends plugin {
         })
       }
 
+      // 已停用用户详情
+      if (data.disabledUsers && data.disabledUsers.length > 0) {
+        const list = data.disabledUsers.map((u) => u.qq).join('\n')
+        forwardMsgs.push({
+          user_id: botQQ,
+          nickname: '⏹️ 已停用用户',
+          message: '⏹️ 已停用用户\n' + list,
+        })
+      }
+
       // 已封禁用户详情
       if (data.bannedUsers && data.bannedUsers.length > 0) {
         const list = data.bannedUsers.map((u) => u.qq).join('\n')
@@ -503,6 +513,11 @@ export class eduAuthApp extends plugin {
         return
       }
 
+      // 合并所有需要踢出的用户（过期+封禁+停用+其他无效+未注册）
+      const disabledUsers = (result.data.disabledUsers || []).map((u) => ({
+        qq: u.qq,
+        reason: '已停用',
+      }))
       // 合并所有需要踢出的用户（过期+封禁+其他无效+未注册）
       const expiredUsers = (result.data.expiredUsers || []).map((u) => ({
         qq: u.qq,
@@ -525,11 +540,12 @@ export class eduAuthApp extends plugin {
       const allInvalidUsers = [
         ...expiredUsers,
         ...bannedUsers,
+        ...disabledUsers,
         ...invalidUsers,
         ...unregisteredUsers,
       ]
       tjLogger.info(
-        `[EDU] 待踢出: 过期${expiredUsers.length} 封禁${bannedUsers.length} 无效${invalidUsers.length} 未注册${unregisteredUsers.length}`,
+        `[EDU] 待踢出: 过期${expiredUsers.length} 封禁${bannedUsers.length} 停用${disabledUsers.length} 无效${invalidUsers.length} 未注册${unregisteredUsers.length}`,
       )
 
       if (allInvalidUsers.length === 0) {
@@ -690,6 +706,7 @@ async function handleGroupMemberChange(e) {
             active: '✅ 正常',
             expired: '⏰ 过期',
             banned: '🚫 已被封禁',
+            disabled: '⏹️ 已停用',
           }
           const statusText = statusMap[u.status] || `❓ ${u.status}`
           notifyMsg += `📊 用户状态: ${statusText}\n`
@@ -744,6 +761,7 @@ async function handleGroupRequest(e) {
         active: '✅ 正常',
         expired: '⏰ 过期',
         banned: '🚫 已被封禁',
+        disabled: '⏹️ 已停用',
       }
       const statusText = statusMap[u?.status] || `❓ ${u?.status || '未知'}`
       msg += `📊 用户状态: ${statusText}\n`

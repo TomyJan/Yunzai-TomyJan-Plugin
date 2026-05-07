@@ -232,6 +232,8 @@ export function getUserStatus(userInfo) {
   if (userInfo.status === 'pending') return 'pending'
   // 已封禁
   if (userInfo.status === 'banned') return 'banned'
+  // 已停用 (区别于封禁，可由管理员恢复)
+  if (userInfo.status === 'disabled') return 'disabled'
   // 异常状态
   if (userInfo.status !== 'active') return 'unknown'
 
@@ -344,6 +346,8 @@ export function getInvalidReason(userInfo) {
       return '待审核'
     case 'banned':
       return '已封禁'
+    case 'disabled':
+      return '已停用'
     case 'expired': {
       const graceInfo = getGracePeriodInfo(userInfo)
       return `已过期 (${graceInfo.expiredDaysAgo}天前)`
@@ -574,6 +578,7 @@ export async function analyzeUserStatus(groupMembers) {
     expiredUsers: [], // 已过期的用户（在群内）
     pendingUsers: [], // 待审核用户（在群内）
     bannedUsers: [], // 已封禁用户（在群内）
+    disabledUsers: [], // 已停用用户（在群内）
     invalidInGroup: [], // 其他无效用户（在群内）
     validNotInGroup: [], // 有效但未加群的用户
     unregisteredInGroup: [], // 群内未注册用户
@@ -621,6 +626,9 @@ export async function analyzeUserStatus(groupMembers) {
             break
           case 'banned':
             result.bannedUsers.push({ qq, ...userInfo })
+            break
+          case 'disabled':
+            result.disabledUsers.push({ qq, ...userInfo })
             break
           default:
             result.invalidInGroup.push({
