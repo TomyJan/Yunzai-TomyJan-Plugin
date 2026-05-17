@@ -4,7 +4,12 @@ import crypto from 'crypto'
 import fs from 'fs'
 import path from 'path'
 import { dataPath } from '../data/system/pluginConstants.js'
-import { sleepAsync } from './utils.js'
+
+function sleepAsync(sleepms) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, sleepms)
+  })
+}
 
 /**
  * 将 API 返回的 UTC 时间字符串解析为 Date 对象
@@ -39,9 +44,195 @@ export function formatDateUTC8(date, includeTime = true) {
 
 // 用户缓存文件路径
 const USER_CACHE_FILE = path.join(dataPath, 'system/eduUserCache.json')
+const TASK_CODE_CONTRACT_REFRESH_INTERVAL = 24 * 60 * 60 * 1000
+
+const TASK_CODE_CONTRACT_SNAPSHOT = {
+  codes: {
+    SUCCESS: 0,
+    QUEUE_WAITING: 100,
+    QUEUE_RUNNING: 101,
+    CLIENT_IP_INVALID: 200,
+    CLIENT_SEGMENT_UNSUPPORTED: 201,
+    AUTH_ENDPOINT_UNAVAILABLE: 300,
+    AUTH_MAX_ATTEMPTS_REACHED: 301,
+    AUTH_PARAM_MISMATCH: 302,
+    AUTH_TASK_TIMEOUT: 303,
+    AUTH_LOCKED_SUCCESS: 304,
+    AUTH_LOCKED_FAIL: 305,
+    AUTH_WORKER_STARTING: 400,
+    AUTH_WORKER_RECOVERING: 401,
+    AUTH_WORKER_FATAL: 402,
+    AUTH_WORKER_UNAVAILABLE: 403,
+    SYSTEM_ERROR: 900,
+  },
+  metadata: [
+    {
+      key: 'SUCCESS',
+      code: 0,
+      category: 'success',
+      defaultMessage: '认证成功',
+      severity: 'success',
+      terminal: true,
+      processing: false,
+    },
+    {
+      key: 'QUEUE_WAITING',
+      code: 100,
+      category: 'queue',
+      defaultMessage: '任务等待中',
+      severity: 'info',
+      terminal: false,
+      processing: true,
+    },
+    {
+      key: 'QUEUE_RUNNING',
+      code: 101,
+      category: 'queue',
+      defaultMessage: '认证初始化中 / 认证中',
+      severity: 'info',
+      terminal: false,
+      processing: true,
+    },
+    {
+      key: 'CLIENT_IP_INVALID',
+      code: 200,
+      category: 'client',
+      defaultMessage: 'IP 格式错误',
+      severity: 'error',
+      terminal: true,
+      processing: false,
+    },
+    {
+      key: 'CLIENT_SEGMENT_UNSUPPORTED',
+      code: 201,
+      category: 'client',
+      defaultMessage: 'IP 段不支持',
+      severity: 'error',
+      terminal: true,
+      processing: false,
+    },
+    {
+      key: 'AUTH_ENDPOINT_UNAVAILABLE',
+      code: 300,
+      category: 'auth',
+      defaultMessage: '认证失败：暂无可用端点',
+      severity: 'error',
+      terminal: true,
+      processing: false,
+    },
+    {
+      key: 'AUTH_MAX_ATTEMPTS_REACHED',
+      code: 301,
+      category: 'auth',
+      defaultMessage: '认证失败：已达尝试上限',
+      severity: 'error',
+      terminal: true,
+      processing: false,
+    },
+    {
+      key: 'AUTH_PARAM_MISMATCH',
+      code: 302,
+      category: 'auth',
+      defaultMessage: '认证失败：认证参数不匹配',
+      severity: 'error',
+      terminal: true,
+      processing: false,
+    },
+    {
+      key: 'AUTH_TASK_TIMEOUT',
+      code: 303,
+      category: 'auth',
+      defaultMessage: '认证失败：任务超时',
+      severity: 'error',
+      terminal: true,
+      processing: false,
+    },
+    {
+      key: 'AUTH_LOCKED_SUCCESS',
+      code: 304,
+      category: 'auth',
+      defaultMessage: '此 IP 近期已认证成功',
+      severity: 'success',
+      terminal: true,
+      processing: false,
+    },
+    {
+      key: 'AUTH_LOCKED_FAIL',
+      code: 305,
+      category: 'auth',
+      defaultMessage: '此 IP 近期认证失败次数过多',
+      severity: 'error',
+      terminal: true,
+      processing: false,
+    },
+    {
+      key: 'AUTH_WORKER_STARTING',
+      code: 400,
+      category: 'auth-worker',
+      defaultMessage: '认证服务启动中',
+      severity: 'warning',
+      terminal: false,
+      processing: true,
+    },
+    {
+      key: 'AUTH_WORKER_RECOVERING',
+      code: 401,
+      category: 'auth-worker',
+      defaultMessage: '认证服务恢复中',
+      severity: 'warning',
+      terminal: false,
+      processing: true,
+    },
+    {
+      key: 'AUTH_WORKER_FATAL',
+      code: 402,
+      category: 'auth-worker',
+      defaultMessage: '认证服务不可用',
+      severity: 'error',
+      terminal: true,
+      processing: false,
+    },
+    {
+      key: 'AUTH_WORKER_UNAVAILABLE',
+      code: 403,
+      category: 'auth-worker',
+      defaultMessage: '认证服务暂不可用',
+      severity: 'error',
+      terminal: true,
+      processing: false,
+    },
+    {
+      key: 'SYSTEM_ERROR',
+      code: 900,
+      category: 'system',
+      defaultMessage: '系统错误',
+      severity: 'error',
+      terminal: true,
+      processing: false,
+    },
+  ],
+}
+
+const LEGACY_TASK_CODE_MESSAGES = {
+  1: '排队中',
+  2: '认证中',
+  10: '提交失败：IP 格式错误',
+  11: '提交失败：校区暂不支持',
+  20: '认证失败: 暂无可用端点',
+  21: '认证失败: 已达尝试上限',
+  22: '认证失败：电信系统返回未知错误',
+  23: '认证失败: 任务超时',
+  24: '系统错误',
+  25: '此 IP 近期已认证成功，请检查',
+  26: '此 IP 近期认证失败过多，请检查',
+}
 
 // 第三方 API 固定 Key ID
 const MOE_KEY_ID = 'moe_thirdParty'
+
+let taskCodeContractCache = null
+let taskCodeContractUpdateTime = 0
+let taskCodeMetadataByCode = new Map()
 
 // 上次使用的时间戳，用于防重放
 let lastTimestamp = 0
@@ -94,9 +285,10 @@ function getEduConfig() {
  * 发起 API 请求
  * @param {string} endpoint - API 端点路径
  * @param {object} data - 请求数据
+ * @param {object} options - 请求选项
  * @returns {Promise<object>} - { success: boolean, data?: any, message?: string, code?: number }
  */
-async function apiRequest(endpoint, data = {}) {
+async function apiRequest(endpoint, data = {}, options = {}) {
   const cfg = getEduConfig()
   const apiBaseUrl = cfg.apiBaseUrl
   const apiKey = cfg.apiKey
@@ -116,8 +308,8 @@ async function apiRequest(endpoint, data = {}) {
   const urlPath = urlObj.pathname
 
   // 准备请求体（压缩 JSON，无空白字符）
-  const body = JSON.stringify(data)
-  const method = 'POST'
+  const method = (options.method || 'POST').toUpperCase()
+  const body = method === 'GET' ? '' : JSON.stringify(data)
 
   // 获取唯一时间戳并生成签名
   const timestamp = getUniqueTimestamp()
@@ -138,14 +330,21 @@ async function apiRequest(endpoint, data = {}) {
   }
 
   tjLogger.debug(`[EDU] API 请求: ${url}`)
-  tjLogger.debug(`[EDU] 请求数据: ${body}`)
+  tjLogger.debug(`[EDU] 请求方法: ${method}`)
+  if (body) {
+    tjLogger.debug(`[EDU] 请求数据: ${body}`)
+  }
 
   try {
-    const response = await fetch(url, {
+    const fetchOptions = {
       method,
       headers,
-      body,
-    })
+    }
+    if (method !== 'GET') {
+      fetchOptions.body = body
+    }
+
+    const response = await fetch(url, fetchOptions)
 
     if (!response.ok) {
       const errMsg = `HTTP ${response.status} ${response.statusText}`
@@ -173,6 +372,107 @@ async function apiRequest(endpoint, data = {}) {
     tjLogger.error(`[EDU] API 请求错误: ${error.message}`)
     return { success: false, message: error.message }
   }
+}
+
+// ==================== 任务码契约管理 ====================
+
+function normalizeTaskCodeContract(contract) {
+  if (!contract || typeof contract !== 'object') return null
+  if (!contract.codes || typeof contract.codes !== 'object') return null
+  if (!Array.isArray(contract.metadata)) return null
+
+  const metadata = contract.metadata
+    .map((item) => {
+      const code = Number(item?.code)
+      if (!Number.isFinite(code)) return null
+      return {
+        ...item,
+        code,
+      }
+    })
+    .filter(Boolean)
+
+  return {
+    codes: contract.codes,
+    metadata,
+  }
+}
+
+function setTaskCodeContractCache(contract, updateTime = Date.now()) {
+  const normalized = normalizeTaskCodeContract(contract)
+  if (!normalized) return false
+
+  taskCodeContractCache = normalized
+  taskCodeContractUpdateTime = updateTime
+  taskCodeMetadataByCode = new Map(
+    normalized.metadata.map((item) => [item.code, item]),
+  )
+  return true
+}
+
+function getFallbackTaskCodeContract() {
+  if (taskCodeContractCache) {
+    return {
+      contract: taskCodeContractCache,
+      updateTime: taskCodeContractUpdateTime,
+    }
+  }
+
+  setTaskCodeContractCache(TASK_CODE_CONTRACT_SNAPSHOT, 0)
+  return {
+    contract: taskCodeContractCache,
+    updateTime: taskCodeContractUpdateTime,
+  }
+}
+
+export async function refreshTaskCodeContract(force = false) {
+  const now = Date.now()
+  if (
+    !force &&
+    taskCodeContractCache &&
+    now - taskCodeContractUpdateTime < TASK_CODE_CONTRACT_REFRESH_INTERVAL
+  ) {
+    return { success: true, data: taskCodeContractCache, fromCache: true }
+  }
+
+  const result = await apiRequest('system/task-codes', {}, { method: 'GET' })
+  if (result.success) {
+    const normalized = normalizeTaskCodeContract(result.data)
+    if (normalized && setTaskCodeContractCache(normalized, now)) {
+      return { success: true, data: normalized, fromCache: false }
+    }
+    tjLogger.warn('[EDU] 任务码契约格式异常，使用本地兜底契约')
+  } else {
+    tjLogger.warn(`[EDU] 刷新任务码契约失败: ${result.message}`)
+  }
+
+  const fallback = getFallbackTaskCodeContract()
+  return {
+    success: true,
+    data: fallback.contract,
+    fromCache: true,
+    message: result.message,
+  }
+}
+
+export async function ensureTaskCodeContract() {
+  const now = Date.now()
+  if (
+    taskCodeContractCache &&
+    now - taskCodeContractUpdateTime < TASK_CODE_CONTRACT_REFRESH_INTERVAL
+  ) {
+    return { success: true, data: taskCodeContractCache, fromCache: true }
+  }
+  return await refreshTaskCodeContract(false)
+}
+
+export function getTaskCodeMetadata(taskCode) {
+  const code = Number(taskCode)
+  if (!Number.isFinite(code)) return null
+  if (taskCodeMetadataByCode.size === 0) {
+    getFallbackTaskCodeContract()
+  }
+  return taskCodeMetadataByCode.get(code) || null
 }
 
 // ==================== 用户缓存管理 ====================
@@ -465,6 +765,7 @@ export async function reportGroupMembers(qqList) {
  */
 export async function submitAuth(userId, authIp) {
   tjLogger.info(`[EDU] 提交认证: userId=${userId}, ip=${authIp}`)
+  await ensureTaskCodeContract()
   return await apiRequest('wifi/submitAsUser', { userId, authIp })
 }
 
@@ -483,22 +784,76 @@ export async function checkTask(taskId) {
  * @returns {string} - 状态描述
  */
 export function getTaskCodeMessage(taskCode) {
-  // 此处的 messages 请与 ChinaNet-EDU-Login-Web packages/web/src/utils/format.ts 中 getStatusText 同步
-  const messages = {
-    0: '认证成功',
-    1: '排队中',
-    2: '认证中',
-    10: '提交失败：IP 格式错误',
-    11: '提交失败：校区暂不支持',
-    20: '认证失败: 暂无可用端点',
-    21: '认证失败: 已达尝试上限',
-    22: '认证失败：电信系统返回未知错误',
-    23: '认证失败: 任务超时',
-    24: '系统错误',
-    25: '此 IP 近期已认证成功，请检查',
-    26: '此 IP 近期认证失败过多，请检查',
+  const metadata = getTaskCodeMetadata(taskCode)
+  return (
+    metadata?.defaultMessage ||
+    LEGACY_TASK_CODE_MESSAGES[taskCode] ||
+    `未知状态(${taskCode})`
+  )
+}
+
+/**
+ * 解析认证任务结果
+ * @param {object} taskInfo - 任务信息
+ * @returns {object} - { done, success, processing, message, metadata }
+ */
+export function resolveTaskResult(taskInfo = {}) {
+  const metadata = getTaskCodeMetadata(taskInfo.taskCode)
+  const message =
+    taskInfo.message ||
+    metadata?.defaultMessage ||
+    (taskInfo.taskCode !== undefined
+      ? getTaskCodeMessage(taskInfo.taskCode)
+      : null)
+
+  if (metadata?.processing === true) {
+    return {
+      done: false,
+      success: false,
+      processing: true,
+      message: message || '任务处理中',
+      metadata,
+    }
   }
-  return messages[taskCode] || `未知状态(${taskCode})`
+
+  if (metadata?.terminal === true) {
+    const success = metadata.severity === 'success'
+    return {
+      done: true,
+      success,
+      processing: false,
+      message: message || (success ? '认证成功！' : '认证失败'),
+      metadata,
+    }
+  }
+
+  if (taskInfo.status === 'success') {
+    return {
+      done: true,
+      success: true,
+      processing: false,
+      message: taskInfo.message || '认证成功！',
+      metadata,
+    }
+  }
+
+  if (taskInfo.status === 'failed') {
+    return {
+      done: true,
+      success: false,
+      processing: false,
+      message: message || '认证失败',
+      metadata,
+    }
+  }
+
+  return {
+    done: false,
+    success: false,
+    processing: true,
+    message: message || '任务处理中',
+    metadata,
+  }
 }
 
 /**
@@ -512,6 +867,8 @@ export async function waitForAuthResult(taskId, onProgress = null) {
   const pollInterval = 2000
   let lastStatus = ''
 
+  await ensureTaskCodeContract()
+
   for (let i = 0; i < maxPolls; i++) {
     const result = await checkTask(taskId)
 
@@ -522,30 +879,24 @@ export async function waitForAuthResult(taskId, onProgress = null) {
     }
 
     const taskInfo = result.data
+    const progressKey = `${taskInfo.status || ''}:${taskInfo.taskCode ?? ''}`
 
     // 状态变化时回调
-    if (onProgress && taskInfo.status !== lastStatus) {
+    if (onProgress && progressKey !== lastStatus) {
       onProgress(taskInfo)
-      lastStatus = taskInfo.status
+      lastStatus = progressKey
     }
 
-    if (taskInfo.status === 'success') {
+    const resolved = resolveTaskResult(taskInfo)
+    if (resolved.done) {
       return {
-        success: true,
-        message: `认证成功！`,
+        success: resolved.success,
+        message: resolved.message,
         data: taskInfo,
       }
     }
 
-    if (taskInfo.status === 'failed') {
-      return {
-        success: false,
-        message: taskInfo.message || getTaskCodeMessage(taskInfo.taskCode),
-        data: taskInfo,
-      }
-    }
-
-    // queued 或 running，继续轮询
+    // queued、running 或 processing 状态，继续轮询
     await sleepAsync(pollInterval)
   }
 

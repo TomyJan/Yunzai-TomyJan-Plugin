@@ -7,7 +7,7 @@ import {
   getInvalidReason,
   submitAuth,
   waitForAuthResult,
-  getTaskCodeMessage,
+  resolveTaskResult,
   reportGroupMembers,
   refreshUserCache,
   analyzeUserStatus,
@@ -181,16 +181,11 @@ export class eduAuthApp extends plugin {
     )
 
     // 如果已经是最终状态
-    if (taskInfo.status === 'success') {
-      const msg = this.formatAuthResultMessage(true, '认证成功！', taskInfo)
-      await this.reply(msg, true)
-      return
-    }
-
-    if (taskInfo.status === 'failed') {
+    const submittedTaskResult = resolveTaskResult(taskInfo)
+    if (submittedTaskResult.done) {
       const msg = this.formatAuthResultMessage(
-        false,
-        taskInfo.message || getTaskCodeMessage(taskInfo.taskCode),
+        submittedTaskResult.success,
+        submittedTaskResult.message,
         taskInfo,
       )
       await this.reply(msg, true)
