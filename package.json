@@ -41,7 +41,7 @@
     "conventional-changelog-cli": "^5.0.0",
     "conventional-changelog-custom-config": "^0.3.1",
     "eslint": "^10.5.0",
-    "globals": "^17.6.0",
+    "globals": "^17.7.0",
     "prettier": "^3.8.4"
   },
   "prettier": {
