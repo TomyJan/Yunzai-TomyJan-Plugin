@@ -27,7 +27,7 @@
     "changelog": "conventional-changelog -p angular -i CHANGELOG.md -s -r 0"
   },
   "dependencies": {
-    "chalk": "^5.6.2",
+    "chalk": "^6.0.0",
     "child_process": "^1.0.2",
     "date-fns": "^4.4.0",
     "iconv-lite": "^0.7.3",
