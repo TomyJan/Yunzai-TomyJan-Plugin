@@ -46,6 +46,112 @@ test('extracts images from quoted message when current message has none', async 
   assert.deepEqual(urls, ['https://example.test/quoted.jpg'])
 })
 
+test('extracts nested quoted images from TRSS reply records', async () => {
+  const urls = await extractImageUrls({
+    message: [{ type: 'text', text: 'ai图' }],
+    reply_id: 3,
+    getReply: async () => [
+      {
+        message: [
+          {
+            type: 'image',
+            data: { url: 'https://example.test/trss.png' },
+          },
+        ],
+      },
+    ],
+  })
+
+  assert.deepEqual(urls, ['https://example.test/trss.png'])
+})
+
+test('extracts quoted images wrapped in raw_message', async () => {
+  const urls = await extractImageUrls({
+    message: [{ type: 'text', text: 'ai图' }],
+    reply_id: 4,
+    getReply: async () => ({
+      raw_message: [
+        { type: 'image', url: 'https://example.test/raw-message.png' },
+      ],
+    }),
+  })
+
+  assert.deepEqual(urls, ['https://example.test/raw-message.png'])
+})
+
+test('extracts quoted images from ICQQ chat history', async () => {
+  const urls = await extractImageUrls({
+    message: [{ type: 'text', text: 'ai图' }],
+    isGroup: true,
+    source: { seq: 42 },
+    group: {
+      getChatHistory: async (seq, count) => {
+        assert.equal(seq, 42)
+        assert.equal(count, 1)
+        return [
+          {
+            message: [{ type: 'image', url: 'https://example.test/icqq.webp' }],
+          },
+        ]
+      },
+    },
+  })
+
+  assert.deepEqual(urls, ['https://example.test/icqq.webp'])
+})
+
+test('falls back to ICQQ history when getReply fails', async () => {
+  const urls = await extractImageUrls({
+    message: [{ type: 'text', text: 'ai图' }],
+    isGroup: true,
+    source: { seq: 43 },
+    getReply: async () => {
+      throw new Error('adapter does not support getReply')
+    },
+    group: {
+      getChatHistory: async () => [
+        {
+          message: [
+            {
+              type: 'image',
+              url: 'https://example.test/icqq-fallback.png',
+            },
+          ],
+        },
+      ],
+    },
+  })
+
+  assert.deepEqual(urls, ['https://example.test/icqq-fallback.png'])
+})
+
+test('extracts quoted images through OneBot get_msg', async () => {
+  const urls = await extractImageUrls({
+    message: [
+      { type: 'reply', data: { id: 'message-4' } },
+      { type: 'text', data: { text: 'ai图' } },
+    ],
+    bot: {
+      sendApi: async (action, params) => {
+        assert.equal(action, 'get_msg')
+        assert.deepEqual(params, { message_id: 'message-4' })
+        return {
+          data: {
+            message: [
+              {
+                type: 'image',
+                data: { file: 'https://example.test/onebot.jpg' },
+              },
+            ],
+          },
+        }
+      },
+    },
+  })
+
+  assert.deepEqual(urls, ['https://example.test/onebot.jpg'])
+})
+
 test('returns no image for a message without image segments', async () => {
   const urls = await extractImageUrls({ message: 'ai图' })
   assert.deepEqual(urls, [])
