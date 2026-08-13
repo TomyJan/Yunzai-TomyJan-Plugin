@@ -1,0 +1,57 @@
+import assert from 'node:assert/strict'
+import fs from 'node:fs'
+import test from 'node:test'
+
+import { parse } from 'yaml'
+
+const rootUrl = new URL('../', import.meta.url)
+const packageJson = JSON.parse(
+  fs.readFileSync(new URL('package.json', rootUrl), 'utf8'),
+)
+const workflow = parse(
+  fs.readFileSync(
+    new URL('.github/workflows/check_code.yml', rootUrl),
+    'utf8',
+  ),
+)
+
+test('exposes read-only formatting and test scripts for CI', () => {
+  assert.equal(packageJson.scripts['format:check'], 'prettier --check "**/*.js"')
+  assert.equal(packageJson.scripts.test, 'node --test')
+})
+
+test('uses the Node built-in child_process module without a shadow package', () => {
+  const utilsSource = fs.readFileSync(
+    new URL('model/utils.js', rootUrl),
+    'utf8',
+  )
+
+  assert.match(utilsSource, /from 'node:child_process'/)
+  assert.equal(packageJson.dependencies.child_process, undefined)
+})
+
+test('runs read-only release checks for pushes and pull requests', () => {
+  assert.deepEqual(workflow.permissions, { contents: 'read' })
+  assert.deepEqual(workflow.on.push.branches, ['master'])
+  assert.deepEqual(workflow.on.pull_request.branches, ['master'])
+
+  const jobs = Object.values(workflow.jobs)
+  const steps = jobs.flatMap((job) => job.steps)
+  const commands = steps.map((step) => step.run).filter(Boolean)
+  const checkoutSteps = steps.filter((step) => step.uses === 'actions/checkout@v7')
+  const nodeSteps = steps.filter((step) => step.uses === 'actions/setup-node@v7')
+
+  assert.ok(jobs.length >= 2)
+  assert.ok(checkoutSteps.length >= 2)
+  assert.ok(
+    checkoutSteps.every((step) => step.with?.['persist-credentials'] === false),
+  )
+  assert.ok(nodeSteps.every((step) => step.with?.['node-version'] === 22))
+  assert.ok(commands.includes('pnpm install --frozen-lockfile'))
+  assert.ok(commands.includes('pnpm format:check'))
+  assert.ok(commands.includes('pnpm lint'))
+  assert.ok(commands.includes('pnpm test'))
+  assert.ok(!commands.includes('pnpm format'))
+  assert.ok(!commands.includes('pnpm lint:fix'))
+  assert.ok(!commands.some((command) => /git\s+(?:commit|push)/.test(command)))
+})

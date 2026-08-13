@@ -14,7 +14,7 @@ import formatDistanceToNow from 'date-fns/formatDistanceToNow'
 import zhCN from 'date-fns/locale/zh-CN'
 import { Buffer } from 'buffer'
 import { isWin } from '../data/system/pluginConstants.js'
-import { exec } from 'child_process'
+import { exec } from 'node:child_process'
 import iconv from 'iconv-lite'
 import pkg from 'pdf-lib-plus-encrypt'
 const { PDFDocument } = pkg

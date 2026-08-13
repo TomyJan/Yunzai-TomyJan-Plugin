@@ -14,9 +14,6 @@ importers:
       chalk:
         specifier: ^5.6.2
         version: 5.6.2
-      child_process:
-        specifier: ^1.0.2
-        version: 1.0.2
       date-fns:
         specifier: ^4.4.0
         version: 4.4.0
@@ -441,9 +438,6 @@ packages:
   chalk@5.6.2:
     resolution: {integrity: sha512-7NzBL0rN6fMUW+f7A6Io4h40qQlG+xGmtMxfbnH/K7TAtt8JQWVQK+6g0UXKMeVJoyV5EkkNsErQ8pVD3bLHbA==}
     engines: {node: ^12.17.0 || ^14.13 || >=16.0.0}
-
-  child_process@1.0.2:
-    resolution: {integrity: sha512-Wmza/JzL0SiWz7kl6MhIKT5ceIlnFPJX+lwUGj7Clhy5MMldsSoJR0+uvRzOS5Kv45Mq7t1PoE8TsOA9bzvb6g==}
 
   cli-progress@3.12.0:
     resolution: {integrity: sha512-tRkV3HJ1ASwm19THiiLIXLO7Im7wlTuKnvkYaTkyoAPefqjNg7W7DHKUlGRxy9vxDvbyCYQkQozvptuMkGCg8A==}
@@ -1371,8 +1365,6 @@ snapshots:
       traverse: 0.3.9
 
   chalk@5.6.2: {}
-
-  child_process@1.0.2: {}
 
   cli-progress@3.12.0:
     dependencies:

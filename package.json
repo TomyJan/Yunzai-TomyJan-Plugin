@@ -22,14 +22,15 @@
   },
   "scripts": {
     "format": "prettier --write \"**/*.js\"",
+    "format:check": "prettier --check \"**/*.js\"",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
+    "test": "node --test",
     "changelog": "conventional-changelog -p angular -i CHANGELOG.md -s -r 0"
   },
   "dependencies": {
     "@contentauth/c2pa-node": "^0.8.3",
     "chalk": "^5.6.2",
-    "child_process": "^1.0.2",
     "date-fns": "^4.4.0",
     "iconv-lite": "^0.7.3",
     "pdf-lib-plus-encrypt": "^1.1.0",
