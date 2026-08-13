@@ -37,6 +37,19 @@ git clone https://github.com/TomyJan/Yunzai-TomyJan-Plugin.git ./plugins/Yunzai-
 pnpm install
 ```
 
+本插件当前要求 Node.js 22 或更高版本。`ai图` 功能默认关闭；启用外部检测渠道前，请在锅巴或 `config/config.json` 中填写对应 API key。
+
+AI 图片识别渠道申请与费用：
+
+- C2PA：不需要申请 API key。`@contentauth/c2pa-node` 在本地运行，库本身开源；它只能读取图片中已有的 Content Credentials，不能凭空生成来源证明。
+- OpenAI Content Provenance API：在 [OpenAI Platform](https://platform.openai.com/) 注册/登录并创建 API key，具体权限和计费以 [官方价格页](https://openai.com/api/pricing/) 为准。API 不是默认永久免费服务，账户可能需要绑定付款方式或余额。
+- Hive：在 [Hive Developer Portal](https://thehive.ai/) 注册并创建 API key。通常提供试用或测试额度，但不是承诺永久免费，额度、单价和开通条件以账户控制台及 [官方文档](https://docs.thehive.ai/reference/ai-generated-image-and-video-detection-1.md) 为准。
+- Sightengine：在 [Sightengine Dashboard](https://dashboard.sightengine.com/) 注册获取 `api_user` 和 `api_secret`。一般有有限免费试用/额度，生产调用按其 [价格页](https://sightengine.com/pricing) 执行；本项目默认关闭。
+
+OpenAI 和 Hive 的多个 key 使用 `apiKeys` JSON 数组，例如 `["key-1", "key-2"]`。Sightengine 使用 `credentials` 数组，例如 `[{"apiUser":"user","apiSecret":"secret"}]`。每次检测会轮换起始凭据；遇到鉴权失败或限流时自动尝试下一项。
+
+全插件只配置一个代理地址 `proxy.url`，各功能通过自己的 `proxy.enable` 决定是否使用。`aiImage.proxy.enable` 同时控制图片下载、OpenAI、Hive 和 Sightengine；本地 C2PA 检测始终不使用代理。JMComic 的开关位于 `JMComic.proxy.enable`，启用后插件会把统一代理地址同步到 `data/JMComic/option.yml`。
+
 外部依赖:
 
 `JMComic 下载` 功能依赖 [`hect0x7/JMComic-Crawler-Python`](https://github.com/hect0x7/JMComic-Crawler-Python), 请先前往此项目按照说明在系统全局安装此工具:
@@ -120,6 +133,13 @@ git -C ./plugins/Yunzai-TomyJan-Plugin/ pull
 ### VV 说
 
 - `#vv说赢` 返回最匹配的两条 VV 表情包
+
+### AI 图片识别
+
+- `ai图` / `#ai图`：直接发送命令和一张图片，或引用图片后发送命令。
+- 本地检查 C2PA Content Credentials，并可调用 OpenAI Content Provenance API、Hive；Sightengine 为默认关闭的可选第二意见。
+- 结果会区分可信来源凭证、概率模型检测、未检测到、渠道不可用和请求失败。`未检测到` 只表示当前渠道没有发现它支持的信号，不能证明图片一定不是 AI 生成。
+- 图片只在内存中处理，不持久化保存；QQ 压缩、截图、裁剪或转码可能清除 C2PA 元数据和水印，导致证据不足。
 
 ### EDU Auth
 

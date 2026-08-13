@@ -1,0 +1,714 @@
+import { Buffer } from 'node:buffer'
+
+import { withProxy } from './proxy.js'
+
+const OPENAI_ENDPOINT = 'https://api.openai.com/v1/content_provenance_checks'
+const HIVE_ENDPOINT = 'https://api.thehive.ai/api/v2/task/sync'
+const SIGHTENGINE_ENDPOINT = 'https://api.sightengine.com/1.0/check.json'
+
+const DEFAULT_TIMEOUT_MS = 15000
+const keyRotation = new Map()
+
+function parseArrayConfig(value) {
+  if (Array.isArray(value)) return value
+  if (typeof value !== 'string' || !value.trim()) return []
+  try {
+    const parsed = JSON.parse(value)
+    return Array.isArray(parsed) ? parsed : []
+  } catch {
+    return value
+      .split(/\r?\n|,|，/)
+      .map((entry) => entry.trim())
+      .filter(Boolean)
+  }
+}
+
+function getApiKeys(options) {
+  return [
+    ...new Set(
+      parseArrayConfig(options?.apiKeys)
+        .map((value) => String(value).trim())
+        .filter(Boolean),
+    ),
+  ]
+}
+
+function getCredentialPairs(options) {
+  return parseArrayConfig(options?.credentials)
+    .map((entry) => ({
+      apiUser: String(entry?.apiUser || '').trim(),
+      apiSecret: String(entry?.apiSecret || '').trim(),
+    }))
+    .filter((entry) => entry.apiUser && entry.apiSecret)
+}
+
+function nextRotation(provider, values) {
+  const signature = JSON.stringify(values)
+  const state = keyRotation.get(provider)
+  const start = state?.signature === signature ? state.start : 0
+  keyRotation.set(provider, {
+    signature,
+    start: (start + 1) % values.length,
+  })
+  return values.slice(start).concat(values.slice(0, start))
+}
+
+function requestInitWithProxy(init, options = {}) {
+  return withProxy(init, options.pluginConfig, options.proxyEnabled, {
+    feature: 'AI 图片识别',
+    proxyAgentFactory: options.proxyAgentFactory,
+    warn: options.warn,
+  })
+}
+
+function asBuffer(input) {
+  if (Buffer.isBuffer(input)) return input
+  if (input instanceof Uint8Array) return Buffer.from(input)
+  return Buffer.from(input || [])
+}
+
+function safeError(error, secrets = []) {
+  const message = error instanceof Error ? error.message : String(error)
+  return secrets
+    .map((secret) => String(secret || '').trim())
+    .filter(Boolean)
+    .reduce((value, secret) => value.split(secret).join('[redacted]'), message)
+    .replace(/Bearer\s+[^\s]+/gi, 'Bearer [redacted]')
+    .replace(/(api[_-]?(?:key|secret|user))=([^&\s]+)/gi, '$1=[redacted]')
+}
+
+function getTimeoutSignal(timeoutMs, signal) {
+  if (signal) return signal
+  if (typeof AbortSignal?.timeout === 'function') {
+    return AbortSignal.timeout(Number(timeoutMs) || DEFAULT_TIMEOUT_MS)
+  }
+  const controller = new AbortController()
+  setTimeout(() => controller.abort(), Number(timeoutMs) || DEFAULT_TIMEOUT_MS)
+  return controller.signal
+}
+
+function withTimeout(promise, timeoutMs) {
+  const duration = Number(timeoutMs) || DEFAULT_TIMEOUT_MS
+  let timer
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(new Error('检测渠道请求超时')), duration)
+  })
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer))
+}
+
+async function fetchJson(fetchImpl, url, init, timeoutMs) {
+  const { proxyOptions, ...requestInit } = init
+  const response = await fetchImpl(url, {
+    ...requestInitWithProxy(requestInit, proxyOptions),
+    signal: getTimeoutSignal(timeoutMs, init.signal),
+  })
+  let body
+  try {
+    body = await response.json()
+  } catch {
+    body = undefined
+  }
+  if (!response.ok) {
+    const error = new Error(`HTTP ${response.status}`)
+    error.status = response.status
+    error.body = body
+    throw error
+  }
+  return body || {}
+}
+
+function toActions(active) {
+  const actions = []
+  const assertions = active?.assertions
+  const list = Array.isArray(assertions)
+    ? assertions
+    : assertions && typeof assertions === 'object'
+      ? Object.values(assertions)
+      : []
+  for (const assertion of list) {
+    const data = assertion?.data ?? assertion
+    const values = Array.isArray(data?.actions)
+      ? data.actions
+      : Array.isArray(data)
+        ? data
+        : []
+    for (const action of values) {
+      const name = typeof action === 'string' ? action : action?.action
+      if (typeof name === 'string' && name && !actions.includes(name)) {
+        actions.push(name)
+      }
+    }
+  }
+  return actions
+}
+
+function isAiSourceType(value) {
+  return /trainedAlgorithmicMedia|compositeWithTrainedAlgorithmicMedia/i.test(
+    String(value || ''),
+  )
+}
+
+function hasAiC2paEvidence(active, actions) {
+  if (isAiSourceType(active?.digital_source_type)) return true
+  if (isAiSourceType(active?.digitalSourceType)) return true
+  if (actions.some((action) => isAiSourceType(action))) return true
+  const assertions = Array.isArray(active?.assertions)
+    ? active.assertions
+    : active?.assertions && typeof active.assertions === 'object'
+      ? Object.values(active.assertions)
+      : []
+  for (const assertion of assertions) {
+    const values = assertion?.data?.actions || assertion?.actions || []
+    if (
+      (Array.isArray(values) ? values : [values]).some((action) =>
+        isAiSourceType(
+          action?.digital_source_type || action?.digitalSourceType,
+        ),
+      )
+    ) {
+      return true
+    }
+  }
+  return false
+}
+
+async function defaultC2paReaderFactory(buffer, options = {}) {
+  const module = await import('@contentauth/c2pa-node')
+  const Reader = module.Reader || module.default?.Reader
+  if (!Reader?.fromAsset) throw new Error('C2PA Reader API unavailable')
+  return Reader.fromAsset(
+    {
+      buffer: asBuffer(buffer),
+      mimeType: options.mimeType || 'application/octet-stream',
+    },
+    options.readerSettings,
+  )
+}
+
+export async function checkC2pa(buffer, options = {}) {
+  if (options.enable === false) {
+    return {
+      provider: 'c2pa',
+      status: 'unavailable',
+      evidence: {},
+      reason: 'disabled',
+    }
+  }
+  try {
+    const readerOptions = {
+      ...options,
+      readerSettings: {
+        ...options.readerSettings,
+        verify: {
+          ...options.readerSettings?.verify,
+          ocsp_fetch: false,
+          remote_manifest_fetch: false,
+        },
+      },
+    }
+    const reader = await withTimeout(
+      (options.readerFactory || defaultC2paReaderFactory)(
+        buffer,
+        readerOptions,
+      ),
+      options.timeoutMs,
+    )
+    const active =
+      typeof reader?.getActive === 'function' ? reader.getActive() : null
+    if (!active)
+      return { provider: 'c2pa', status: 'not_detected', evidence: {} }
+    const manifestStore =
+      typeof reader?.json === 'function' ? reader.json() || {} : {}
+    const validationStatuses = Array.isArray(manifestStore.validation_status)
+      ? manifestStore.validation_status
+      : []
+    const validationState =
+      active.validation_state ||
+      active.validationState ||
+      active.validation?.state ||
+      (validationStatuses.length > 0
+        ? validationStatuses.map((entry) => entry?.code || entry).join(',')
+        : 'trusted')
+    const evidence = {
+      manifestLabel: active.label || active.label_id || active.manifest_label,
+      validationState,
+      issuer: active.issuer,
+      claimGenerator: active.claim_generator_info?.[0]?.name,
+      actions: toActions(active),
+      validationStatuses,
+    }
+    evidence.aiGenerated = hasAiC2paEvidence(active, evidence.actions)
+    const trusted = /^(trusted|valid)$/i.test(validationState)
+    return {
+      provider: 'c2pa',
+      status: evidence.aiGenerated && trusted ? 'detected' : 'not_detected',
+      evidence,
+    }
+  } catch (error) {
+    return {
+      provider: 'c2pa',
+      status: 'error',
+      error: safeError(error),
+      evidence: {},
+    }
+  }
+}
+
+function makeImageForm(
+  buffer,
+  fieldName,
+  filename = 'image',
+  mimeType = 'application/octet-stream',
+) {
+  const form = new FormData()
+  form.append(
+    fieldName,
+    new Blob([asBuffer(buffer)], { type: mimeType }),
+    filename,
+  )
+  return form
+}
+
+function normalizeOpenAiSignals(payload) {
+  const entries = Array.isArray(payload?.results) ? payload.results : []
+  return entries.map((entry) => ({
+    type: entry?.type || 'unknown',
+    outcome: entry?.outcome || 'unknown',
+    validationState: entry?.validation_state || entry?.validationState,
+    issuer: entry?.issuer,
+    model: entry?.model,
+  }))
+}
+
+export async function checkOpenAi(buffer, options = {}) {
+  const apiKeys = getApiKeys(options)
+  if (options.enable === false || apiKeys.length === 0) {
+    return {
+      provider: 'openai',
+      status: 'unavailable',
+      signals: [],
+      reason: 'missing_api_key',
+    }
+  }
+  const fetchImpl = options.fetchImpl || globalThis.fetch
+  if (typeof fetchImpl !== 'function') {
+    return {
+      provider: 'openai',
+      status: 'unavailable',
+      signals: [],
+      reason: 'fetch_unavailable',
+    }
+  }
+  let lastError
+  for (const apiKey of nextRotation('openai', apiKeys)) {
+    try {
+      const payload = await fetchJson(
+        fetchImpl,
+        options.endpoint || OPENAI_ENDPOINT,
+        {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${apiKey}` },
+          body: makeImageForm(
+            buffer,
+            'file',
+            'image',
+            options.mimeType || 'application/octet-stream',
+          ),
+          proxyOptions: options,
+        },
+        options.timeoutMs,
+      )
+      const signals = normalizeOpenAiSignals(payload)
+      const status = signals.some((entry) => entry.outcome === 'detected')
+        ? 'detected'
+        : signals.length > 0 &&
+            signals.every((entry) => entry.outcome === 'not_detected')
+          ? 'not_detected'
+          : 'error'
+      return { provider: 'openai', status, signals }
+    } catch (error) {
+      lastError = error
+      if (![401, 403, 404, 429].includes(error?.status)) break
+    }
+  }
+  const status = [401, 403, 404, 429].includes(lastError?.status)
+    ? 'unavailable'
+    : 'error'
+  return {
+    provider: 'openai',
+    status,
+    error: safeError(lastError, apiKeys),
+    signals: [],
+  }
+}
+
+function findHiveValue(payload, keys) {
+  if (!payload || typeof payload !== 'object') return undefined
+  for (const key of keys) {
+    if (payload[key] !== undefined) return payload[key]
+  }
+  for (const value of Object.values(payload)) {
+    const found = findHiveValue(value, keys)
+    if (found !== undefined) return found
+  }
+  return undefined
+}
+
+function numberValue(value) {
+  const number = Number(value)
+  return Number.isFinite(number) ? number : undefined
+}
+
+function normalizeHive(payload) {
+  const ai = findHiveValue(payload, [
+    'ai_generated',
+    'aiGenerated',
+    'is_ai_generated',
+  ])
+  const deepfake = findHiveValue(payload, ['deepfake', 'is_deepfake'])
+  const generator = findHiveValue(payload, [
+    'generator',
+    'source',
+    'generator_source',
+  ])
+  const c2pa = findHiveValue(payload, ['c2pa', 'content_credentials'])
+  const classes = findHiveValue(payload, ['classes', 'classifications'])
+  const classList = Array.isArray(classes) ? classes : []
+  const generatedClass =
+    classList.find((entry) =>
+      /^ai_generated$/i.test(
+        String(entry?.class || entry?.label || entry?.name),
+      ),
+    ) ||
+    classList.find((entry) =>
+      /^not_ai_generated$/i.test(
+        String(entry?.class || entry?.label || entry?.name),
+      ),
+    )
+  const generatedValue =
+    generatedClass?.class || generatedClass?.label || generatedClass?.name
+  const generatedProbability = numberValue(
+    generatedClass?.score ??
+      generatedClass?.probability ??
+      generatedClass?.confidence,
+  )
+  const deepfakeClass = classList.find((entry) =>
+    /^deepfake$/i.test(String(entry?.class || entry?.label || entry?.name)),
+  )
+  const sourceClass = classList
+    .filter((entry) => {
+      const name = String(entry?.class || entry?.label || entry?.name)
+      return (
+        name &&
+        !/^(ai_generated|not_ai_generated|deepfake|none|inconclusive|inconclusive_video)$/i.test(
+          name,
+        )
+      )
+    })
+    .sort(
+      (left, right) =>
+        numberValue(right?.score ?? right?.probability) -
+        numberValue(left?.score ?? left?.probability),
+    )[0]
+  const aiProbability = numberValue(
+    typeof ai === 'object'
+      ? (ai.probability ?? ai.score ?? ai.confidence)
+      : ai !== undefined
+        ? ai
+        : /^ai_generated$/i.test(String(generatedValue))
+          ? generatedProbability
+          : /^not_ai_generated$/i.test(String(generatedValue)) &&
+              generatedProbability !== undefined
+            ? 1 - generatedProbability
+            : undefined,
+  )
+  const deepfakeProbability = numberValue(
+    typeof deepfake === 'object'
+      ? (deepfake.probability ?? deepfake.score ?? deepfake.confidence)
+      : (deepfake ?? deepfakeClass?.score),
+  )
+  const generatorName =
+    typeof generator === 'string'
+      ? generator
+      : generator?.name ||
+        generator?.label ||
+        generator?.value ||
+        sourceClass?.class ||
+        sourceClass?.label ||
+        sourceClass?.name
+  const generatorProbability = numberValue(
+    typeof generator === 'object'
+      ? (generator.probability ?? generator.score ?? generator.confidence)
+      : (sourceClass?.score ??
+          sourceClass?.probability ??
+          sourceClass?.confidence),
+  )
+  const deepfakeValue =
+    typeof deepfake === 'object' ? (deepfake.value ?? deepfake.label) : deepfake
+  const aiValue =
+    typeof ai === 'object' ? (ai.value ?? ai.label) : (ai ?? generatedValue)
+  const aiDetected =
+    aiValue === true ||
+    /^(yes|true|ai_generated|generated)$/i.test(String(aiValue)) ||
+    (aiProbability !== undefined && aiProbability >= 0.5)
+  const hasExplicitDeepfakeValue =
+    deepfakeValue !== undefined && deepfakeValue !== null
+  const deepfakeDetected = hasExplicitDeepfakeValue
+    ? deepfakeValue === true ||
+      /^(yes|true|deepfake)$/i.test(String(deepfakeValue))
+    : deepfakeProbability !== undefined && deepfakeProbability >= 0.5
+  return {
+    aiGeneratedProbability: aiProbability,
+    generator: generatorName,
+    generatorProbability,
+    deepfake:
+      deepfakeValue === undefined && !deepfakeClass
+        ? undefined
+        : deepfakeDetected,
+    deepfakeProbability,
+    c2paPresent: c2pa?.present ?? c2pa?.detected,
+    raw: payload,
+    _recognized:
+      aiValue !== undefined ||
+      aiProbability !== undefined ||
+      deepfakeValue !== undefined ||
+      deepfakeProbability !== undefined ||
+      generatorName !== undefined ||
+      c2pa !== undefined,
+    _detected: aiDetected || deepfakeDetected,
+  }
+}
+
+export async function checkHive(buffer, options = {}) {
+  const apiKeys = getApiKeys(options)
+  if (options.enable === false || apiKeys.length === 0) {
+    return {
+      provider: 'hive',
+      status: 'unavailable',
+      evidence: {},
+      reason: 'missing_api_key',
+    }
+  }
+  const fetchImpl = options.fetchImpl || globalThis.fetch
+  if (typeof fetchImpl !== 'function') {
+    return {
+      provider: 'hive',
+      status: 'unavailable',
+      evidence: {},
+      reason: 'fetch_unavailable',
+    }
+  }
+  let lastError
+  for (const apiKey of nextRotation('hive', apiKeys)) {
+    try {
+      const payload = await fetchJson(
+        fetchImpl,
+        options.endpoint || HIVE_ENDPOINT,
+        {
+          method: 'POST',
+          headers: { Authorization: `Token ${apiKey}` },
+          body: makeImageForm(
+            buffer,
+            'media',
+            'image',
+            options.mimeType || 'application/octet-stream',
+          ),
+          proxyOptions: options,
+        },
+        options.timeoutMs,
+      )
+      const evidence = normalizeHive(payload)
+      const status = !evidence._recognized
+        ? 'error'
+        : evidence._detected
+          ? 'detected'
+          : 'not_detected'
+      delete evidence._recognized
+      delete evidence._detected
+      return { provider: 'hive', status, evidence }
+    } catch (error) {
+      lastError = error
+      if (![401, 403, 429].includes(error?.status)) break
+    }
+  }
+  const status = [401, 403, 404, 429].includes(lastError?.status)
+    ? 'unavailable'
+    : 'error'
+  return {
+    provider: 'hive',
+    status,
+    error: safeError(lastError, apiKeys),
+    evidence: {},
+  }
+}
+
+function normalizeSightengine(payload) {
+  const value =
+    payload?.type?.ai_generated ?? payload?.ai_generated ?? payload?.genai
+  const probability = numberValue(
+    typeof value === 'object' ? (value.probability ?? value.score) : value,
+  )
+  return { aiGeneratedProbability: probability, raw: payload }
+}
+
+export async function checkSightengine(buffer, options = {}) {
+  const credentials = getCredentialPairs(options)
+  if (options.enable === false || credentials.length === 0) {
+    return {
+      provider: 'sightengine',
+      status: 'unavailable',
+      evidence: {},
+      reason: 'missing_credentials',
+    }
+  }
+  const fetchImpl = options.fetchImpl || globalThis.fetch
+  if (typeof fetchImpl !== 'function') {
+    return {
+      provider: 'sightengine',
+      status: 'unavailable',
+      evidence: {},
+      reason: 'fetch_unavailable',
+    }
+  }
+  let lastError
+  for (const credential of nextRotation('sightengine', credentials)) {
+    try {
+      const url = new URL(options.endpoint || SIGHTENGINE_ENDPOINT)
+      const form = makeImageForm(
+        buffer,
+        'media',
+        'image',
+        options.mimeType || 'application/octet-stream',
+      )
+      form.append('api_user', credential.apiUser)
+      form.append('api_secret', credential.apiSecret)
+      form.append('models', 'genai')
+      const payload = await fetchJson(
+        fetchImpl,
+        url,
+        { method: 'POST', body: form, proxyOptions: options },
+        options.timeoutMs,
+      )
+      const evidence = normalizeSightengine(payload)
+      return {
+        provider: 'sightengine',
+        status:
+          evidence.aiGeneratedProbability === undefined
+            ? 'error'
+            : evidence.aiGeneratedProbability >= 0.5
+              ? 'detected'
+              : 'not_detected',
+        evidence,
+      }
+    } catch (error) {
+      lastError = error
+      if (![401, 403, 429].includes(error?.status)) break
+    }
+  }
+  const status = [401, 403, 404, 429].includes(lastError?.status)
+    ? 'unavailable'
+    : 'error'
+  return {
+    provider: 'sightengine',
+    status,
+    error: safeError(
+      lastError,
+      credentials.flatMap(({ apiUser, apiSecret }) => [apiUser, apiSecret]),
+    ),
+    evidence: {},
+  }
+}
+
+function hasTrustedProvenance(result) {
+  if (result.provider === 'c2pa') {
+    return (
+      /^(trusted|valid)$/i.test(result.evidence?.validationState) &&
+      result.evidence?.aiGenerated !== false
+    )
+  }
+  return (
+    result.provider === 'openai' &&
+    result.signals?.some(
+      (signal) =>
+        signal.outcome === 'detected' &&
+        (signal.type === 'synthid' ||
+          (signal.type === 'c2pa' &&
+            /^(trusted|valid)$/i.test(signal.validationState))),
+    )
+  )
+}
+
+const PROVIDER_NAMES = {
+  c2pa: 'C2PA',
+  openai: 'OpenAI',
+  hive: 'Hive',
+  sightengine: 'Sightengine',
+}
+
+const STATUS_NAMES = {
+  detected: '检测到支持的信号',
+  not_detected: '未发现支持的信号',
+  unavailable: '未配置或不可用',
+  error: '检测失败',
+}
+
+function summarizeProviderStatuses(results) {
+  if (results.length === 0) return ''
+  return results
+    .map(
+      (result) =>
+        `${PROVIDER_NAMES[result.provider] || result.provider}：${STATUS_NAMES[result.status] || result.status}`,
+    )
+    .join('\n')
+}
+
+export function summarizeAiImageResults(results = []) {
+  const normalized = Array.isArray(results) ? results.filter(Boolean) : []
+  const trusted = normalized.find(
+    (result) => result.status === 'detected' && hasTrustedProvenance(result),
+  )
+  const detected = normalized.filter((result) => result.status === 'detected')
+  const unavailable = normalized.filter(
+    (result) => result.status === 'unavailable',
+  )
+  const errors = normalized.filter((result) => result.status === 'error')
+  let verdict = 'unknown'
+  let confidence = 'low'
+  let message = '未发现明确的 AI 来源信号，但这不等于确定为真人图片。证据不足。'
+
+  if (trusted) {
+    verdict = 'detected'
+    confidence = 'high'
+    const synthid = trusted.signals?.some(
+      (signal) => signal.type === 'synthid' && signal.outcome === 'detected',
+    )
+    if (synthid) {
+      message = '检测到 OpenAI SynthID 信号。'
+    } else {
+      const issuer = trusted.evidence?.issuer
+        ? `（签发者：${trusted.evidence.issuer}）`
+        : ''
+      message = `检测到可信 C2PA 来源凭证${issuer}。`
+    }
+  } else if (detected.length > 0) {
+    verdict = 'detected'
+    confidence = 'medium'
+    message = '检测到 AI 生成或篡改信号（概率模型结果），请结合来源凭证复核。'
+  } else if (unavailable.length > 0 || errors.length > 0) {
+    message = '当前检测渠道不可用或失败，无法形成可靠结论。'
+  }
+
+  const providerStatuses = summarizeProviderStatuses(normalized)
+  if (providerStatuses) message = `${message}\n${providerStatuses}`
+
+  return { verdict, confidence, message, results: normalized }
+}
+
+export {
+  OPENAI_ENDPOINT,
+  HIVE_ENDPOINT,
+  SIGHTENGINE_ENDPOINT,
+  normalizeOpenAiSignals,
+  normalizeHive,
+  normalizeSightengine,
+}

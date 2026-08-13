@@ -1,7 +1,13 @@
 import assert from 'node:assert/strict'
+import fs from 'node:fs'
 import test from 'node:test'
 
 import { extractImageUrls, isAiImageCommand } from '../model/aiImageMessage.js'
+
+const appSource = fs.readFileSync(
+  new URL('../apps/aiImage.js', import.meta.url),
+  'utf8',
+)
 
 test('matches ai图 command case-insensitively with optional hash prefix', () => {
   assert.equal(isAiImageCommand('ai图'), true)
@@ -43,4 +49,13 @@ test('extracts images from quoted message when current message has none', async 
 test('returns no image for a message without image segments', async () => {
   const urls = await extractImageUrls({ message: 'ai图' })
   assert.deepEqual(urls, [])
+})
+
+test('wires the app to shared message parsing and the full plugin config', () => {
+  assert.match(appSource, /from '..\/model\/aiImageMessage\.js'/)
+  assert.match(
+    appSource,
+    /inspectAiImage\(imageUrls\[0\], config\.getConfig\(\)\)/,
+  )
+  assert.match(appSource, /reg: '\^#\?\[aA\]\[iI\]图\$'/)
 })

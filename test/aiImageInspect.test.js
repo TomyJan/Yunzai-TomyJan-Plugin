@@ -1,0 +1,271 @@
+import assert from 'node:assert/strict'
+import { Buffer } from 'node:buffer'
+import test from 'node:test'
+
+import { downloadImage, inspectAiImage } from '../model/aiImage.js'
+
+test('downloads once and isolates provider failures during inspection', async () => {
+  let downloads = 0
+  const result = await inspectAiImage(
+    'https://example.test/image.png',
+    {
+      timeoutMs: 1000,
+      maxFileSize: 1024,
+      proxy: { url: '' },
+      aiImage: {
+        proxy: { enable: false },
+        c2pa: { enable: true },
+        openai: { enable: false },
+        hive: { enable: true, apiKeys: ['hive-key'] },
+        sightengine: { enable: false },
+      },
+    },
+    {
+      downloadImpl: async () => {
+        downloads += 1
+        return { buffer: Buffer.from('image'), mimeType: 'image/png' }
+      },
+      readerFactory: async () => ({
+        getActive: () => ({
+          validation_state: 'trusted',
+          issuer: 'Test issuer',
+          digital_source_type:
+            'http://cv.iptc.org/newscodes/digitalsourcetype/trainedAlgorithmicMedia',
+        }),
+      }),
+      fetchImpl: async () => {
+        throw new Error('provider timeout')
+      },
+    },
+  )
+
+  assert.equal(downloads, 1)
+  assert.equal(result.verdict, 'detected')
+  assert.match(result.message, /C2PA/)
+  assert.equal(
+    result.results.find(({ provider }) => provider === 'hive').status,
+    'error',
+  )
+})
+
+test('rejects unsupported image content before providers run', async () => {
+  await assert.rejects(
+    inspectAiImage(
+      'https://example.test/image.gif',
+      {},
+      {
+        downloadImpl: async () => ({
+          buffer: Buffer.from('image'),
+          mimeType: 'image/gif',
+        }),
+      },
+    ),
+    /PNG、JPEG、WebP/,
+  )
+})
+
+test('rejects private image URLs before making a request', async () => {
+  let requested = false
+  await assert.rejects(
+    inspectAiImage(
+      'http://127.0.0.1/image.png',
+      {},
+      {
+        fetchImpl: async () => {
+          requested = true
+          throw new Error('should not request')
+        },
+      },
+    ),
+    /内网地址/,
+  )
+  assert.equal(requested, false)
+})
+
+test('rejects non-public and IPv4-mapped image addresses', async () => {
+  for (const url of [
+    'http://100.64.0.1/image.png',
+    'http://[fe90::1]/image.png',
+    'http://[::ffff:127.0.0.1]/image.png',
+  ]) {
+    let requested = false
+    await assert.rejects(
+      downloadImage(url, {
+        fetchImpl: async () => {
+          requested = true
+          return new Response()
+        },
+      }),
+      /内网地址/,
+    )
+    assert.equal(requested, false)
+  }
+})
+
+test('aborts a streamed image when it exceeds the configured size', async () => {
+  let cancelled = false
+  const body = {
+    getReader() {
+      return {
+        async read() {
+          return { done: false, value: new Uint8Array(10) }
+        },
+        async cancel() {
+          cancelled = true
+        },
+        releaseLock() {},
+      }
+    },
+  }
+  await assert.rejects(
+    downloadImage('https://example.com/image.png', {
+      maxFileSize: 5,
+      fetchImpl: async () => ({
+        ok: true,
+        status: 200,
+        headers: {
+          get: (name) => (name === 'content-type' ? 'image/png' : null),
+        },
+        body,
+      }),
+    }),
+    /图片超过大小限制/,
+  )
+  assert.equal(cancelled, true)
+})
+
+test('validates every redirect target before following it', async () => {
+  let requests = 0
+  await assert.rejects(
+    downloadImage('https://public.example/image.png', {
+      resolveHost: async () => [{ address: '203.0.113.10', family: 4 }],
+      fetchImpl: async () => {
+        requests += 1
+        return {
+          ok: false,
+          status: 302,
+          headers: {
+            get: (name) =>
+              name === 'location' ? 'http://127.0.0.1/private.png' : null,
+          },
+        }
+      },
+    }),
+    /内网地址/,
+  )
+  assert.equal(requests, 1)
+})
+
+test('shares one proxy switch across download and external providers', async () => {
+  const dispatchers = []
+  const proxyAgentFactory = (url) => ({ proxyUrl: url })
+  const pluginConfig = {
+    proxy: { url: 'http://proxy.example:8080' },
+    aiImage: {
+      proxy: { enable: true },
+      c2pa: { enable: false },
+      openai: { enable: true, apiKeys: ['openai-key'] },
+      hive: { enable: true, apiKeys: ['hive-key'] },
+      sightengine: {
+        enable: true,
+        credentials: [{ apiUser: 'user', apiSecret: 'secret' }],
+      },
+    },
+  }
+
+  await inspectAiImage('https://public.example/image.png', pluginConfig, {
+    resolveHost: async () => [{ address: '203.0.113.10', family: 4 }],
+    proxyAgentFactory,
+    fetchImpl: async (url, init) => {
+      dispatchers.push({ url: String(url), dispatcher: init.dispatcher })
+      if (String(url).includes('public.example')) {
+        return new Response(Buffer.from('image'), {
+          status: 200,
+          headers: { 'content-type': 'image/png' },
+        })
+      }
+      if (String(url).includes('openai.com')) {
+        return new Response(
+          JSON.stringify({
+            results: [{ type: 'synthid', outcome: 'not_detected' }],
+          }),
+        )
+      }
+      if (String(url).includes('thehive.ai')) {
+        return new Response(JSON.stringify({ ai_generated: 0.1 }))
+      }
+      return new Response(JSON.stringify({ type: { ai_generated: 0.1 } }))
+    },
+  })
+
+  assert.equal(dispatchers.length, 4)
+  assert.deepEqual(
+    dispatchers.map(({ dispatcher }) => dispatcher),
+    Array(4).fill({ proxyUrl: 'http://proxy.example:8080' }),
+  )
+})
+
+test('keeps download and providers direct when the AI image proxy switch is off', async () => {
+  const dispatchers = []
+  await inspectAiImage(
+    'https://public.example/image.png',
+    {
+      proxy: { url: 'http://proxy.example:8080' },
+      aiImage: {
+        proxy: { enable: false },
+        c2pa: { enable: false },
+        openai: { enable: true, apiKeys: ['key'] },
+        hive: { enable: false },
+        sightengine: { enable: false },
+      },
+    },
+    {
+      resolveHost: async () => [{ address: '203.0.113.10', family: 4 }],
+      fetchImpl: async (url, init) => {
+        dispatchers.push(init.dispatcher)
+        if (String(url).includes('public.example')) {
+          return new Response(Buffer.from('image'), {
+            headers: { 'content-type': 'image/png' },
+          })
+        }
+        return new Response(
+          JSON.stringify({
+            results: [{ type: 'synthid', outcome: 'not_detected' }],
+          }),
+        )
+      },
+    },
+  )
+
+  assert.deepEqual(dispatchers, [undefined, undefined])
+})
+
+test('never creates a proxy dispatcher for local C2PA inspection', async () => {
+  let proxyFactories = 0
+  await inspectAiImage(
+    'https://public.example/image.png',
+    {
+      proxy: { url: 'http://proxy.example:8080' },
+      aiImage: {
+        proxy: { enable: true },
+        c2pa: { enable: true },
+        openai: { enable: false },
+        hive: { enable: false },
+        sightengine: { enable: false },
+      },
+    },
+    {
+      downloadImpl: async () => ({
+        buffer: Buffer.from('image'),
+        mimeType: 'image/png',
+      }),
+      readerFactory: async () => ({ getActive: () => null }),
+      proxyAgentFactory: () => {
+        proxyFactories += 1
+        return { proxy: true }
+      },
+    },
+  )
+
+  assert.equal(proxyFactories, 0)
+})
