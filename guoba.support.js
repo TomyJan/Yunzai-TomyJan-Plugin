@@ -232,9 +232,15 @@ export function supportGuoba() {
         {
           field: 'aiImage.openai.apiKeys',
           label: 'OpenAI API keys',
-          helpMessage: 'JSON 字符串数组，例如 ["key-1", "key-2"]',
+          helpMessage: '逐项添加 OpenAI API key',
           bottomHelpMessage: '401/403/404/429 时自动尝试下一个 key',
-          component: 'InputPassword',
+          component: 'Select',
+          componentProps: {
+            allowAdd: true,
+            allowDel: true,
+            mode: 'multiple',
+            options: [],
+          },
         },
         {
           field: 'aiImage.hive.enable',
@@ -246,9 +252,15 @@ export function supportGuoba() {
         {
           field: 'aiImage.hive.apiKeys',
           label: 'Hive API keys',
-          helpMessage: 'JSON 字符串数组，例如 ["key-1", "key-2"]',
+          helpMessage: '逐项添加 Hive API key',
           bottomHelpMessage: '401/403/429 时自动尝试下一个 key',
-          component: 'InputPassword',
+          component: 'Select',
+          componentProps: {
+            allowAdd: true,
+            allowDel: true,
+            mode: 'multiple',
+            options: [],
+          },
         },
         {
           field: 'aiImage.sightengine.enable',
@@ -261,9 +273,15 @@ export function supportGuoba() {
           field: 'aiImage.sightengine.credentials',
           label: 'Sightengine 凭据',
           helpMessage:
-            'JSON 数组，例如 [{"apiUser":"user","apiSecret":"secret"}]',
+            '逐项添加 JSON 对象，例如 {"apiUser":"user","apiSecret":"secret"}',
           bottomHelpMessage: '401/403/429 时自动尝试下一组凭据',
-          component: 'InputPassword',
+          component: 'Select',
+          componentProps: {
+            allowAdd: true,
+            allowDel: true,
+            mode: 'multiple',
+            options: [],
+          },
         },
         {
           component: 'Divider',

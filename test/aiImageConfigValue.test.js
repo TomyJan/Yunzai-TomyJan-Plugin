@@ -96,7 +96,7 @@ test('rejects malformed JSON instead of saving invalid credentials', () => {
   assert.throws(() => parseApiKeys('{}'), /必须是 JSON 数组/)
 })
 
-test('serializes credential arrays for Guoba password inputs without mutation', () => {
+test('keeps API key arrays native and serializes Sightengine entries for Guoba', () => {
   const config = {
     aiImage: {
       openai: { apiKeys: ['openai-key'] },
@@ -109,11 +109,23 @@ test('serializes credential arrays for Guoba password inputs without mutation', 
 
   const displayed = serializeAiImageCredentialFields(config)
 
-  assert.equal(displayed.aiImage.openai.apiKeys, '["openai-key"]')
-  assert.equal(displayed.aiImage.hive.apiKeys, '["hive-key"]')
-  assert.equal(
-    displayed.aiImage.sightengine.credentials,
-    '[{"apiUser":"user","apiSecret":"secret"}]',
-  )
+  assert.deepEqual(displayed.aiImage.openai.apiKeys, ['openai-key'])
+  assert.deepEqual(displayed.aiImage.hive.apiKeys, ['hive-key'])
+  assert.deepEqual(displayed.aiImage.sightengine.credentials, [
+    '{"apiUser":"user","apiSecret":"secret"}',
+  ])
   assert.deepEqual(config.aiImage.openai.apiKeys, ['openai-key'])
+})
+
+test('parses Sightengine credential arrays submitted by Guoba multiple select', () => {
+  assert.deepEqual(
+    parseSightengineCredentials([
+      '{"apiUser":" first ","apiSecret":" secret-1 "}',
+      '{"apiUser":"second","apiSecret":"secret-2"}',
+    ]),
+    [
+      { apiUser: 'first', apiSecret: 'secret-1' },
+      { apiUser: 'second', apiSecret: 'secret-2' },
+    ],
+  )
 })

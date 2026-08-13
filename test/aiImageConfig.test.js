@@ -70,3 +70,19 @@ test('exposes only the new AI credential and proxy fields in Guoba', () => {
     /tjLogger\.[a-z]+\([^\n]*JSON\.stringify\(configJson\)/,
   )
 })
+
+test('uses Guoba native multiple selects for AI credential arrays', () => {
+  for (const field of [
+    'aiImage.openai.apiKeys',
+    'aiImage.hive.apiKeys',
+    'aiImage.sightengine.credentials',
+  ]) {
+    const fieldIndex = guobaSource.indexOf(`field: '${field}'`)
+    assert.notEqual(fieldIndex, -1)
+    const schemaSource = guobaSource.slice(fieldIndex, fieldIndex + 700)
+    assert.match(schemaSource, /component: 'Select'/)
+    assert.match(schemaSource, /allowAdd: true/)
+    assert.match(schemaSource, /allowDel: true/)
+    assert.match(schemaSource, /mode: 'multiple'/)
+  }
+})

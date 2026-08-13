@@ -57,6 +57,14 @@ export function parseApiKeys(value, fieldName = 'API keys') {
 
 export function parseSightengineCredentials(value) {
   return parseArray(value, 'Sightengine 凭据')
+    .map((item) => {
+      if (typeof item !== 'string') return item
+      try {
+        return JSON.parse(item)
+      } catch {
+        throw new Error('Sightengine 每项凭据必须是合法的 JSON 对象')
+      }
+    })
     .filter((item) => item && typeof item === 'object')
     .map((item) => ({
       apiUser: String(item.apiUser || '').trim(),
@@ -69,12 +77,10 @@ export function serializeAiImageCredentialFields(config) {
   const value = structuredClone(config)
   if (!value.aiImage) return value
 
-  value.aiImage.openai.apiKeys = JSON.stringify(
-    value.aiImage.openai.apiKeys || [],
-  )
-  value.aiImage.hive.apiKeys = JSON.stringify(value.aiImage.hive.apiKeys || [])
-  value.aiImage.sightengine.credentials = JSON.stringify(
-    value.aiImage.sightengine.credentials || [],
-  )
+  value.aiImage.openai.apiKeys = value.aiImage.openai.apiKeys || []
+  value.aiImage.hive.apiKeys = value.aiImage.hive.apiKeys || []
+  value.aiImage.sightengine.credentials = (
+    value.aiImage.sightengine.credentials || []
+  ).map((credential) => JSON.stringify(credential))
   return value
 }
