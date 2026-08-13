@@ -44,6 +44,11 @@ function redactLogValue(value, secrets = []) {
     .trim()
 }
 
+export function redactAiImageError(error, pluginConfig = {}) {
+  const aiImageConfig = pluginConfig.aiImage || pluginConfig
+  return redactLogValue(error, collectSecrets(aiImageConfig)) || '未知错误'
+}
+
 function writeLog(logger, level, message) {
   logger?.[level]?.(`[AI图片识别] ${message}`)
 }
@@ -319,12 +324,13 @@ export async function inspectAiImage(
   try {
     image = await downloadImage(imageUrl, sharedOptions)
   } catch (error) {
+    const safeMessage = redactAiImageError(error, pluginConfig)
     writeLog(
       logger,
       'error',
-      `图片下载失败: ${redactLogValue(error, secrets)}，总耗时 ${elapsedMs(now, inspectionStartedAt)} ms`,
+      `图片下载失败: ${safeMessage}，总耗时 ${elapsedMs(now, inspectionStartedAt)} ms`,
     )
-    throw error
+    throw new Error(safeMessage, { cause: error })
   }
   writeLog(
     logger,

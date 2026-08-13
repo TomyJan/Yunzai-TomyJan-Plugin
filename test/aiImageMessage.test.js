@@ -159,9 +159,15 @@ test('returns no image for a message without image segments', async () => {
 
 test('wires the app to shared parsing, full config and plugin logger', () => {
   assert.match(appSource, /from '..\/model\/aiImageMessage\.js'/)
+  assert.match(appSource, /redactAiImageError/)
   assert.match(
     appSource,
     /inspectAiImage\(imageUrls\[0\], config\.getConfig\(\), \{\s*logger: tjLogger,\s*\}\)/,
   )
+  assert.match(
+    appSource,
+    /const safeMessage = redactAiImageError\(error, config\.getConfig\(\)\)/,
+  )
+  assert.match(appSource, /`❌ AI 图片识别失败\\n\\n\$\{safeMessage\}`/)
   assert.match(appSource, /reg: '\^#\?\[aA\]\[iI\]图\$'/)
 })

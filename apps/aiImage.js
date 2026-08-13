@@ -1,7 +1,7 @@
 import plugin from '../../../lib/plugins/plugin.js'
 import config from '../components/config.js'
 import tjLogger from '../components/logger.js'
-import { inspectAiImage } from '../model/aiImage.js'
+import { inspectAiImage, redactAiImageError } from '../model/aiImage.js'
 import { extractImageUrls } from '../model/aiImageMessage.js'
 
 export class aiImageApp extends plugin {
@@ -37,8 +37,9 @@ export class aiImageApp extends plugin {
       })
       await this.reply(result.message, true)
     } catch (error) {
-      tjLogger.error(`[AI图片识别] 检查失败: ${error.message}`)
-      await this.reply(`AI 图片识别失败: ${error.message}`, true)
+      const safeMessage = redactAiImageError(error, config.getConfig())
+      tjLogger.error(`[AI图片识别] 检查失败: ${safeMessage}`)
+      await this.reply(`❌ AI 图片识别失败\n\n${safeMessage}`, true)
     }
   }
 }

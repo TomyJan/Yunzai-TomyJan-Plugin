@@ -424,3 +424,35 @@ test('redacts image URLs and credentials from provider failure logs', async () =
     assert.doesNotMatch(output, new RegExp(sensitiveValue))
   }
 })
+
+test('redacts image URLs from download errors exposed to callers', async () => {
+  const imageUrl =
+    'https://public.example/image.png?token=sensitive-download-query'
+
+  await assert.rejects(
+    inspectAiImage(
+      imageUrl,
+      {
+        aiImage: {
+          c2pa: { enable: false },
+          openai: { enable: false },
+          hive: { enable: false },
+          sightengine: { enable: false },
+        },
+      },
+      {
+        downloadImpl: async () => {
+          throw new Error(`download rejected ${imageUrl}`)
+        },
+      },
+    ),
+    (error) => {
+      assert.match(error.message, /download rejected \[redacted-url\]/)
+      assert.doesNotMatch(
+        error.message,
+        /public\.example|sensitive-download-query/,
+      )
+      return true
+    },
+  )
+})

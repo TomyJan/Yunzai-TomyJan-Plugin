@@ -74,6 +74,7 @@ function safeError(error, secrets = []) {
     .map((secret) => String(secret || '').trim())
     .filter(Boolean)
     .reduce((value, secret) => value.split(secret).join('[redacted]'), message)
+    .replace(/https?:\/\/[^\s，。；]+/gi, '[redacted-url]')
     .replace(/Bearer\s+[^\s]+/gi, 'Bearer [redacted]')
     .replace(/(api[_-]?(?:key|secret|user))=([^&\s]+)/gi, '$1=[redacted]')
 }
@@ -643,7 +644,7 @@ function describeProviderStatus(result) {
     return `${description}（HTTP ${httpStatus}）`
   }
 
-  const error = String(result.error || '').trim()
+  const error = safeError(result.error).trim()
   if (/超时|timeout|aborted?/i.test(error)) return '请求超时'
   if (/fetch failed|network|socket|connect|dns/i.test(error))
     return '网络请求失败'

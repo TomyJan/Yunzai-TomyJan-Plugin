@@ -195,3 +195,20 @@ test('explains unrecognized and unknown provider errors', () => {
   assert.match(summary.message, /Hive：响应格式无法识别/)
   assert.match(summary.message, /OpenAI：检测失败（upstream rejected image）/)
 })
+
+test('redacts image URLs from unknown provider errors in replies', () => {
+  const summary = summarizeAiImageResults([
+    {
+      provider: 'hive',
+      status: 'error',
+      error:
+        'upstream rejected https://public.example/image.png?token=sensitive-query',
+    },
+  ])
+
+  assert.match(
+    summary.message,
+    /Hive：检测失败（upstream rejected \[redacted-url\]）/,
+  )
+  assert.doesNotMatch(summary.message, /public\.example|sensitive-query/)
+})
