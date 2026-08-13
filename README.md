@@ -74,7 +74,6 @@ git -C ./plugins/Yunzai-TomyJan-Plugin/ pull
 建议通过 [锅巴插件](https://gitee.com/guoba-yunzai/guoba-plugin) 进行配置. 当然, 你也可以自己配置, 默认配置文件位置 `./data/system/default_config.json`, 配置文件位置 `./config/config.json`, 配置项默认值及其作用:
 
 ```json
-// 此处的 json 可能忘记更新, 如果和实际的配置文件字段不同, 请及时反馈
 {
   "logger": {
     // 插件的日志器配置
@@ -83,7 +82,7 @@ git -C ./plugins/Yunzai-TomyJan-Plugin/ pull
   },
   "proxy": {
     // 全插件共用的代理设置
-    "url": "http://127.0.0.1:7890", // HTTP 或 HTTPS 代理地址, 为空则不使用
+    "url": "", // HTTP 或 HTTPS 代理地址, 为空则不使用
     "autoUpdate": false, // 插件自动更新是否使用代理
     "randomBackground": false // 随机背景下载是否使用代理
   },
@@ -99,18 +98,28 @@ git -C ./plugins/Yunzai-TomyJan-Plugin/ pull
   },
   "vvShuo": {
     // VV 说 功能配置
-    "enable": true // 是否启用 VV 说 功能
+    "enable": true, // 是否启用 VV 说 功能
+    "proxy": { "enable": false } // 是否使用上方统一代理
   },
   "eduAuth": {
     // EDU Auth 功能配置
     "enable": false, // 是否启用 EDU Auth 功能
-    "whitelist": {
-      // 白名单配置, 仅允许白名单内的 QQ 群成员/ QQ 号私聊使用 EDU Auth 功能
-      "group": [630657900], // 白名单群号, 允许白名单群内的所有成员使用
-      "private": [2445387644] // 白名单 QQ 号, 允许白名单内的私聊使用
-    },
-    "apiBaseUrl": "https://edu.amoe.cc/api/wifi/", // EDU Auth API 基础 URL
-    "apiKey": "123456|abcdefg" // EDU Auth API 密钥, 格式为 `账号ID|密钥`, 请前往 [EDU Auth](https://edu.amoe.cc/user) 获取
+    "apiBaseUrl": "https://edu.amoe.cc/api/v2/thirdParty", // EDU Auth API 基础 URL
+    "apiKey": "your-api-key", // EDU Auth API 密钥
+    "userGroup": 725571000, // 用户群群号
+    "adminGroup": 725571000, // 管理群群号
+    "proxy": { "enable": false } // 是否使用上方统一代理
+  },
+  "aiImage": {
+    // AI 图片识别配置
+    "enable": false, // 是否启用 AI 图片识别
+    "timeoutMs": 15000, // 图片下载和单个检测渠道的超时时间
+    "maxFileSize": 52428800, // 图片大小上限, 默认 50 MiB
+    "proxy": { "enable": false }, // 图片下载和外部检测渠道是否使用上方统一代理
+    "c2pa": { "enable": true }, // 是否启用本地 C2PA 检测
+    "openai": { "enable": true, "apiKeys": [] }, // OpenAI API Key 列表
+    "hive": { "enable": true, "apiKeys": [] }, // Hive V3 Secret Key 列表
+    "sightengine": { "enable": false, "credentials": [] } // Sightengine 凭据列表
   },
   "httpServer": {
     // 插件内置 HTTP 服务器配置
