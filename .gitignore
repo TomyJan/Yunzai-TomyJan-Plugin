@@ -13,3 +13,4 @@ data/httpServer/root
 
 #nodejs
 node_modules/
+.worktrees/
