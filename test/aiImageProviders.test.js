@@ -183,6 +183,28 @@ test('returns not_detected when C2PA has no active manifest', async () => {
   assert.equal(result.status, 'not_detected')
 })
 
+test('does not report malformed C2PA assets as a missing local component', async () => {
+  const result = await checkC2pa(Buffer.from('image'), {
+    readerFactory: async () => {
+      throw new Error('failed to load malformed asset')
+    },
+  })
+
+  assert.equal(result.status, 'error')
+  assert.equal(result.reason, undefined)
+})
+
+test('reports an unavailable C2PA module as a missing local component', async () => {
+  const result = await checkC2pa(Buffer.from('image'), {
+    readerFactory: async () => {
+      throw new Error("Cannot find package '@contentauth/c2pa-node'")
+    },
+  })
+
+  assert.equal(result.status, 'error')
+  assert.equal(result.reason, 'component_unavailable')
+})
+
 test('keeps the default C2PA reader local-only', async () => {
   let readerOptions
   await checkC2pa(Buffer.from('image'), {

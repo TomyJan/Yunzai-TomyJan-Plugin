@@ -48,6 +48,60 @@ test('downloads once and isolates provider failures during inspection', async ()
   )
 })
 
+test('runs every enabled provider instead of treating providers as fallbacks', async () => {
+  const calls = []
+  const result = await inspectAiImage(
+    'https://example.test/image.png',
+    {
+      aiImage: {
+        c2pa: { enable: true },
+        openai: { enable: true, apiKeys: ['openai-key'] },
+        hive: { enable: true, apiKeys: ['hive-key'] },
+        sightengine: {
+          enable: true,
+          credentials: [{ apiUser: 'user', apiSecret: 'secret' }],
+        },
+      },
+    },
+    {
+      downloadImpl: async () => ({
+        buffer: Buffer.from('image'),
+        mimeType: 'image/png',
+      }),
+      readerFactory: async () => {
+        calls.push('c2pa')
+        return { getActive: () => null }
+      },
+      fetchImpl: async (url) => {
+        const value = String(url)
+        if (value.includes('openai.com')) {
+          calls.push('openai')
+          return new Response(
+            JSON.stringify({
+              results: [{ type: 'synthid', outcome: 'not_detected' }],
+            }),
+          )
+        }
+        if (value.includes('thehive.ai')) {
+          calls.push('hive')
+          return new Response(JSON.stringify({ ai_generated: 0.1 }))
+        }
+        calls.push('sightengine')
+        return new Response(JSON.stringify({ type: { ai_generated: 0.1 } }))
+      },
+    },
+  )
+
+  assert.deepEqual(
+    new Set(calls),
+    new Set(['c2pa', 'openai', 'hive', 'sightengine']),
+  )
+  assert.deepEqual(
+    result.results.map(({ provider }) => provider),
+    ['c2pa', 'openai', 'hive', 'sightengine'],
+  )
+})
+
 test('rejects unsupported image content before providers run', async () => {
   await assert.rejects(
     inspectAiImage(

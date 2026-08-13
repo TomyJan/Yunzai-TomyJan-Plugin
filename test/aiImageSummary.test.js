@@ -96,14 +96,64 @@ test('reports evidence insufficient when providers are available but detect noth
   assert.match(summary.message, /Hive：未发现支持的信号/)
 })
 
-test('keeps provider failures from becoming an AI verdict', () => {
+test('explains missing provider credentials without changing the verdict', () => {
   const summary = summarizeAiImageResults([
-    { provider: 'openai', status: 'error', error: 'timeout' },
-    { provider: 'hive', status: 'unavailable' },
+    {
+      provider: 'openai',
+      status: 'unavailable',
+      reason: 'missing_api_key',
+    },
+    {
+      provider: 'sightengine',
+      status: 'unavailable',
+      reason: 'missing_credentials',
+    },
   ])
 
   assert.equal(summary.verdict, 'unknown')
   assert.match(summary.message, /不可用|失败/)
-  assert.match(summary.message, /OpenAI：检测失败/)
-  assert.match(summary.message, /Hive：未配置或不可用/)
+  assert.match(summary.message, /OpenAI：未配置 API Key/)
+  assert.match(summary.message, /Sightengine：未配置 API 凭据/)
+})
+
+test('explains provider HTTP and timeout failures', () => {
+  const summary = summarizeAiImageResults([
+    {
+      provider: 'openai',
+      status: 'unavailable',
+      error: 'HTTP 404',
+      httpStatus: 404,
+    },
+    {
+      provider: 'hive',
+      status: 'unavailable',
+      error: 'HTTP 429',
+      httpStatus: 429,
+    },
+    {
+      provider: 'sightengine',
+      status: 'error',
+      error: '检测渠道请求超时',
+    },
+    {
+      provider: 'c2pa',
+      status: 'error',
+      reason: 'component_unavailable',
+    },
+  ])
+
+  assert.match(summary.message, /OpenAI：无接口权限或接口未开放（HTTP 404）/)
+  assert.match(summary.message, /Hive：请求频率受限（HTTP 429）/)
+  assert.match(summary.message, /Sightengine：请求超时/)
+  assert.match(summary.message, /C2PA：本地检测组件不可用/)
+})
+
+test('explains unrecognized and unknown provider errors', () => {
+  const summary = summarizeAiImageResults([
+    { provider: 'hive', status: 'error', reason: 'invalid_response' },
+    { provider: 'openai', status: 'error', error: 'upstream rejected image' },
+  ])
+
+  assert.match(summary.message, /Hive：响应格式无法识别/)
+  assert.match(summary.message, /OpenAI：检测失败（upstream rejected image）/)
 })

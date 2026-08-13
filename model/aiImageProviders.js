@@ -185,6 +185,15 @@ async function defaultC2paReaderFactory(buffer, options = {}) {
   )
 }
 
+function isC2paComponentUnavailable(error, message) {
+  return (
+    error?.code === 'ERR_MODULE_NOT_FOUND' ||
+    /C2PA Reader API unavailable|cannot find (?:package|module)|module not found|could not locate (?:the )?bindings?|no native build was found|native bindings? (?:is |are )?(?:missing|unavailable|not found)/i.test(
+      message,
+    )
+  )
+}
+
 export async function checkC2pa(buffer, options = {}) {
   if (options.enable === false) {
     return {
@@ -245,10 +254,14 @@ export async function checkC2pa(buffer, options = {}) {
       evidence,
     }
   } catch (error) {
+    const message = safeError(error)
     return {
       provider: 'c2pa',
       status: 'error',
-      error: safeError(error),
+      error: message,
+      reason: isC2paComponentUnavailable(error, message)
+        ? 'component_unavailable'
+        : undefined,
       evidence: {},
     }
   }
@@ -325,7 +338,12 @@ export async function checkOpenAi(buffer, options = {}) {
             signals.every((entry) => entry.outcome === 'not_detected')
           ? 'not_detected'
           : 'error'
-      return { provider: 'openai', status, signals }
+      return {
+        provider: 'openai',
+        status,
+        signals,
+        reason: status === 'error' ? 'invalid_response' : undefined,
+      }
     } catch (error) {
       lastError = error
       if (![401, 403, 404, 429].includes(error?.status)) break
@@ -338,6 +356,7 @@ export async function checkOpenAi(buffer, options = {}) {
     provider: 'openai',
     status,
     error: safeError(lastError, apiKeys),
+    httpStatus: lastError?.status,
     signals: [],
   }
 }
@@ -525,7 +544,12 @@ export async function checkHive(buffer, options = {}) {
           : 'not_detected'
       delete evidence._recognized
       delete evidence._detected
-      return { provider: 'hive', status, evidence }
+      return {
+        provider: 'hive',
+        status,
+        evidence,
+        reason: status === 'error' ? 'invalid_response' : undefined,
+      }
     } catch (error) {
       lastError = error
       if (![401, 403, 429].includes(error?.status)) break
@@ -538,6 +562,7 @@ export async function checkHive(buffer, options = {}) {
     provider: 'hive',
     status,
     error: safeError(lastError, apiKeys),
+    httpStatus: lastError?.status,
     evidence: {},
   }
 }
@@ -598,6 +623,10 @@ export async function checkSightengine(buffer, options = {}) {
             : evidence.aiGeneratedProbability >= 0.5
               ? 'detected'
               : 'not_detected',
+        reason:
+          evidence.aiGeneratedProbability === undefined
+            ? 'invalid_response'
+            : undefined,
         evidence,
       }
     } catch (error) {
@@ -615,6 +644,7 @@ export async function checkSightengine(buffer, options = {}) {
       lastError,
       credentials.flatMap(({ apiUser, apiSecret }) => [apiUser, apiSecret]),
     ),
+    httpStatus: lastError?.status,
     evidence: {},
   }
 }
@@ -652,12 +682,50 @@ const STATUS_NAMES = {
   error: '检测失败',
 }
 
+const REASON_NAMES = {
+  disabled: '已禁用',
+  missing_api_key: '未配置 API Key',
+  missing_credentials: '未配置 API 凭据',
+  fetch_unavailable: '当前 Node 环境不支持网络请求',
+  component_unavailable: '本地检测组件不可用',
+  invalid_response: '响应格式无法识别',
+}
+
+const HTTP_STATUS_NAMES = {
+  401: 'API 凭据无效',
+  403: 'API 凭据无权限',
+  404: '无接口权限或接口未开放',
+  429: '请求频率受限',
+}
+
+function describeProviderStatus(result) {
+  if (result.status === 'detected' || result.status === 'not_detected') {
+    return STATUS_NAMES[result.status]
+  }
+  if (REASON_NAMES[result.reason]) return REASON_NAMES[result.reason]
+
+  const httpStatus = Number(result.httpStatus)
+  if (Number.isInteger(httpStatus)) {
+    const description =
+      HTTP_STATUS_NAMES[httpStatus] ||
+      (httpStatus >= 500 ? '服务端异常' : '请求失败')
+    return `${description}（HTTP ${httpStatus}）`
+  }
+
+  const error = String(result.error || '').trim()
+  if (/超时|timeout|aborted?/i.test(error)) return '请求超时'
+  if (/fetch failed|network|socket|connect|dns/i.test(error))
+    return '网络请求失败'
+  if (error) return `检测失败（${error.replace(/\s+/g, ' ').slice(0, 120)}）`
+  return STATUS_NAMES[result.status] || result.status
+}
+
 function summarizeProviderStatuses(results) {
   if (results.length === 0) return ''
   return results
     .map(
       (result) =>
-        `${PROVIDER_NAMES[result.provider] || result.provider}：${STATUS_NAMES[result.status] || result.status}`,
+        `${PROVIDER_NAMES[result.provider] || result.provider}：${describeProviderStatus(result)}`,
     )
     .join('\n')
 }
