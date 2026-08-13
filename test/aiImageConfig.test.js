@@ -1,0 +1,72 @@
+import assert from 'node:assert/strict'
+import fs from 'node:fs'
+import test from 'node:test'
+
+const defaultConfig = JSON.parse(
+  fs.readFileSync(
+    new URL('../data/system/default_config.json', import.meta.url),
+  ),
+)
+const packageJson = JSON.parse(
+  fs.readFileSync(new URL('../package.json', import.meta.url)),
+)
+const guobaSource = fs.readFileSync(
+  new URL('../guoba.support.js', import.meta.url),
+  'utf8',
+)
+
+test('requires Node.js 22 and enables local C2PA support', () => {
+  assert.equal(packageJson.engines.node, '>=22.0.0')
+  assert.equal(
+    typeof packageJson.dependencies['@contentauth/c2pa-node'],
+    'string',
+  )
+})
+
+test('defines one AI image proxy switch and no provider proxy settings', () => {
+  const aiImage = defaultConfig.aiImage
+
+  assert.equal(aiImage?.proxy?.enable, false)
+  for (const provider of ['openai', 'hive', 'sightengine']) {
+    assert.equal(aiImage?.[provider]?.proxy, undefined)
+  }
+})
+
+test('uses only arrays for AI image API credentials', () => {
+  const aiImage = defaultConfig.aiImage
+
+  assert.deepEqual(aiImage?.openai?.apiKeys, [])
+  assert.equal(aiImage?.openai?.apiKey, undefined)
+  assert.deepEqual(aiImage?.hive?.apiKeys, [])
+  assert.equal(aiImage?.hive?.apiKey, undefined)
+  assert.deepEqual(aiImage?.sightengine?.credentials, [])
+  assert.equal(aiImage?.sightengine?.apiUser, undefined)
+  assert.equal(aiImage?.sightengine?.apiSecret, undefined)
+})
+
+test('keeps conservative AI image defaults', () => {
+  const aiImage = defaultConfig.aiImage
+
+  assert.equal(aiImage?.enable, false)
+  assert.equal(aiImage?.timeoutMs, 15000)
+  assert.equal(aiImage?.maxFileSize, 50 * 1024 * 1024)
+  assert.equal(aiImage?.c2pa?.enable, true)
+  assert.equal(aiImage?.openai?.enable, true)
+  assert.equal(aiImage?.hive?.enable, true)
+  assert.equal(aiImage?.sightengine?.enable, false)
+})
+
+test('exposes only the new AI credential and proxy fields in Guoba', () => {
+  assert.match(guobaSource, /field: 'aiImage\.proxy\.enable'/)
+  assert.match(guobaSource, /field: 'aiImage\.openai\.apiKeys'/)
+  assert.match(guobaSource, /field: 'aiImage\.hive\.apiKeys'/)
+  assert.match(guobaSource, /field: 'aiImage\.sightengine\.credentials'/)
+  assert.doesNotMatch(guobaSource, /field: 'aiImage\.openai\.apiKey'/)
+  assert.doesNotMatch(guobaSource, /field: 'aiImage\.hive\.apiKey'/)
+  assert.doesNotMatch(guobaSource, /field: 'aiImage\.sightengine\.apiUser'/)
+  assert.doesNotMatch(guobaSource, /field: 'aiImage\.[^']+\.proxy\./)
+  assert.doesNotMatch(
+    guobaSource,
+    /tjLogger\.[a-z]+\([^\n]*JSON\.stringify\(configJson\)/,
+  )
+})

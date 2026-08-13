@@ -35,6 +35,29 @@
       "enable": false
     }
   },
+  "aiImage": {
+    "enable": false,
+    "timeoutMs": 15000,
+    "maxFileSize": 52428800,
+    "proxy": {
+      "enable": false
+    },
+    "c2pa": {
+      "enable": true
+    },
+    "openai": {
+      "enable": true,
+      "apiKeys": []
+    },
+    "hive": {
+      "enable": true,
+      "apiKeys": []
+    },
+    "sightengine": {
+      "enable": false,
+      "credentials": []
+    }
+  },
   "httpServer": {
     "enable": false,
     "listenPort": 5252,

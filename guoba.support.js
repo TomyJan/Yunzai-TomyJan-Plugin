@@ -14,6 +14,12 @@ import {
 import tjLogger from './components/logger.js'
 import { sendMsgFriend } from './model/utils.js'
 import cfg from '../../lib/config/config.js'
+import {
+  migrateAiImageConfig,
+  parseApiKeys,
+  parseSightengineCredentials,
+  serializeAiImageCredentialFields,
+} from './model/aiImageConfig.js'
 
 // 支持锅巴
 export function supportGuoba() {
@@ -179,6 +185,88 @@ export function supportGuoba() {
         },
         {
           component: 'Divider',
+          label: 'AI 图片识别设置',
+        },
+        {
+          field: 'aiImage.enable',
+          label: '启用',
+          helpMessage: '是否启用 AI 图片来源检测',
+          bottomHelpMessage: '更改即时生效',
+          component: 'Switch',
+        },
+        {
+          field: 'aiImage.proxy.enable',
+          label: '使用代理',
+          helpMessage: '图片下载和所有外部检测渠道使用全局代理地址',
+          bottomHelpMessage: '本地 C2PA 检测不使用代理',
+          component: 'Switch',
+        },
+        {
+          field: 'aiImage.timeoutMs',
+          label: '请求超时毫秒数',
+          helpMessage: '图片下载和单个检测渠道的最大请求时间',
+          bottomHelpMessage: '更改即时生效, 默认 15000',
+          component: 'InputNumber',
+        },
+        {
+          field: 'aiImage.maxFileSize',
+          label: '图片大小上限',
+          helpMessage: '允许检测的最大字节数',
+          bottomHelpMessage: '更改即时生效, 默认 52428800 (50 MiB)',
+          component: 'InputNumber',
+        },
+        {
+          field: 'aiImage.c2pa.enable',
+          label: 'C2PA 检测',
+          helpMessage: '在本地验证 C2PA Content Credentials',
+          bottomHelpMessage: '无需 API key',
+          component: 'Switch',
+        },
+        {
+          field: 'aiImage.openai.enable',
+          label: 'OpenAI 来源检测',
+          helpMessage: '检测 OpenAI 支持的 C2PA 与 SynthID 信号',
+          bottomHelpMessage: '需要 OpenAI API key',
+          component: 'Switch',
+        },
+        {
+          field: 'aiImage.openai.apiKeys',
+          label: 'OpenAI API keys',
+          helpMessage: 'JSON 字符串数组，例如 ["key-1", "key-2"]',
+          bottomHelpMessage: '401/403/404/429 时自动尝试下一个 key',
+          component: 'InputPassword',
+        },
+        {
+          field: 'aiImage.hive.enable',
+          label: 'Hive AI 检测',
+          helpMessage: '使用 Hive AI Image + Deepfake Classifier',
+          bottomHelpMessage: '需要 Hive API key',
+          component: 'Switch',
+        },
+        {
+          field: 'aiImage.hive.apiKeys',
+          label: 'Hive API keys',
+          helpMessage: 'JSON 字符串数组，例如 ["key-1", "key-2"]',
+          bottomHelpMessage: '401/403/429 时自动尝试下一个 key',
+          component: 'InputPassword',
+        },
+        {
+          field: 'aiImage.sightengine.enable',
+          label: 'Sightengine 备用检测',
+          helpMessage: '使用 Sightengine genai 模型作为可选第二意见',
+          bottomHelpMessage: '默认关闭',
+          component: 'Switch',
+        },
+        {
+          field: 'aiImage.sightengine.credentials',
+          label: 'Sightengine 凭据',
+          helpMessage:
+            'JSON 数组，例如 [{"apiUser":"user","apiSecret":"secret"}]',
+          bottomHelpMessage: '401/403/429 时自动尝试下一组凭据',
+          component: 'InputPassword',
+        },
+        {
+          component: 'Divider',
           label: 'EDU 认证设置',
         },
         {
@@ -286,12 +374,18 @@ export function supportGuoba() {
       ],
       // 获取配置数据方法（用于前端填充显示数据）
       getConfigData() {
-        return configJson
+        return serializeAiImageCredentialFields(configJson)
       },
       // 设置配置的方法（前端点确定后调用的方法）
       setConfigData(data, { Result }) {
-        configJson = flattenObject(data)
-        tjLogger.debug('欲保存的新配置数据:', JSON.stringify(configJson))
+        try {
+          configJson = migrateAiImageConfig(
+            normalizeConfigValues(flattenObject(data)),
+          )
+        } catch (error) {
+          return Result.error(error.message)
+        }
+        tjLogger.debug('准备保存新配置')
         let saveRst = updateConfigFile()
         if (saveRst) return Result.error(saveRst)
         else return Result.ok({}, '保存成功辣ε(*´･ω･)з')
@@ -299,11 +393,28 @@ export function supportGuoba() {
     },
   }
 
+  function normalizeConfigValues(value) {
+    if (!value.aiImage) return value
+
+    value.aiImage.openai.apiKeys = parseApiKeys(
+      value.aiImage.openai.apiKeys,
+      'OpenAI API keys',
+    )
+    value.aiImage.hive.apiKeys = parseApiKeys(
+      value.aiImage.hive.apiKeys,
+      'Hive API keys',
+    )
+    value.aiImage.sightengine.credentials = parseSightengineCredentials(
+      value.aiImage.sightengine.credentials,
+    )
+    return value
+  }
+
   function getConfigFromFile() {
     try {
       // 尝试读取config.json
       const rawData = fs.readFileSync(configPath)
-      configJson = JSON.parse(rawData)
+      configJson = migrateAiImageConfig(JSON.parse(rawData))
 
       // 读取 default_config.json
       const defaultRawData = fs.readFileSync(defaultConfigPath)
@@ -313,8 +424,6 @@ export function supportGuoba() {
       let testConfigJson = mergeObjects(defaultConfigJson, configJson)
       if (JSON.stringify(testConfigJson) !== JSON.stringify(configJson)) {
         tjLogger.warn('配置文件有更新, 建议检查是否有新的项目需要配置!')
-        tjLogger.debug('testConfigJson:', JSON.stringify(testConfigJson))
-        tjLogger.debug('configJson:', JSON.stringify(configJson))
         configJson = testConfigJson
         updateConfigFile()
         sendMsgFriend(
@@ -328,7 +437,7 @@ export function supportGuoba() {
         tjLogger.warn('config.json 不存在, 生成默认配置...')
         const defaultRawData = fs.readFileSync(defaultConfigPath)
         fs.writeFileSync(configPath, defaultRawData)
-        configJson = JSON.parse(defaultRawData)
+        configJson = migrateAiImageConfig(JSON.parse(defaultRawData))
       } else {
         // 处理其他可能的读取错误
         tjLogger.error('读取 config.json 出错:', error.message)
