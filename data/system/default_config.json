@@ -3,23 +3,37 @@
     "logLevel": "info",
     "saveToFile": false
   },
+  "proxy": {
+    "url": "",
+    "autoUpdate": false,
+    "randomBackground": false
+  },
   "JMComic": {
     "enable": true,
     "pdfPassword": "",
     "sendPdfPassword": false,
     "sendFilePolicy": 1,
     "archiveDownloadedImg": false,
-    "archiveConvertedPdf": false
+    "archiveConvertedPdf": false,
+    "proxy": {
+      "enable": false
+    }
   },
   "vvShuo": {
-    "enable": true
+    "enable": true,
+    "proxy": {
+      "enable": false
+    }
   },
   "eduAuth": {
     "enable": false,
     "apiBaseUrl": "https://edu.amoe.cc/api/v2/thirdParty",
     "apiKey": "your-api-key",
     "userGroup": 725571000,
-    "adminGroup": 725571000
+    "adminGroup": 725571000,
+    "proxy": {
+      "enable": false
+    }
   },
   "httpServer": {
     "enable": false,

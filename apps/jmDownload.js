@@ -10,6 +10,7 @@ import jmDownload from '../model/jmDownload.js'
 import { _DataPath, pluginAuthor } from '../data/system/pluginConstants.js'
 import common from '../../../lib/common/common.js'
 import fs from 'fs'
+import { syncJmProxyConfig } from '../model/jmOption.js'
 
 export class jmDownloadApp extends plugin {
   constructor() {
@@ -32,8 +33,10 @@ export class jmDownloadApp extends plugin {
   }
 
   async jmDownload() {
+    const pluginConfig = config.getConfig()
+
     // 一些预检
-    if (!config.getConfig().JMComic.enable) {
+    if (!pluginConfig.JMComic.enable) {
       await this.reply('JMComic 功能未启用', true)
       return
     }
@@ -70,10 +73,8 @@ export class jmDownloadApp extends plugin {
     let jmPrepareMsg = await this.reply(msg, true)
 
     // 变量
-    let command = ''
-    let commandResult = {}
     let downloadPath = `${jmDownload.downloadPathPrefix}/${id}`
-    let pdfPassword = config.getConfig().JMComic.pdfPassword
+    let pdfPassword = pluginConfig.JMComic.pdfPassword
     const pdfPath = `${jmDownload.convertPathPrefix}/${id}${
       pdfPassword ? `_Password` : ''
     }.pdf`
@@ -112,8 +113,20 @@ export class jmDownloadApp extends plugin {
     }
     // 开始下载
     tjLogger.info(`开始下载 JMComic ID: ${id}`)
-    command = `jmcomic ${id} --option="${_DataPath}/JMComic/option.yml"`
-    commandResult = await runCommand(command)
+    const optionPath = `${_DataPath}/JMComic/option.yml`
+    try {
+      syncJmProxyConfig(optionPath, {
+        enable: pluginConfig.JMComic.proxy?.enable,
+        url: pluginConfig.proxy?.url,
+      })
+    } catch (error) {
+      tjLogger.error(`同步 JMComic 代理配置失败: ${error.message}`)
+      jmDownload.delTempFile(1, downloadPath, false, id)
+      await this.reply(`同步 JMComic 代理配置失败: ${error.message}`, true)
+      return
+    }
+    const command = `jmcomic ${id} --option="${optionPath}"`
+    const commandResult = await runCommand(command)
 
     // 下载完成, 撤回准备消息
     if (this.e.group) this.e.group.recallMsg(jmPrepareMsg.message_id)

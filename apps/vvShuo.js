@@ -1,7 +1,7 @@
 import plugin from '../../../lib/plugins/plugin.js'
 import tjLogger from '../components/logger.js'
 import config from '../components/config.js'
-import fetch from 'node-fetch'
+import { withProxy } from '../model/proxy.js'
 
 export class vvShuoApp extends plugin {
   constructor() {
@@ -24,8 +24,10 @@ export class vvShuoApp extends plugin {
   }
 
   async vvShuoSearch() {
+    const pluginConfig = config.getConfig()
+
     // 一些预检
-    if (!config.getConfig().vvShuo.enable) {
+    if (!pluginConfig.vvShuo.enable) {
       await this.reply('VV 说 功能未启用', true)
       return
     }
@@ -51,7 +53,13 @@ export class vvShuoApp extends plugin {
       }准备搜索: ${content}, 搜索地址: ${searchApiUrl}`,
     )
 
-    fetch(searchApiUrl)
+    fetch(
+      searchApiUrl,
+      withProxy({}, pluginConfig, pluginConfig.vvShuo.proxy?.enable, {
+        feature: 'VV 说',
+        warn: (message) => tjLogger.warn(message),
+      }),
+    )
       .then((response) => {
         if (!response.ok) {
           tjLogger.error(

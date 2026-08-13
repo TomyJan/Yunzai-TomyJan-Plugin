@@ -10,7 +10,6 @@ import {
 } from '../data/system/pluginConstants.js'
 import fs from 'fs'
 import path from 'path'
-import fetch from 'node-fetch'
 import formatDistanceToNow from 'date-fns/formatDistanceToNow'
 import zhCN from 'date-fns/locale/zh-CN'
 import { Buffer } from 'buffer'
@@ -20,6 +19,7 @@ import iconv from 'iconv-lite'
 import pkg from 'pdf-lib-plus-encrypt'
 const { PDFDocument } = pkg
 import sharp from 'sharp'
+import { withProxy } from './proxy.js'
 
 /**
  * 程序延时
@@ -120,12 +120,13 @@ export function generateFixedString(inputString, length = 40) {
  * @returns {boolean} 是否成功更新背景图片
  */
 export function updateCardBg() {
+  const pluginConfig = config.getConfig()
   let defaultCardBgPath = resPath + '/img/common/bg/Alisa-Echo_0.jpg'
   let cardBgPath = dataPath + '/system/cachedImg/cardBg.jpg'
   let tmpCardBgPath = dataPath + '/system/cachedImg/cardBgTmp.jpg'
   let imgDownloadUrl = 'https://api.tomys.top/api/pnsWallPaper'
 
-  if (!config.getConfig().useRandomBgInCard) {
+  if (!pluginConfig.useRandomBgInCard) {
     // 没使用随机背景图片
     try {
       let cardBgExist = fs.existsSync(cardBgPath)
@@ -144,7 +145,17 @@ export function updateCardBg() {
   }
 
   // 获取随机背景图片
-  fetch(imgDownloadUrl, { method: 'GET', timeout: 5000 })
+  const fetchOptions = withProxy(
+    { method: 'GET', signal: AbortSignal.timeout(5000) },
+    pluginConfig,
+    pluginConfig.proxy?.randomBackground,
+    {
+      feature: '随机背景图',
+      warn: (message) => tjLogger.warn(message),
+    },
+  )
+
+  fetch(imgDownloadUrl, fetchOptions)
     .then((rsp) => {
       if (
         rsp.status === 301 ||
@@ -160,7 +171,7 @@ export function updateCardBg() {
           'url:',
           location,
         )
-        return fetch(location, { method: 'GET', timeout: 5000 })
+        return fetch(location, fetchOptions)
       }
       return rsp
     })

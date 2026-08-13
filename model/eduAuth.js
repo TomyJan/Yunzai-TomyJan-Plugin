@@ -4,6 +4,7 @@ import crypto from 'crypto'
 import fs from 'fs'
 import path from 'path'
 import { dataPath } from '../data/system/pluginConstants.js'
+import { withProxy } from './proxy.js'
 
 function sleepAsync(sleepms) {
   return new Promise((resolve) => {
@@ -242,7 +243,7 @@ let lastTimestamp = 0
  * @returns {string} - 毫秒级时间戳
  */
 function getUniqueTimestamp() {
-  let timestamp = Date.now()
+  let timestamp
   do {
     timestamp = Date.now()
   } while (timestamp <= lastTimestamp)
@@ -289,6 +290,7 @@ function getEduConfig() {
  * @returns {Promise<object>} - { success: boolean, data?: any, message?: string, code?: number }
  */
 async function apiRequest(endpoint, data = {}, options = {}) {
+  const pluginConfig = config.getConfig()
   const cfg = getEduConfig()
   const apiBaseUrl = cfg.apiBaseUrl
   const apiKey = cfg.apiKey
@@ -344,7 +346,13 @@ async function apiRequest(endpoint, data = {}, options = {}) {
       fetchOptions.body = body
     }
 
-    const response = await fetch(url, fetchOptions)
+    const response = await fetch(
+      url,
+      withProxy(fetchOptions, pluginConfig, cfg.proxy?.enable, {
+        feature: 'EDU 认证',
+        warn: (message) => tjLogger.warn(message),
+      }),
+    )
 
     if (!response.ok) {
       const errMsg = `HTTP ${response.status} ${response.statusText}`
@@ -562,7 +570,11 @@ export function getUserStatus(userInfo) {
   const graceAuthCount = (role && role.graceAuthCount) || 0
   const graceUsed = userInfo.graceUsed || 0
 
-  if (graceAuthCount > 0 && graceUsed < graceAuthCount && expireTime + graceDays * 24 * 60 * 60 * 1000 > now) {
+  if (
+    graceAuthCount > 0 &&
+    graceUsed < graceAuthCount &&
+    expireTime + graceDays * 24 * 60 * 60 * 1000 > now
+  ) {
     // 还在宽限期内
     return 'grace_period'
   } else {
@@ -1081,13 +1093,14 @@ export function formatUserStatusReport(analysisResult) {
 
   // 标题和概览（始终显示所有类别）
   lines.push('📊 用户状态概览\n')
-  if (totalNormal > 0 ) lines.push(`✅ 正常用户: ${totalNormal}`)
+  if (totalNormal > 0) lines.push(`✅ 正常用户: ${totalNormal}`)
   if (totalGrace > 0) lines.push(`⏳ 宽限期内: ${totalGrace}`)
   if (totalExpired > 0) lines.push(`⚠️ 过期用户: ${totalExpired}`)
   if (totalInvalidOther > 0) lines.push(`❌ 其他无效: ${totalInvalidOther}`)
   if (totalPending > 0) lines.push(`🔍 待审核: ${totalPending}`)
   if (totalBanned > 0) lines.push(`🚫 已封禁: ${totalBanned}`)
-  if (totalValidNotInGroup > 0) lines.push(`📭 有效未加群: ${totalValidNotInGroup}`)
+  if (totalValidNotInGroup > 0)
+    lines.push(`📭 有效未加群: ${totalValidNotInGroup}`)
   if (totalUnregistered > 0) lines.push(`👻 群内未注册: ${totalUnregistered}`)
   if (totalUnkQQ > 0) lines.push(`❓ 未绑定QQ: ${totalUnkQQ}`)
 

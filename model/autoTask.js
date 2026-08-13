@@ -7,8 +7,9 @@ import {
   pluginThemeColor,
 } from '../data/system/pluginConstants.js'
 import { sendMsgFriend } from './utils.js'
+import { withProxy } from './proxy.js'
 import cfg from '../../../lib/config/config.js'
-// import config from '../components/config.js'
+import config from '../components/config.js'
 
 export async function initAutoTask() {
   // TODO: 加回来定时任务相关配置
@@ -96,6 +97,7 @@ export async function checkUpdateTask() {
   }
 
   async function getRemoteVersion() {
+    const pluginConfig = config.getConfig()
     const updateSources = [
       {
         name: 'KuroPluginServer',
@@ -118,7 +120,13 @@ export async function checkUpdateTask() {
     for (const source of updateSources) {
       tjLogger.debug(`尝试从 ${source.name} 检查更新...`)
       try {
-        let rsp = await fetch(source.url)
+        let rsp = await fetch(
+          source.url,
+          withProxy({}, pluginConfig, pluginConfig.proxy?.autoUpdate, {
+            feature: '自动更新',
+            warn: (message) => tjLogger.warn(message),
+          }),
+        )
         if (!rsp.ok) {
           tjLogger.warn(
             `从 ${source.name} 获取更新信息失败: ${rsp.status} ${rsp.statusText}`,

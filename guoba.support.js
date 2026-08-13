@@ -76,6 +76,24 @@ export function supportGuoba() {
         },
         {
           component: 'Divider',
+          label: '代理设置',
+        },
+        {
+          field: 'proxy.url',
+          label: '代理服务器地址',
+          helpMessage: '插件外部网络请求共用的 HTTP 或 HTTPS 代理地址',
+          bottomHelpMessage: '例如 http://127.0.0.1:7890，各功能需单独开启代理',
+          component: 'Input',
+        },
+        {
+          field: 'proxy.autoUpdate',
+          label: '自动更新检查使用代理',
+          helpMessage: '自动检查更新时通过代理访问更新源',
+          bottomHelpMessage: '更改即时生效',
+          component: 'Switch',
+        },
+        {
+          component: 'Divider',
           label: 'JMComic 功能设置',
         },
         {
@@ -83,6 +101,13 @@ export function supportGuoba() {
           label: '启用',
           helpMessage: '是否启用 JMComic 功能',
           bottomHelpMessage: '更改即时生效',
+          component: 'Switch',
+        },
+        {
+          field: 'JMComic.proxy.enable',
+          label: '下载使用代理',
+          helpMessage: '下载前将全局代理地址同步到 JMComic 配置文件',
+          bottomHelpMessage: '关闭时只移除由插件管理的 proxies 配置',
           component: 'Switch',
         },
         {
@@ -146,6 +171,13 @@ export function supportGuoba() {
           component: 'Switch',
         },
         {
+          field: 'vvShuo.proxy.enable',
+          label: '使用代理',
+          helpMessage: 'VV 说 API 请求是否使用全局代理地址',
+          bottomHelpMessage: '更改即时生效',
+          component: 'Switch',
+        },
+        {
           component: 'Divider',
           label: 'EDU 认证设置',
         },
@@ -153,6 +185,13 @@ export function supportGuoba() {
           field: 'eduAuth.enable',
           label: '启用',
           helpMessage: '是否启用 EDU 认证 功能',
+          bottomHelpMessage: '更改即时生效',
+          component: 'Switch',
+        },
+        {
+          field: 'eduAuth.proxy.enable',
+          label: '使用代理',
+          helpMessage: 'EDU 认证 API 请求是否使用全局代理地址',
           bottomHelpMessage: '更改即时生效',
           component: 'Switch',
         },
@@ -221,6 +260,13 @@ export function supportGuoba() {
             '卡片是否使用随机背景图, 获取失败会回退到最后一张图或者本地背景图, 本地默认背景图: 插件根目录/resources/img/common/bg/Alisa-Echo_0.jpg',
           bottomHelpMessage:
             '更改即时生效, 背景图 API: https://api.tomys.top/api/pnsWallPaper 均为战双官方壁纸',
+          component: 'Switch',
+        },
+        {
+          field: 'proxy.randomBackground',
+          label: '随机背景图使用代理',
+          helpMessage: '获取随机背景图时是否使用全局代理地址',
+          bottomHelpMessage: '更改即时生效',
           component: 'Switch',
         },
         {
