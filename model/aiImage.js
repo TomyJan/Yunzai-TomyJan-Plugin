@@ -311,6 +311,15 @@ export async function inspectAiImage(
   const secrets = collectSecrets(aiImageConfig)
   const inspectionStartedAt = now()
   writeLog(logger, 'info', '开始检测')
+  const providersEnabled =
+    aiImageConfig.c2pa?.enable !== false ||
+    aiImageConfig.openai?.enable !== false ||
+    aiImageConfig.hive?.enable !== false ||
+    aiImageConfig.sightengine?.enable === true
+  if (!providersEnabled) {
+    writeLog(logger, 'warn', '未启用任何检测渠道，跳过图片下载')
+    return summarizeAiImageResults([], { noProvidersEnabled: true })
+  }
   const proxyEnabled = aiImageConfig.proxy?.enable === true
   const sharedOptions = {
     ...dependencies,

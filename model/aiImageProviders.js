@@ -364,8 +364,16 @@ export async function checkOpenAi(buffer, options = {}) {
 }
 
 function numberValue(value) {
+  if (
+    typeof value !== 'number' &&
+    !(typeof value === 'string' && value.trim() !== '')
+  ) {
+    return undefined
+  }
   const number = Number(value)
-  return Number.isFinite(number) ? number : undefined
+  return Number.isFinite(number) && number >= 0 && number <= 1
+    ? number
+    : undefined
 }
 
 function normalizeHive(payload) {
@@ -675,7 +683,7 @@ function summarizeProviderStatuses(results) {
     .join('\n')
 }
 
-export function summarizeAiImageResults(results = []) {
+export function summarizeAiImageResults(results = [], options = {}) {
   const normalized = Array.isArray(results) ? results.filter(Boolean) : []
   const trusted = normalized.find(
     (result) => result.status === 'detected' && hasTrustedProvenance(result),
@@ -690,7 +698,9 @@ export function summarizeAiImageResults(results = []) {
   let verdictIcon = '❔'
   let conclusion = '暂未发现明确的 AI 来源信号，证据不足'
 
-  if (trusted) {
+  if (options.noProvidersEnabled === true) {
+    conclusion = '未启用任何检测渠道，请先在配置中启用至少一个渠道'
+  } else if (trusted) {
     verdict = 'detected'
     confidence = 'high'
     verdictIcon = '✅'

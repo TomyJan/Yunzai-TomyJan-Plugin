@@ -59,6 +59,31 @@ test('downloads once and isolates provider failures during inspection', async ()
   )
 })
 
+test('skips image download when every inspection provider is disabled', async () => {
+  let downloadCalls = 0
+  const result = await inspectAiImage(
+    'https://public.example/image.png',
+    {
+      aiImage: {
+        c2pa: { enable: false },
+        openai: { enable: false },
+        hive: { enable: false },
+        sightengine: { enable: false },
+      },
+    },
+    {
+      downloadImpl: async () => {
+        downloadCalls += 1
+        return { buffer: Buffer.from('image'), mimeType: 'image/png' }
+      },
+    },
+  )
+
+  assert.equal(downloadCalls, 0)
+  assert.equal(result.verdict, 'unknown')
+  assert.match(result.message, /未启用任何检测渠道/)
+})
+
 test('runs every enabled provider instead of treating providers as fallbacks', async () => {
   const calls = []
   const result = await inspectAiImage(
@@ -434,7 +459,7 @@ test('redacts image URLs from download errors exposed to callers', async () => {
       imageUrl,
       {
         aiImage: {
-          c2pa: { enable: false },
+          c2pa: { enable: true },
           openai: { enable: false },
           hive: { enable: false },
           sightengine: { enable: false },

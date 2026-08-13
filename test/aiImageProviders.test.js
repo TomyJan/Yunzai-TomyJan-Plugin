@@ -513,6 +513,31 @@ test('reports an error when Hive returns no recognizable detection result', asyn
   assert.equal(result.status, 'error')
 })
 
+for (const invalidValue of [null, '', false, -0.1, 1.1]) {
+  test(`rejects invalid Hive V3 probability ${JSON.stringify(invalidValue)}`, async () => {
+    const result = await checkHive(Buffer.from('image'), {
+      apiKeys: ['hive-v3-secret-key'],
+      imageUrl: 'https://public.example/image.png',
+      fetchImpl: async () =>
+        new Response(
+          JSON.stringify({
+            output: [
+              {
+                classes: [
+                  { class: 'ai_generated', value: invalidValue },
+                  { class: 'deepfake', value: invalidValue },
+                ],
+              },
+            ],
+          }),
+        ),
+    })
+
+    assert.equal(result.status, 'error')
+    assert.equal(result.reason, 'invalid_response')
+  })
+}
+
 test('normalizes Sightengine genai result', async () => {
   const fetchImpl = async () =>
     new Response(JSON.stringify({ type: { ai_generated: 0.91 } }), {
