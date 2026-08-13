@@ -23,6 +23,13 @@ test('prioritizes trusted provenance over probabilistic provider results', () =>
 
   assert.equal(summary.verdict, 'detected')
   assert.equal(summary.confidence, 'high')
+  assert.match(summary.message, /^🔎 AI 图片识别结果/)
+  assert.match(summary.message, /✅ 结论：检测到可信 C2PA 来源凭证/)
+  assert.match(summary.message, /📊 可信度：高/)
+  assert.match(summary.message, /\n\n检测渠道：\n/)
+  assert.match(summary.message, /✅ C2PA：检测到支持的信号/)
+  assert.match(summary.message, /✅ Hive：检测到支持的信号/)
+  assert.match(summary.message, /ℹ️ 未检出不代表图片一定不是 AI 生成。$/)
   assert.match(summary.message, /C2PA/)
   assert.match(summary.message, /OpenAI OpCo, LLC/)
 })
@@ -60,7 +67,26 @@ test('prioritizes a detected SynthID signal over probabilistic results', () => {
   ])
 
   assert.equal(summary.confidence, 'high')
+  assert.match(summary.message, /✅ 结论：检测到 OpenAI SynthID 信号/)
   assert.match(summary.message, /SynthID/)
+})
+
+test('formats probabilistic detections with a medium-confidence warning', () => {
+  const summary = summarizeAiImageResults([
+    {
+      provider: 'hive',
+      status: 'detected',
+      evidence: { aiGeneratedProbability: 0.97 },
+    },
+    { provider: 'c2pa', status: 'not_detected', evidence: {} },
+  ])
+
+  assert.equal(summary.verdict, 'detected')
+  assert.equal(summary.confidence, 'medium')
+  assert.match(summary.message, /⚠️ 结论：检测到 AI 生成或篡改信号（概率模型）/)
+  assert.match(summary.message, /📊 可信度：中/)
+  assert.match(summary.message, /✅ Hive：检测到支持的信号/)
+  assert.match(summary.message, /ℹ️ C2PA：未发现支持的信号/)
 })
 
 test('treats an OpenAI valid C2PA signal as high-confidence provenance', () => {
@@ -90,16 +116,23 @@ test('reports evidence insufficient when providers are available but detect noth
   ])
 
   assert.equal(summary.verdict, 'unknown')
+  assert.match(summary.message, /❔ 结论：暂未发现明确的 AI 来源信号/)
+  assert.match(summary.message, /📊 可信度：低/)
   assert.match(summary.message, /证据不足/)
-  assert.match(summary.message, /C2PA：未发现支持的信号/)
-  assert.match(summary.message, /OpenAI：未发现支持的信号/)
-  assert.match(summary.message, /Hive：未发现支持的信号/)
+  assert.match(summary.message, /ℹ️ C2PA：未发现支持的信号/)
+  assert.match(summary.message, /ℹ️ OpenAI：未发现支持的信号/)
+  assert.match(summary.message, /ℹ️ Hive：未发现支持的信号/)
 })
 
 test('explains missing provider credentials without changing the verdict', () => {
   const summary = summarizeAiImageResults([
     {
       provider: 'openai',
+      status: 'unavailable',
+      reason: 'missing_api_key',
+    },
+    {
+      provider: 'hive',
       status: 'unavailable',
       reason: 'missing_api_key',
     },
@@ -112,8 +145,9 @@ test('explains missing provider credentials without changing the verdict', () =>
 
   assert.equal(summary.verdict, 'unknown')
   assert.match(summary.message, /不可用|失败/)
-  assert.match(summary.message, /OpenAI：未配置 API Key/)
-  assert.match(summary.message, /Sightengine：未配置 API 凭据/)
+  assert.match(summary.message, /⏸️ OpenAI：未配置 API Key/)
+  assert.match(summary.message, /⏸️ Hive：未配置 V3 Secret Key/)
+  assert.match(summary.message, /⏸️ Sightengine：未配置 API 凭据/)
 })
 
 test('explains provider HTTP and timeout failures', () => {
@@ -146,6 +180,10 @@ test('explains provider HTTP and timeout failures', () => {
   assert.match(summary.message, /Hive：请求频率受限（HTTP 429）/)
   assert.match(summary.message, /Sightengine：请求超时/)
   assert.match(summary.message, /C2PA：本地检测组件不可用/)
+  assert.match(summary.message, /⏸️ OpenAI：/)
+  assert.match(summary.message, /⏸️ Hive：/)
+  assert.match(summary.message, /❌ Sightengine：/)
+  assert.match(summary.message, /❌ C2PA：/)
 })
 
 test('explains unrecognized and unknown provider errors', () => {

@@ -615,6 +615,7 @@ const STATUS_NAMES = {
 const REASON_NAMES = {
   disabled: '已禁用',
   missing_api_key: '未配置 API Key',
+  missing_image_url: '缺少可供 Hive 读取的图片地址',
   missing_credentials: '未配置 API 凭据',
   fetch_unavailable: '当前 Node 环境不支持网络请求',
   component_unavailable: '本地检测组件不可用',
@@ -650,12 +651,25 @@ function describeProviderStatus(result) {
   return STATUS_NAMES[result.status] || result.status
 }
 
+function providerStatusIcon(result) {
+  return {
+    detected: '✅',
+    not_detected: 'ℹ️',
+    unavailable: '⏸️',
+    error: '❌',
+  }[result.status]
+}
+
 function summarizeProviderStatuses(results) {
   if (results.length === 0) return ''
   return results
     .map(
       (result) =>
-        `${PROVIDER_NAMES[result.provider] || result.provider}：${describeProviderStatus(result)}`,
+        `${providerStatusIcon(result) || '•'} ${PROVIDER_NAMES[result.provider] || result.provider}：${
+          result.provider === 'hive' && result.reason === 'missing_api_key'
+            ? '未配置 V3 Secret Key'
+            : describeProviderStatus(result)
+        }`,
     )
     .join('\n')
 }
@@ -672,32 +686,46 @@ export function summarizeAiImageResults(results = []) {
   const errors = normalized.filter((result) => result.status === 'error')
   let verdict = 'unknown'
   let confidence = 'low'
-  let message = '未发现明确的 AI 来源信号，但这不等于确定为真人图片。证据不足。'
+  let verdictIcon = '❔'
+  let conclusion = '暂未发现明确的 AI 来源信号，证据不足'
 
   if (trusted) {
     verdict = 'detected'
     confidence = 'high'
+    verdictIcon = '✅'
     const synthid = trusted.signals?.some(
       (signal) => signal.type === 'synthid' && signal.outcome === 'detected',
     )
     if (synthid) {
-      message = '检测到 OpenAI SynthID 信号。'
+      conclusion = '检测到 OpenAI SynthID 信号'
     } else {
       const issuer = trusted.evidence?.issuer
         ? `（签发者：${trusted.evidence.issuer}）`
         : ''
-      message = `检测到可信 C2PA 来源凭证${issuer}。`
+      conclusion = `检测到可信 C2PA 来源凭证${issuer}`
     }
   } else if (detected.length > 0) {
     verdict = 'detected'
     confidence = 'medium'
-    message = '检测到 AI 生成或篡改信号（概率模型结果），请结合来源凭证复核。'
+    verdictIcon = '⚠️'
+    conclusion = '检测到 AI 生成或篡改信号（概率模型），请结合来源凭证复核'
   } else if (unavailable.length > 0 || errors.length > 0) {
-    message = '当前检测渠道不可用或失败，无法形成可靠结论。'
+    verdictIcon = '⚠️'
+    conclusion = '检测渠道不可用或失败，无法形成可靠结论'
   }
 
   const providerStatuses = summarizeProviderStatuses(normalized)
-  if (providerStatuses) message = `${message}\n${providerStatuses}`
+  const confidenceName = { high: '高', medium: '中', low: '低' }[confidence]
+  let message = [
+    '🔎 AI 图片识别结果',
+    '',
+    `${verdictIcon} 结论：${conclusion}`,
+    `📊 可信度：${confidenceName}`,
+  ].join('\n')
+  if (providerStatuses) {
+    message += `\n\n检测渠道：\n${providerStatuses}`
+  }
+  message += '\n\nℹ️ 未检出不代表图片一定不是 AI 生成。'
 
   return { verdict, confidence, message, results: normalized }
 }

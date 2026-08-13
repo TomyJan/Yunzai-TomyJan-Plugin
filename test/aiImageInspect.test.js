@@ -4,6 +4,17 @@ import test from 'node:test'
 
 import { downloadImage, inspectAiImage } from '../model/aiImage.js'
 
+function createMemoryLogger() {
+  const entries = []
+  return {
+    entries,
+    debug: (...parts) => entries.push(['debug', parts.join(' ')]),
+    info: (...parts) => entries.push(['info', parts.join(' ')]),
+    warn: (...parts) => entries.push(['warn', parts.join(' ')]),
+    error: (...parts) => entries.push(['error', parts.join(' ')]),
+  }
+}
+
 test('downloads once and isolates provider failures during inspection', async () => {
   let downloads = 0
   const result = await inspectAiImage(
@@ -322,4 +333,94 @@ test('never creates a proxy dispatcher for local C2PA inspection', async () => {
   )
 
   assert.equal(proxyFactories, 0)
+})
+
+test('logs the AI image inspection lifecycle and provider durations', async () => {
+  const logger = createMemoryLogger()
+  let currentTime = 1000
+
+  await inspectAiImage(
+    'https://public.example/image.png?token=private-query',
+    {
+      aiImage: {
+        c2pa: { enable: true },
+        openai: { enable: false },
+        hive: { enable: false },
+        sightengine: { enable: false },
+      },
+    },
+    {
+      logger,
+      now: () => (currentTime += 5),
+      downloadImpl: async () => ({
+        buffer: Buffer.alloc(2048),
+        mimeType: 'image/png',
+      }),
+      readerFactory: async () => ({ getActive: () => null }),
+    },
+  )
+
+  const messages = logger.entries.map(([, message]) => message)
+  assert.match(messages[0], /\[AI图片识别\] 开始检测/)
+  assert.ok(
+    messages.some((message) =>
+      /图片下载完成.*image\/png.*2048 字节.*耗时 \d+ ms/.test(message),
+    ),
+  )
+  assert.ok(messages.some((message) => /C2PA 开始检测/.test(message)))
+  assert.ok(
+    messages.some((message) =>
+      /C2PA 检测完成.*not_detected.*耗时 \d+ ms/.test(message),
+    ),
+  )
+  assert.match(messages.at(-1), /检测汇总.*unknown.*low.*总耗时 \d+ ms/)
+  assert.doesNotMatch(messages.join('\n'), /public\.example|private-query/)
+})
+
+test('redacts image URLs and credentials from provider failure logs', async () => {
+  const logger = createMemoryLogger()
+  const imageUrl = 'https://public.example/image.png?token=sensitive-query'
+  const openAiSecret = 'openai-super-secret'
+  const hiveSecret = 'hive-super-secret'
+
+  await inspectAiImage(
+    imageUrl,
+    {
+      aiImage: {
+        c2pa: { enable: false },
+        openai: { enable: true, apiKeys: [openAiSecret] },
+        hive: { enable: true, apiKeys: [hiveSecret] },
+        sightengine: { enable: false },
+      },
+    },
+    {
+      logger,
+      downloadImpl: async () => ({
+        buffer: Buffer.from('image'),
+        mimeType: 'image/png',
+      }),
+      fetchImpl: async (url) => {
+        if (String(url).includes('openai.com')) {
+          throw new Error(`request ${imageUrl} rejected ${openAiSecret}`)
+        }
+        return new Response(
+          JSON.stringify({ message: `invalid ${hiveSecret}` }),
+          { status: 403 },
+        )
+      },
+    },
+  )
+
+  const output = logger.entries.map((entry) => entry.join(' ')).join('\n')
+  assert.match(output, /OpenAI 检测失败/)
+  assert.match(output, /Hive 不可用.*HTTP 403/)
+  for (const sensitiveValue of [
+    imageUrl,
+    'public.example',
+    'sensitive-query',
+    openAiSecret,
+    hiveSecret,
+  ]) {
+    assert.doesNotMatch(output, new RegExp(sensitiveValue))
+  }
 })

@@ -157,11 +157,11 @@ test('returns no image for a message without image segments', async () => {
   assert.deepEqual(urls, [])
 })
 
-test('wires the app to shared message parsing and the full plugin config', () => {
+test('wires the app to shared parsing, full config and plugin logger', () => {
   assert.match(appSource, /from '..\/model\/aiImageMessage\.js'/)
   assert.match(
     appSource,
-    /inspectAiImage\(imageUrls\[0\], config\.getConfig\(\)\)/,
+    /inspectAiImage\(imageUrls\[0\], config\.getConfig\(\), \{\s*logger: tjLogger,\s*\}\)/,
   )
   assert.match(appSource, /reg: '\^#\?\[aA\]\[iI\]图\$'/)
 })

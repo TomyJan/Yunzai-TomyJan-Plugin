@@ -32,7 +32,9 @@ export class aiImageApp extends plugin {
         await this.reply('请发送或引用一张图片后再使用 ai图', true)
         return
       }
-      const result = await inspectAiImage(imageUrls[0], config.getConfig())
+      const result = await inspectAiImage(imageUrls[0], config.getConfig(), {
+        logger: tjLogger,
+      })
       await this.reply(result.message, true)
     } catch (error) {
       tjLogger.error(`[AI图片识别] 检查失败: ${error.message}`)

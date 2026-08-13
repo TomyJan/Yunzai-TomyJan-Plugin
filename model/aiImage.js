@@ -11,6 +11,47 @@ import {
 } from './aiImageProviders.js'
 import { withProxy } from './proxy.js'
 
+const PROVIDER_NAMES = {
+  c2pa: 'C2PA',
+  openai: 'OpenAI',
+  hive: 'Hive',
+  sightengine: 'Sightengine',
+}
+
+function collectSecrets(aiImageConfig) {
+  return [
+    ...(aiImageConfig.openai?.apiKeys || []),
+    ...(aiImageConfig.hive?.apiKeys || []),
+    ...(aiImageConfig.sightengine?.credentials || []).flatMap((credential) => [
+      credential?.apiUser,
+      credential?.apiSecret,
+    ]),
+  ]
+    .map((value) => String(value || '').trim())
+    .filter(Boolean)
+}
+
+function redactLogValue(value, secrets = []) {
+  let message = value instanceof Error ? value.message : String(value || '')
+  for (const secret of secrets) {
+    message = message.split(secret).join('[redacted]')
+  }
+  return message
+    .replace(/https?:\/\/[^\s，。；]+/gi, '[redacted-url]')
+    .replace(/Bearer\s+[^\s，。；]+/gi, 'Bearer [redacted]')
+    .replace(/(api[_-]?(?:key|secret|user))=([^&\s]+)/gi, '$1=[redacted]')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+function writeLog(logger, level, message) {
+  logger?.[level]?.(`[AI图片识别] ${message}`)
+}
+
+function elapsedMs(now, startedAt) {
+  return Math.max(0, Math.round(now() - startedAt))
+}
+
 function getTimeoutMs(options) {
   const timeoutMs = Number(options?.timeoutMs)
   return Number.isFinite(timeoutMs) && timeoutMs > 0 ? timeoutMs : 15000
@@ -212,16 +253,46 @@ async function downloadImage(url, options = {}) {
   throw new Error('图片下载失败')
 }
 
-function providerCall(provider, fn) {
-  return Promise.resolve()
-    .then(fn)
-    .catch((error) => ({
+async function providerCall(provider, fn, context = {}) {
+  const { logger, now = Date.now, secrets = [] } = context
+  const name = PROVIDER_NAMES[provider] || provider
+  const startedAt = now()
+  writeLog(logger, 'info', `${name} 开始检测`)
+  let result
+  try {
+    result = await Promise.resolve().then(fn)
+  } catch (error) {
+    result = {
       provider,
       status: 'error',
-      error: error instanceof Error ? error.message : String(error),
+      error: redactLogValue(error, secrets),
       evidence: {},
       signals: [],
-    }))
+    }
+  }
+
+  const duration = elapsedMs(now, startedAt)
+  if (result.status === 'unavailable') {
+    const detail = result.httpStatus
+      ? `HTTP ${result.httpStatus}`
+      : result.reason || redactLogValue(result.error, secrets) || '未知原因'
+    writeLog(logger, 'warn', `${name} 不可用: ${detail}，耗时 ${duration} ms`)
+  } else if (result.status === 'error') {
+    const detail =
+      result.reason || redactLogValue(result.error, secrets) || '未知错误'
+    writeLog(
+      logger,
+      'error',
+      `${name} 检测失败: ${detail}，耗时 ${duration} ms`,
+    )
+  } else {
+    writeLog(
+      logger,
+      'info',
+      `${name} 检测完成: ${result.status}，耗时 ${duration} ms`,
+    )
+  }
+  return result
 }
 
 export async function inspectAiImage(
@@ -230,6 +301,11 @@ export async function inspectAiImage(
   dependencies = {},
 ) {
   const aiImageConfig = pluginConfig.aiImage || pluginConfig
+  const logger = dependencies.logger
+  const now = dependencies.now || Date.now
+  const secrets = collectSecrets(aiImageConfig)
+  const inspectionStartedAt = now()
+  writeLog(logger, 'info', '开始检测')
   const proxyEnabled = aiImageConfig.proxy?.enable === true
   const sharedOptions = {
     ...dependencies,
@@ -238,7 +314,23 @@ export async function inspectAiImage(
     timeoutMs: getTimeoutMs(aiImageConfig),
     maxFileSize: getMaxFileSize(aiImageConfig),
   }
-  const image = await downloadImage(imageUrl, sharedOptions)
+  const downloadStartedAt = now()
+  let image
+  try {
+    image = await downloadImage(imageUrl, sharedOptions)
+  } catch (error) {
+    writeLog(
+      logger,
+      'error',
+      `图片下载失败: ${redactLogValue(error, secrets)}，总耗时 ${elapsedMs(now, inspectionStartedAt)} ms`,
+    )
+    throw error
+  }
+  writeLog(
+    logger,
+    'info',
+    `图片下载完成: ${image.mimeType}，${image.buffer.length} 字节，耗时 ${elapsedMs(now, downloadStartedAt)} ms`,
+  )
   const timeoutMs = getTimeoutMs(aiImageConfig)
   const providerOptions = {
     ...sharedOptions,
@@ -249,45 +341,65 @@ export async function inspectAiImage(
   const tasks = []
   if (aiImageConfig.c2pa?.enable !== false) {
     tasks.push(
-      providerCall('c2pa', () =>
-        checkC2pa(image.buffer, {
-          ...dependencies,
-          ...aiImageConfig.c2pa,
-          timeoutMs,
-          mimeType: image.mimeType,
-        }),
+      providerCall(
+        'c2pa',
+        () =>
+          checkC2pa(image.buffer, {
+            ...dependencies,
+            ...aiImageConfig.c2pa,
+            timeoutMs,
+            mimeType: image.mimeType,
+          }),
+        { logger, now, secrets },
       ),
     )
   }
   if (aiImageConfig.openai?.enable !== false) {
     tasks.push(
-      providerCall('openai', () =>
-        checkOpenAi(image.buffer, {
-          ...providerOptions,
-          ...aiImageConfig.openai,
-        }),
+      providerCall(
+        'openai',
+        () =>
+          checkOpenAi(image.buffer, {
+            ...providerOptions,
+            ...aiImageConfig.openai,
+          }),
+        { logger, now, secrets },
       ),
     )
   }
   if (aiImageConfig.hive?.enable !== false) {
     tasks.push(
-      providerCall('hive', () =>
-        checkHive(image.buffer, { ...providerOptions, ...aiImageConfig.hive }),
+      providerCall(
+        'hive',
+        () =>
+          checkHive(image.buffer, {
+            ...providerOptions,
+            ...aiImageConfig.hive,
+          }),
+        { logger, now, secrets },
       ),
     )
   }
   if (aiImageConfig.sightengine?.enable === true) {
     tasks.push(
-      providerCall('sightengine', () =>
-        checkSightengine(image.buffer, {
-          ...providerOptions,
-          ...aiImageConfig.sightengine,
-        }),
+      providerCall(
+        'sightengine',
+        () =>
+          checkSightengine(image.buffer, {
+            ...providerOptions,
+            ...aiImageConfig.sightengine,
+          }),
+        { logger, now, secrets },
       ),
     )
   }
   const results = await Promise.all(tasks)
   const summary = summarizeAiImageResults(results)
+  writeLog(
+    logger,
+    'info',
+    `检测汇总: ${summary.verdict}，可信度 ${summary.confidence}，总耗时 ${elapsedMs(now, inspectionStartedAt)} ms`,
+  )
   return {
     ...summary,
     image: { mimeType: image.mimeType, size: image.buffer.length },
