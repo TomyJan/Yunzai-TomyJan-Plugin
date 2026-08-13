@@ -9,14 +9,14 @@ const packageJson = JSON.parse(
   fs.readFileSync(new URL('package.json', rootUrl), 'utf8'),
 )
 const workflow = parse(
-  fs.readFileSync(
-    new URL('.github/workflows/check_code.yml', rootUrl),
-    'utf8',
-  ),
+  fs.readFileSync(new URL('.github/workflows/check_code.yml', rootUrl), 'utf8'),
 )
 
 test('exposes read-only formatting and test scripts for CI', () => {
-  assert.equal(packageJson.scripts['format:check'], 'prettier --check "**/*.js"')
+  assert.equal(
+    packageJson.scripts['format:check'],
+    'prettier --check "**/*.js"',
+  )
   assert.equal(packageJson.scripts.test, 'node --test')
 })
 
@@ -30,6 +30,12 @@ test('uses the Node built-in child_process module without a shadow package', () 
   assert.equal(packageJson.dependencies.child_process, undefined)
 })
 
+test('allows the C2PA package to prepare its platform binding', () => {
+  assert.deepEqual(packageJson.pnpm?.onlyBuiltDependencies, [
+    '@contentauth/c2pa-node',
+  ])
+})
+
 test('runs read-only release checks for pushes and pull requests', () => {
   assert.deepEqual(workflow.permissions, { contents: 'read' })
   assert.deepEqual(workflow.on.push.branches, ['master'])
@@ -38,8 +44,12 @@ test('runs read-only release checks for pushes and pull requests', () => {
   const jobs = Object.values(workflow.jobs)
   const steps = jobs.flatMap((job) => job.steps)
   const commands = steps.map((step) => step.run).filter(Boolean)
-  const checkoutSteps = steps.filter((step) => step.uses === 'actions/checkout@v7')
-  const nodeSteps = steps.filter((step) => step.uses === 'actions/setup-node@v7')
+  const checkoutSteps = steps.filter(
+    (step) => step.uses === 'actions/checkout@v7',
+  )
+  const nodeSteps = steps.filter(
+    (step) => step.uses === 'actions/setup-node@v7',
+  )
 
   assert.ok(jobs.length >= 2)
   assert.ok(checkoutSteps.length >= 2)

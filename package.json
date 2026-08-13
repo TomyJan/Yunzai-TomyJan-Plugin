@@ -52,6 +52,11 @@
     "semi": false,
     "singleQuote": true
   },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@contentauth/c2pa-node"
+    ]
+  },
   "packageManager": "pnpm@10.25.0",
   "engines": {
     "node": ">=22.0.0",
