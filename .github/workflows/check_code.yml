@@ -42,8 +42,13 @@ jobs:
         run: pnpm lint
 
   test:
-    name: Test
-    runs-on: ubuntu-latest
+    name: Test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os:
+          - ubuntu-latest
+          - windows-latest
 
     steps:
       - name: Checkout
@@ -62,6 +67,9 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Check C2PA native binding
+        run: pnpm test:c2pa
 
       - name: Run tests
         run: pnpm test

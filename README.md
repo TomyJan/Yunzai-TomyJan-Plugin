@@ -35,10 +35,12 @@ git clone https://github.com/TomyJan/Yunzai-TomyJan-Plugin.git ./plugins/Yunzai-
 ### 安装依赖
 
 ```shell
-pnpm install
+pnpm -C ./plugins/Yunzai-TomyJan-Plugin/ --ignore-workspace install --frozen-lockfile
+pnpm -C ./plugins/Yunzai-TomyJan-Plugin/ --ignore-workspace test:c2pa
 ```
 
 本插件当前要求 Node.js 22 或更高版本。
+`--ignore-workspace` 用于确保 pnpm 使用插件自己的锁文件和原生依赖构建配置。
 
 外部依赖:
 
@@ -58,6 +60,15 @@ pip install jmcomic -U --break-system-packages
 
 ```shell
 git -C ./plugins/Yunzai-TomyJan-Plugin/ pull
+pnpm -C ./plugins/Yunzai-TomyJan-Plugin/ --ignore-workspace install --frozen-lockfile
+pnpm -C ./plugins/Yunzai-TomyJan-Plugin/ --ignore-workspace test:c2pa
+```
+
+如果 C2PA 检测提示本地组件不可用，可重新安装其原生绑定：
+
+```shell
+pnpm -C ./plugins/Yunzai-TomyJan-Plugin/ --ignore-workspace rebuild @contentauth/c2pa-node
+pnpm -C ./plugins/Yunzai-TomyJan-Plugin/ --ignore-workspace test:c2pa
 ```
 
 如为手动安装, 需要先备份插件 [数据目录](#数据目录) , 删除旧插件并解压新的插件后, 再将插件 [数据目录](#数据目录) 恢复进去, 即可完成更新
