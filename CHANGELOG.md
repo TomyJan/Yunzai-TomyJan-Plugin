@@ -1,16 +1,69 @@
-# [0.2.0-rel](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/compare/v0.1.18-rel...v0.2.0-rel) (2026-01-07)
+# [0.3.0-rel](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/compare/v0.2.0-rel...v0.3.0-rel) (2026-08-13)
 
+### Bug Fixes
+
+* **AI图片:** 防止错误信息泄露图片地址 ([cce7f8e](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/cce7f8e3bf2dbb9e31d9a94dda442347d3e91f3b))
+* **AI图片:** 兼容多适配器引用图片 ([75b358b](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/75b358b38af82b6282a40f0994b2e48f6dc3b51a))
+* **AI图片:** 拒绝异常概率并跳过无渠道下载 ([f551da0](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/f551da0f7620e1c986cebf310cd124b49fb36436))
+* **C2PA:** 补全原生绑定安装验证 ([5edf683](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/5edf683f6197e9402557f3cd14483f9617f9e56e))
+* **eduAuth:** auto approve group application ([ad992fb](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/ad992fbf064bc2738055f6d91150784d53fa3ea9))
+* **eduAuth:** error handle ([a9f5bc0](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/a9f5bc04b24557847962a306d09e7bce027fcdfe))
+* **eduAuth:** error handle ([db711b5](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/db711b5ba7843bf35fd60f834ec1c3fb2e30b403))
+* **eduAuth:** expire judgement ([f47d836](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/f47d836d99326c7899c9debfa4f8ab551dd87a43))
+* **eduAuth:** format utc time as utc+8 ([939556a](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/939556a6ab89720f488ce79b72da679064a70a7c))
+
+### Features
+
+* **代理:** 添加全插件统一代理配置 ([9929a53](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/9929a53cc6edc1c99cfc75e461a6312b096a7799))
+* **锅巴配置:** 按功能拆分配置卡片 ([06d2423](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/06d2423971f742b23f6784e89c29af5d9af579a6))
+* **锅巴配置:** 使用原生多选管理 AI 凭据 ([335fcd5](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/335fcd5a7d002461d24220cd0e9a1c9d4e039c5f))
+* **AI图片:** 将 Hive 检测迁移到 V3 ([5442989](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/544298997a36a686fc6a235774b5bbab753f5abc))
+* **AI图片:** 实现来源检测与凭据轮换 ([4977e60](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/4977e60e3b43bac72c127290d9a94fd274b4fa78))
+* **AI图片:** 添加识别配置与消息解析 ([903bd4d](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/903bd4d2d67e6fbd66487d4d209e4f66101d5f51))
+* **AI图片:** 细化检测渠道状态提示 ([885f2fd](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/885f2fd3818a8d6e35489f88da391989d22b98d3))
+* **AI图片:** 优化识别日志与结果排版 ([535f4e7](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/535f4e7dcefcd40819c745b500cca5d7a38d0956))
+* **eduAuth:** 上报用户变动后同时显示用户信息 ([0cb46b6](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/0cb46b60408d4f6aa747aee57b108a3b78ed03fa))
+* **eduAuth:** 同步上游 API 改动 ([6872f25](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/6872f25bd34a10e0e0276f68536a3d1529c20341))
+* **eduAuth:** add support for disabled user status ([05375df](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/05375dfe1f81e96749e3369eefcfb014ef70abf7))
+* **eduAuth:** ip auth lock ([dcc1746](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/dcc17466f2edb680bf69261d599b4ad5f64657fa))
+* **eduAuth:** support task code contract ([2bb9223](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/2bb92235999ad54c4dbf96dd10af57be0ee617de))
+
+### Performance Improvements
+
+* **eduAuth:** 认证结果文案 ([d7800a4](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/d7800a4c6756e8f1bb48a62e20305d5f04fcebe6))
+* **eduAuth:** 认证结果文案 ([727e54b](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/727e54b046c12fc76e91f6442c19905fe0a225b7))
+* **eduAuth:** 认证结果文案 ([32ca91d](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/32ca91da024c3ca388d2bad8489ed6cde4ffba55))
+* **eduAuth:** 上报用户提醒信息文案 ([a3a38c6](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/a3a38c6897efeed039bd32f0b420ad0ac690de04))
+* **eduAuth:** 上报用户提醒信息文案 ([b35cd49](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/b35cd490661fbeb2f0dbe0362e859e15971d5631))
+* **eduAuth:** error handle ([8c93b6e](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/8c93b6ec3e139292e66776ce288ffcbf5c790fca))
+* **eduAuth:** grace period and fullexipred judge ([7c63796](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/7c63796dfd61820e742c58e9a88cfcc06d176ca4))
+* **eduAuth:** user check return ([623df28](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/623df282e0c8c62a4d8f4f1c8a4b9541b459827f))
+* **server:** 上报用户提醒信息格式 ([4bab993](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/4bab99350fbb201643591e571ea797faaf066718))
+* **server:** 上报用户提醒信息文案 ([8adf9db](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/8adf9dbc75969def4df79a1f64b1ba3bbbffeadf))
+
+### Reverts
+
+* Revert "style: format code [skip ci]" ([7751db0](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/7751db093906fa8e27ad20179bc8b4954d4eec2f))
+* Revert "refactor(cny): timed prize list use combined msg" ([c06367f](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/c06367fa5e92a795ceb8153380c99fca7430c24b))
+* Revert "style: format code [skip ci]" ([60779bb](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/60779bbeb043f3abd7e32dc167200280d06609fc))
+* Revert "refactor(cny): parallel get room list, record recent errors" ([8a0cd3b](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/8a0cd3b780a63ddc5d2adc7eff4e8ff213fe681a))
+* Revert "style: format code [skip ci]" ([ccc6755](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/ccc675507badccbc0e89dfa77966bb74e47bfbd6))
+* Revert "style: format code [skip ci]" ([7f41085](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/7f410856bcf7f7f8ebc9a315c54b1aaaee8f5f58))
+
+### BREAKING CHANGES
+
+* **代理:** 代理地址统一迁移到 proxy.url；各功能仅配置是否使用代理。
+
+# [0.2.0-rel](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/compare/v0.1.18-rel...v0.2.0-rel) (2026-01-07)
 
 ### Bug Fixes
 
 * **eduAuth:** edu指令匹配优先级 ([159c82c](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/159c82c23025fdfaf749ce3ddf245930a719b53d))
 
-
 ### Features
 
 * 重构适配新版 MoeEDU ([34de43f](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/34de43feccd05adc558d0f447d382c481886817c))
 * **eduAuth:** 群成员变动上报及审核通知 ([cb03710](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/cb03710109a739446a781519363d7a0ab4d2c9ac))
-
 
 ### Performance Improvements
 
@@ -22,82 +75,59 @@
 * **eduAuth:** 踢人和放人需判断返回值 ([ec47ad0](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/ec47ad0365215c47549ee1a68f8023ac14a30308))
 * **eduAuth:** 用户检查回复文案 ([6372094](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/6372094eb5b7f0ce8b24b61da38e4cd805b02452))
 
-
-
 ## [0.1.18-rel](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/compare/v0.1.17-rel...v0.1.18-rel) (2025-12-15)
-
 
 ### Bug Fixes
 
 * **jmDownload:** 本子不存在的匹配错误 ([035bbd2](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/035bbd2c2b393c8a9d70566d9d4d063c4506029d))
 
-
-
 ## [0.1.17-rel](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/compare/v0.1.16-rel...v0.1.17-rel) (2025-11-20)
-
 
 ### Bug Fixes
 
 * 缺少依赖 ([64cbc67](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/64cbc671058b5d06980fc387ada2a33f66da5b15))
 
-
 ### Features
 
 * **vvShuo:** 增强版 ([8fe30f1](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/8fe30f1227f8dd72bfe86d11e2970e6bc2f71165))
-
 
 ### Performance Improvements
 
 * **eduAuth:** trim tip ([708f57e](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/708f57e63ed7b64fe952763bcb7ff666d94e839b))
 * **vvShuo:** API报错返回 ([f8da8c3](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/f8da8c391f9b7e7116f0ed78c7eb66ab708e0f4b))
 
-
-
 ## [0.1.16-rel](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/compare/v0.1.15-rel...v0.1.16-rel) (2025-05-27)
-
 
 ### Bug Fixes
 
 * 更新配置文件无法正确处理数组 ([dfc19dd](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/dfc19dd651e3b123b47ed8f87dca4d1ac81ed727))
 
-
 ### Features
 
 * **eduAuth:** edu认证 ([49689ec](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/49689ec35113714941d1349145d1282a922d4168))
-
 
 ### Performance Improvements
 
 * 更新一些图标 ([0cfbd20](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/0cfbd204037f8296365ac889be8971b874df1b8a))
 
-
-
 ## [0.1.15-rel](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/compare/v0.1.14-rel...v0.1.15-rel) (2025-04-28)
-
 
 ### Bug Fixes
 
 * **vvShuo:** 多余的导入 ([c226b09](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/c226b0940131c5cbdab3e9bba95f0bdedfa8107c))
 * **vvShuo:** 添加 logo ([9b5a751](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/9b5a751343615f894dbb0af1e48d996138059c27))
 
-
-
 ## [0.1.14-rel](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/compare/v0.1.13-rel...v0.1.14-rel) (2025-04-03)
-
 
 ### Features
 
 * **vvShuo:** VV 说搜索 ([abcba73](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/abcba7375082777fd85308e13e76245bf32b6783))
 
-
-
 ## [0.1.13-rel](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/compare/v0.1.12-rel...v0.1.13-rel) (2025-04-03)
-
 
 ### Bug Fixes
 
 * **jmDownload:** 私聊撤回方法错误 ([db2daa7](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/db2daa745ed76d35202a587f90f862c264851468))
-
 
 ### Performance Improvements
 
@@ -105,31 +135,23 @@
 * **jmDownload:** `JMComic` 错误输出的匹配 ([2a5306b](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/2a5306b8c21ba99d17cef2bcec32ed9efc599ea8))
 * **jmDownload:** 是否归档的判断逻辑 ([a933e22](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/a933e220da4bbdb90b1029da4a9f933c59ea69c0))
 
-
-
 ## [0.1.12-rel](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/compare/v0.1.11-rel...v0.1.12-rel) (2025-03-31)
-
 
 ### Features
 
 * **jmDownload:** 使用缓存的图片加速下载 ([3fc84d2](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/3fc84d2132294e39c6cb1315c42cd972bd8d2b61))
 * **jmDownload:** 支持归档下载的图片/PDF ([342bca9](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/342bca93162a762034d5c9c6590e88a7f484898f))
 
-
 ### Performance Improvements
 
 * **httpServer:** 内置 HTTP 服务器的 ico ([30ac69f](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/30ac69f4331963cd83089df90e3fef1500a71169))
 
-
-
 ## [0.1.11-rel](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/compare/v0.1.10-rel...v0.1.11-rel) (2025-03-30)
-
 
 ### Bug Fixes
 
 * **autoTask:** 更换检查更新的 GHProxy 地址 ([d3d1dde](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/d3d1ddea2d14d5b60878785a6b381c7dc48feff1))
 * **JMComic:** 任务出错后删除下载目录 ([0afa274](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/0afa274d3cb5fc42ef78b1e337183e002328288b))
-
 
 ### Performance Improvements
 
@@ -137,55 +159,41 @@
 * **guoba:** 锅巴适配的帮助文案 ([b0efa44](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/b0efa4463e2157e45dd9c4088d574a9e29f8d415))
 * **JMComic:** 等待目录释放超时时间 ([b7f5c99](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/b7f5c9983dbeb3ab4a11771c1bd655909bd55ead))
 
-
-
 ## [0.1.10-rel](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/compare/v0.1.9-rel...v0.1.10-rel) (2025-03-29)
-
 
 ### Bug Fixes
 
 * **JMComic:** 下载目录重命名错误 ([096f440](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/096f4404f8d61cd14203ab79c74483acb6399631))
 
-
 ### Features
 
 * **JMComic:** 支持设置发送策略 只传文件 / 优先文件 / 只发链接 ([#5](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/issues/5) ) ([4e511e7](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/4e511e776324286e5190ec0c5846ee0249a74e5b))
-
 
 ### Performance Improvements
 
 * **JMComic:** 防止重复任务冲突 ([64c99f5](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/64c99f5293cefd57e3f0249d4a905dab5e99cdde))
 
-
-
 ## [0.1.9-rel](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/compare/v0.1.8-rel...v0.1.9-rel) (2025-03-28)
-
 
 ### Bug Fixes
 
 * **httpServer:** 在 win 系统上安全判断不正确 ([2da6f41](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/2da6f412e2273f4473333ee13b593b97ee14520c))
 * **JMComic:** 文件名别用中文逼事太多 ([8c1dc90](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/8c1dc9028b64cb001ea46ac91bf129e78e5347ec))
 
-
 ### Features
 
 * **JMComic:** 支持发送 pdf 密码 ([a2907d4](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/a2907d4858f3670da4d9beb8db7280d9076fc712))
-
 
 ### Performance Improvements
 
 * **JMComic:** 消息中的多余空行 ([c8ba364](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/c8ba36431e3e8e47c37a362d981237a32fc65aca))
 * **JMComic:** 优化逻辑 ([a3fe105](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/a3fe105df6ab1a43f109f6a771bf7181dae7c077))
 
-
-
 ## [0.1.8-rel](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/compare/v0.1.7-rel...v0.1.8-rel) (2025-03-28)
-
 
 ### Bug Fixes
 
 * **JMComic:** 换用社区版 `pdf-lib-plus-encrypt` 以实现 pdf 加密 ([#2](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/issues/2) ) ([ac07436](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/ac07436a5999583004121f0c78154df839a77342))
-
 
 ### Features
 
@@ -193,25 +201,19 @@
 * JMComic 支持给 pdf 设置密码([#2](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/issues/2) ) ([3ac9547](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/3ac9547411f0b85660a48850b2a9f8003fdbe1eb))
 * **JMComic:** 写 pdf 的元信息 ([eeebbbe](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/eeebbbe036734b4453cb7b758bb1d273dd17fc80))
 
-
 ### Performance Improvements
 
 * **JMComic:** 瞎几把翻译一些常见发送文件错误消息 ([10217e6](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/10217e6a4b03ebff2e0bd078defdfb0a624b822b))
 
-
-
 ## [0.1.7-rel](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/compare/v0.1.6-rel...v0.1.7-rel) (2025-03-27)
-
 
 ### Bug Fixes
 
 * `载入插件时清理 JMComic 临时目录` 逻辑问题 ([6528685](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/652868596528d4f2805111a1f3377dd5d8314805))
 
-
 ### Features
 
 * JMComic 下载前先删除临时文件 ([a92854c](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/a92854cae89284fe7194d5920d1cde307987970c))
-
 
 ### Performance Improvements
 
@@ -221,28 +223,19 @@
 * 载入插件时清理 JMComic 临时目录 ([048f79f](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/048f79f2485c2d3aef96d895e7f8ac49374ce842))
 * JMComic 部分代码逻辑 ([573b7ac](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/573b7ac245eab05d68e9d67ddbbc55274013cb8e))
 
-
-
 ## [0.1.6-rel](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/compare/v0.1.5-rel...v0.1.6-rel) (2025-03-27)
-
 
 ### Bug Fixes
 
 * JMComic 指令无法匹配`#` ([#1](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/issues/1) ) & 放宽匹配限制 ([4ddb295](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/4ddb2953729d58a52a2c33c16c4715b8f29f0e22))
 
-
-
 ## [0.1.5-rel](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/compare/v0.1.4-rel...v0.1.5-rel) (2025-03-26)
-
 
 ### Performance Improvements
 
 * 没用的东西你怎么还在 ([e3c0487](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/e3c048738d8b9d28068114969f9eb77b6269b1c6))
 
-
-
 ## [0.1.4-rel](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/compare/v0.1.3-rel...v0.1.4-rel) (2025-03-26)
-
 
 ### Bug Fixes
 
@@ -258,13 +251,11 @@
 * http 服务器目录 ([03f49d1](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/03f49d1ea2ac267e8dd2328aea2244a2a629320f))
 * http服务器根目录 ([32b3194](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/32b3194007a2263ae669a7798cd0ca2cb8770474))
 
-
 ### Features
 
 * 建立一个内置 http 服务器 ([626d088](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/626d088a7e09cc0952ea3d76a87ce7eed2c0f80b))
 * 文件上传失败后使用内置 http 服务器提供临时链接 ([c3255cd](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/c3255cd365c345f307ea152ac768192440665f84))
 * http 服务器相关设置锅巴兼容 ([98b3845](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/98b38455b2e148dda4f61403fb24a8d9cc8f9e40))
-
 
 ### Performance Improvements
 
@@ -275,42 +266,29 @@
 * http 服务器报错处理代码 ([3a7b997](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/3a7b99799f2fcb5b77ddc0fdc22adc62a1eb4dd0))
 * http 服务器更多错误处理 ([157e3f9](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/157e3f98ddba56b0a65f202bcbede5e63e836757))
 
-
-
 ## [0.1.3-rel](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/compare/v0.1.2-rel...v0.1.3-rel) (2025-03-25)
-
 
 ### Performance Improvements
 
 * 引用回复消息 ([3f3f5e5](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/3f3f5e5ff7f0059e273686d3480001b11ae2bc80))
 
-
-
 ## [0.1.2-rel](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/compare/v0.1.1-rel...v0.1.2-rel) (2025-03-25)
-
 
 ### Bug Fixes
 
 * 留名就留名, 不要给id搞掉啊 ([025dd8b](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/025dd8bc4ce174838ab94b28f6a0771deb7a1f9a))
 
-
-
 ## [0.1.1-rel](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/compare/v0.1.0-rel...v0.1.1-rel) (2025-03-25)
-
 
 ### Features
 
 * 不介意我在 pdf 中留个名吧 ([d817f18](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/d817f187233e37d5d671c12c60e6abe422e52b35))
 
-
 ### Performance Improvements
 
 * 添加群文件空间不足的报错识别 ([9956edb](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/9956edb7dde4e4c52edd1befc83f962ab106f5eb))
 
-
-
 # [0.1.0-rel](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/compare/v0.0.1-rel...v0.1.0-rel) (2025-03-25)
-
 
 ### Bug Fixes
 
@@ -318,19 +296,12 @@
 * 或许修复了发送文件的问题 ([587db90](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/587db903ed6716f00c20da5988de778d37cb54b7))
 * 遗留的旧命名 ([8396809](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/8396809bf5dc4a3df07d28a412205e3f0599d22d))
 
-
-
 ## [0.0.1-rel](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/compare/52e15d037eeb62ffa233c8d354d9a2036016f335...v0.0.1-rel) (2025-03-25)
-
 
 ### Bug Fixes
 
 * 修复运行(定时任务, 日志更名) ([52e15d0](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/52e15d037eeb62ffa233c8d354d9a2036016f335))
 
-
 ### Features
 
 * 禁漫下载 ([161fb09](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/161fb099c305902e195cc5750593eb178322ec1c))
-
-
-
