@@ -27,7 +27,7 @@
     "changelog": "conventional-changelog -p angular -i CHANGELOG.md -s -r 0"
   },
   "dependencies": {
-    "chalk": "^5.6.2",
+    "chalk": "^6.0.0",
     "child_process": "^1.0.2",
     "date-fns": "^4.4.0",
     "iconv-lite": "^0.7.3",
@@ -36,13 +36,13 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "conventional-changelog": "^8.1.0",
+    "conventional-changelog": "^8.1.1",
     "conventional-changelog-angular": "^9.2.1",
     "conventional-changelog-cli": "^5.0.0",
     "conventional-changelog-custom-config": "^0.3.1",
-    "eslint": "^10.7.0",
+    "eslint": "^10.8.1",
     "globals": "^17.9.0",
-    "prettier": "^3.9.5"
+    "prettier": "^3.9.6"
   },
   "prettier": {
     "semi": false,
