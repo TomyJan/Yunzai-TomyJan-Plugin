@@ -54,7 +54,7 @@ export function supportGuoba() {
       // 配置项 schemas
       schemas: [
         {
-          component: 'Divider',
+          component: 'SOFT_GROUP_BEGIN',
           label: '日志设置',
         },
         {
@@ -81,7 +81,7 @@ export function supportGuoba() {
           component: 'Switch',
         },
         {
-          component: 'Divider',
+          component: 'SOFT_GROUP_BEGIN',
           label: '代理设置',
         },
         {
@@ -99,7 +99,7 @@ export function supportGuoba() {
           component: 'Switch',
         },
         {
-          component: 'Divider',
+          component: 'SOFT_GROUP_BEGIN',
           label: 'JMComic 功能设置',
         },
         {
@@ -166,8 +166,8 @@ export function supportGuoba() {
           component: 'Switch',
         },
         {
-          component: 'Divider',
-          label: 'VV 说 设置',
+          component: 'SOFT_GROUP_BEGIN',
+          label: 'VV 说设置',
         },
         {
           field: 'vvShuo.enable',
@@ -184,7 +184,7 @@ export function supportGuoba() {
           component: 'Switch',
         },
         {
-          component: 'Divider',
+          component: 'SOFT_GROUP_BEGIN',
           label: 'AI 图片识别设置',
         },
         {
@@ -284,7 +284,7 @@ export function supportGuoba() {
           },
         },
         {
-          component: 'Divider',
+          component: 'SOFT_GROUP_BEGIN',
           label: 'EDU 认证设置',
         },
         {
@@ -330,7 +330,7 @@ export function supportGuoba() {
           component: 'InputNumber',
         },
         {
-          component: 'Divider',
+          component: 'SOFT_GROUP_BEGIN',
           label: 'HTTP 服务器设置',
         },
         {
@@ -356,8 +356,8 @@ export function supportGuoba() {
           component: 'Input',
         },
         {
-          component: 'Divider',
-          label: '其他设置',
+          component: 'SOFT_GROUP_BEGIN',
+          label: '随机背景图设置',
         },
         {
           field: 'useRandomBgInCard',
@@ -374,6 +374,10 @@ export function supportGuoba() {
           helpMessage: '获取随机背景图时是否使用全局代理地址',
           bottomHelpMessage: '更改即时生效',
           component: 'Switch',
+        },
+        {
+          component: 'SOFT_GROUP_BEGIN',
+          label: '其他设置',
         },
         {
           field: 'attemptSendNonFriend',
