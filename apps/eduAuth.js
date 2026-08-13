@@ -778,14 +778,16 @@ async function handleGroupRequest(e) {
           notifyMsg =
             `✅ 新加群申请 - 已自动批准\n` +
             `QQ: ${userQQ}\n` +
-            buildUserInfo(userResult.data) + '\n' +
+            buildUserInfo(userResult.data) +
+            '\n' +
             `申请消息: ${e.comment || '无'}`
         } else {
           tjLogger.error(`[EDU] 自动批准用户 ${userQQ} 失败: 操作返回失败`)
           notifyMsg =
             `❌ 新加群申请 - 待手动审核\n` +
             `QQ: ${userQQ}\n` +
-            buildUserInfo(userResult.data) + '\n' +
+            buildUserInfo(userResult.data) +
+            '\n' +
             `申请消息: ${e.comment || '无'}\n` +
             `用户有效, 但自动批准失败, 请手动审核`
         }
@@ -794,7 +796,8 @@ async function handleGroupRequest(e) {
         notifyMsg =
           `❌ 新加群申请 - 待手动审核\n` +
           `QQ: ${userQQ}\n` +
-          buildUserInfo(userResult.data) + '\n' +
+          buildUserInfo(userResult.data) +
+          '\n' +
           `申请消息: ${e.comment || '无'}\n` +
           `错误: ${error.message}\n\n` +
           `用户有效, 但自动批准失败, 请手动审核`
