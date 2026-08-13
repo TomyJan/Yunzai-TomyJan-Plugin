@@ -354,86 +354,159 @@ test('does not expose credentials in provider errors', async () => {
   assert.doesNotMatch(result.error, new RegExp(secret))
 })
 
-test('normalizes Hive AI generated, source and deepfake results', async () => {
-  const fetchImpl = async () =>
-    new Response(
+test('calls Hive V3 with a media URL and Secret Key', async () => {
+  let request
+  const fetchImpl = async (url, init) => {
+    request = { url, init }
+    return new Response(
       JSON.stringify({
-        ai_generated: { value: 'yes', probability: 0.97 },
-        deepfake: { value: 'no', probability: 0.99 },
-        generator: { name: 'midjourney', probability: 0.88 },
-        c2pa: { present: true, validation_state: 'trusted' },
-      }),
-      { status: 200 },
-    )
-
-  const result = await checkHive(Buffer.from('image'), {
-    apiKeys: ['hive-key'],
-    fetchImpl,
-  })
-
-  assert.equal(result.provider, 'hive')
-  assert.equal(result.status, 'detected')
-  assert.equal(result.evidence.aiGeneratedProbability, 0.97)
-  assert.equal(result.evidence.generator, 'midjourney')
-  assert.equal(result.evidence.deepfake, false)
-  assert.equal(result.evidence.c2paPresent, true)
-})
-
-test('normalizes Hive nested classes response and chooses highest source score', async () => {
-  const fetchImpl = async () =>
-    new Response(
-      JSON.stringify({
-        status: [
+        output: [
           {
-            response: {
-              output: [
-                {
-                  classes: [
-                    { class: 'not_ai_generated', score: 0.02 },
-                    { class: 'ai_generated', score: 0.98 },
-                    { class: 'flux', score: 0.87 },
-                    { class: 'midjourney', score: 0.11 },
-                    { class: 'deepfake', score: 0.31 },
-                  ],
-                },
-              ],
-            },
+            classes: [
+              { class: 'not_ai_generated', value: 0.02 },
+              { class: 'ai_generated', value: 0.98 },
+              { class: 'flux', value: 0.87 },
+              { class: 'midjourney', value: 0.11 },
+              { class: 'deepfake', value: 0.31 },
+            ],
           },
         ],
       }),
-      { status: 200 },
     )
+  }
 
   const result = await checkHive(Buffer.from('image'), {
-    apiKeys: ['hive-key'],
+    apiKeys: ['hive-v3-secret-key'],
+    imageUrl: 'https://public.example/image.png',
     fetchImpl,
   })
 
+  assert.equal(
+    request.url,
+    'https://api.thehive.ai/api/v3/hive/ai-generated-and-deepfake-content-detection',
+  )
+  assert.equal(request.init.method, 'POST')
+  assert.equal(request.init.headers.Authorization, 'Bearer hive-v3-secret-key')
+  assert.equal(request.init.headers['Content-Type'], 'application/json')
+  assert.deepEqual(JSON.parse(request.init.body), {
+    input: [{ media_url: 'https://public.example/image.png' }],
+    processing_mode: 'sync_with_fallback',
+  })
+  assert.equal(result.provider, 'hive')
   assert.equal(result.status, 'detected')
   assert.equal(result.evidence.aiGeneratedProbability, 0.98)
   assert.equal(result.evidence.generator, 'flux')
   assert.equal(result.evidence.generatorProbability, 0.87)
   assert.equal(result.evidence.deepfake, false)
+  assert.equal(result.evidence.deepfakeProbability, 0.31)
 })
 
-test('does not treat a not_ai_generated score as AI probability', async () => {
+test('uses the Hive recommended 0.9 detection threshold', async () => {
   const result = await checkHive(Buffer.from('image'), {
-    apiKeys: ['hive-key'],
+    apiKeys: ['hive-v3-secret-key'],
+    imageUrl: 'https://public.example/image.png',
     fetchImpl: async () =>
       new Response(
         JSON.stringify({
-          classes: [{ class: 'not_ai_generated', score: 0.98 }],
+          output: [
+            {
+              classes: [
+                { class: 'not_ai_generated', value: 0.11 },
+                { class: 'ai_generated', value: 0.89 },
+                { class: 'deepfake', value: 0.89 },
+              ],
+            },
+          ],
         }),
       ),
   })
 
   assert.equal(result.status, 'not_detected')
-  assert.ok(Math.abs(result.evidence.aiGeneratedProbability - 0.02) < 1e-12)
+  assert.equal(result.evidence.aiGeneratedProbability, 0.89)
+  assert.equal(result.evidence.deepfake, false)
+})
+
+test('detects a Hive V3 deepfake score at the recommended threshold', async () => {
+  const result = await checkHive(Buffer.from('image'), {
+    apiKeys: ['hive-v3-secret-key'],
+    imageUrl: 'https://public.example/image.png',
+    fetchImpl: async () =>
+      new Response(
+        JSON.stringify({
+          output: [
+            {
+              classes: [
+                { class: 'not_ai_generated', value: 0.99 },
+                { class: 'ai_generated', value: 0.01 },
+                { class: 'deepfake', value: 0.9 },
+              ],
+            },
+          ],
+        }),
+      ),
+  })
+
+  assert.equal(result.status, 'detected')
+  assert.equal(result.evidence.deepfake, true)
+})
+
+test('rotates Hive V3 Secret Keys after authentication failures', async () => {
+  const authorizations = []
+  const result = await checkHive(Buffer.from('image'), {
+    apiKeys: ['first-secret', 'second-secret'],
+    imageUrl: 'https://public.example/image.png',
+    fetchImpl: async (_url, init) => {
+      authorizations.push(init.headers.Authorization)
+      if (authorizations.length === 1)
+        return new Response('{}', { status: 401 })
+      return new Response(
+        JSON.stringify({
+          output: [
+            {
+              classes: [
+                { class: 'not_ai_generated', value: 0.99 },
+                { class: 'ai_generated', value: 0.01 },
+              ],
+            },
+          ],
+        }),
+      )
+    },
+  })
+
+  assert.equal(result.status, 'not_detected')
+  assert.deepEqual(authorizations, [
+    'Bearer first-secret',
+    'Bearer second-secret',
+  ])
+})
+
+test('does not accept Hive V2 response shapes', async () => {
+  const result = await checkHive(Buffer.from('image'), {
+    apiKeys: ['hive-v3-secret-key'],
+    imageUrl: 'https://public.example/image.png',
+    fetchImpl: async () =>
+      new Response(
+        JSON.stringify({
+          status: [
+            {
+              response: {
+                output: [{ classes: [{ class: 'ai_generated', score: 0.99 }] }],
+              },
+            },
+          ],
+        }),
+      ),
+  })
+
+  assert.equal(result.status, 'error')
+  assert.equal(result.reason, 'invalid_response')
 })
 
 test('reports an error when Hive returns no recognizable detection result', async () => {
   const result = await checkHive(Buffer.from('image'), {
-    apiKeys: ['hive-key'],
+    apiKeys: ['hive-v3-secret-key'],
+    imageUrl: 'https://public.example/image.png',
     fetchImpl: async () => new Response(JSON.stringify({ status: 'success' })),
   })
 

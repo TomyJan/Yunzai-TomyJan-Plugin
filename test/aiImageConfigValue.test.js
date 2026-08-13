@@ -40,7 +40,7 @@ test('removes legacy single credentials and provider proxy settings', () => {
   assert.equal(migrated.aiImage.sightengine.proxy, undefined)
 })
 
-test('moves legacy credentials into arrays before deleting old fields', () => {
+test('moves compatible legacy credentials but discards Hive V2 keys', () => {
   const migrated = migrateAiImageConfig({
     aiImage: {
       openai: { apiKey: 'openai-key' },
@@ -50,7 +50,7 @@ test('moves legacy credentials into arrays before deleting old fields', () => {
   })
 
   assert.deepEqual(migrated.aiImage.openai.apiKeys, ['openai-key'])
-  assert.deepEqual(migrated.aiImage.hive.apiKeys, ['hive-key'])
+  assert.deepEqual(migrated.aiImage.hive.apiKeys, [])
   assert.deepEqual(migrated.aiImage.sightengine.credentials, [
     { apiUser: 'user', apiSecret: 'secret' },
   ])
@@ -72,6 +72,20 @@ test('normalizes credential arrays previously saved as JSON strings', () => {
   assert.deepEqual(migrated.aiImage.sightengine.credentials, [
     { apiUser: 'user', apiSecret: 'secret' },
   ])
+})
+
+test('keeps configured Hive V3 Secret Keys while deleting a Hive V2 key', () => {
+  const migrated = migrateAiImageConfig({
+    aiImage: {
+      hive: {
+        apiKey: 'legacy-v2-key',
+        apiKeys: ['v3-secret-key'],
+      },
+    },
+  })
+
+  assert.deepEqual(migrated.aiImage.hive.apiKeys, ['v3-secret-key'])
+  assert.equal(migrated.aiImage.hive.apiKey, undefined)
 })
 
 test('parses API key arrays from Guoba JSON fields', () => {

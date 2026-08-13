@@ -24,8 +24,10 @@ export function migrateAiImageConfig(config) {
     delete aiImage.openai.proxy
   }
   if (aiImage.hive) {
-    const apiKeys = parseApiKeys(aiImage.hive.apiKeys, 'Hive API keys')
-    aiImage.hive.apiKeys = parseApiKeys([...apiKeys, aiImage.hive.apiKey])
+    aiImage.hive.apiKeys = parseApiKeys(
+      aiImage.hive.apiKeys,
+      'Hive V3 Secret Keys',
+    )
     delete aiImage.hive.apiKey
     delete aiImage.hive.proxy
   }

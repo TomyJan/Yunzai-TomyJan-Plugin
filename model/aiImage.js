@@ -244,6 +244,7 @@ export async function inspectAiImage(
     ...sharedOptions,
     timeoutMs,
     mimeType: image.mimeType,
+    imageUrl,
   }
   const tasks = []
   if (aiImageConfig.c2pa?.enable !== false) {

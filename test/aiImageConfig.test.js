@@ -86,3 +86,23 @@ test('uses Guoba native multiple selects for AI credential arrays', () => {
     assert.match(schemaSource, /mode: 'multiple'/)
   }
 })
+
+test('describes Hive credentials as V3 Secret Keys only', () => {
+  const fieldIndex = guobaSource.indexOf("field: 'aiImage.hive.apiKeys'")
+  assert.notEqual(fieldIndex, -1)
+  const schemaSource = guobaSource.slice(fieldIndex, fieldIndex + 700)
+
+  assert.match(schemaSource, /Hive V3 Secret Keys/)
+  assert.match(schemaSource, /只填写创建 V3 API Key 时显示的 Secret Key/)
+  assert.doesNotMatch(schemaSource, /Access Key|AK\s*\+/i)
+})
+
+test('contains no Hive V2 endpoint or Token authorization', () => {
+  const providerSource = fs.readFileSync(
+    new URL('../model/aiImageProviders.js', import.meta.url),
+    'utf8',
+  )
+
+  assert.doesNotMatch(providerSource, /thehive\.ai\/api\/v2\/task/i)
+  assert.doesNotMatch(providerSource, /Authorization:\s*`Token/i)
+})

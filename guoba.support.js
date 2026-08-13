@@ -245,15 +245,15 @@ export function supportGuoba() {
         {
           field: 'aiImage.hive.enable',
           label: 'Hive AI 检测',
-          helpMessage: '使用 Hive AI Image + Deepfake Classifier',
-          bottomHelpMessage: '需要 Hive API key',
+          helpMessage: '使用 Hive V3 AI Image + Deepfake Classifier',
+          bottomHelpMessage: '需要 Hive V3 Secret Key',
           component: 'Switch',
         },
         {
           field: 'aiImage.hive.apiKeys',
-          label: 'Hive API keys',
-          helpMessage: '逐项添加 Hive API key',
-          bottomHelpMessage: '401/403/429 时自动尝试下一个 key',
+          label: 'Hive V3 Secret Keys',
+          helpMessage: '只填写创建 V3 API Key 时显示的 Secret Key',
+          bottomHelpMessage: '401/403/429 时自动尝试下一个 Secret Key',
           component: 'Select',
           componentProps: {
             allowAdd: true,
@@ -420,7 +420,7 @@ export function supportGuoba() {
     )
     value.aiImage.hive.apiKeys = parseApiKeys(
       value.aiImage.hive.apiKeys,
-      'Hive API keys',
+      'Hive V3 Secret Keys',
     )
     value.aiImage.sightengine.credentials = parseSightengineCredentials(
       value.aiImage.sightengine.credentials,

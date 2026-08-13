@@ -3,7 +3,8 @@ import { Buffer } from 'node:buffer'
 import { withProxy } from './proxy.js'
 
 const OPENAI_ENDPOINT = 'https://api.openai.com/v1/content_provenance_checks'
-const HIVE_ENDPOINT = 'https://api.thehive.ai/api/v2/task/sync'
+const HIVE_ENDPOINT =
+  'https://api.thehive.ai/api/v3/hive/ai-generated-and-deepfake-content-detection'
 const SIGHTENGINE_ENDPOINT = 'https://api.sightengine.com/1.0/check.json'
 
 const DEFAULT_TIMEOUT_MS = 15000
@@ -361,144 +362,64 @@ export async function checkOpenAi(buffer, options = {}) {
   }
 }
 
-function findHiveValue(payload, keys) {
-  if (!payload || typeof payload !== 'object') return undefined
-  for (const key of keys) {
-    if (payload[key] !== undefined) return payload[key]
-  }
-  for (const value of Object.values(payload)) {
-    const found = findHiveValue(value, keys)
-    if (found !== undefined) return found
-  }
-  return undefined
-}
-
 function numberValue(value) {
   const number = Number(value)
   return Number.isFinite(number) ? number : undefined
 }
 
 function normalizeHive(payload) {
-  const ai = findHiveValue(payload, [
-    'ai_generated',
-    'aiGenerated',
-    'is_ai_generated',
-  ])
-  const deepfake = findHiveValue(payload, ['deepfake', 'is_deepfake'])
-  const generator = findHiveValue(payload, [
-    'generator',
-    'source',
-    'generator_source',
-  ])
-  const c2pa = findHiveValue(payload, ['c2pa', 'content_credentials'])
-  const classes = findHiveValue(payload, ['classes', 'classifications'])
-  const classList = Array.isArray(classes) ? classes : []
-  const generatedClass =
-    classList.find((entry) =>
-      /^ai_generated$/i.test(
-        String(entry?.class || entry?.label || entry?.name),
-      ),
-    ) ||
-    classList.find((entry) =>
-      /^not_ai_generated$/i.test(
-        String(entry?.class || entry?.label || entry?.name),
-      ),
-    )
-  const generatedValue =
-    generatedClass?.class || generatedClass?.label || generatedClass?.name
-  const generatedProbability = numberValue(
-    generatedClass?.score ??
-      generatedClass?.probability ??
-      generatedClass?.confidence,
-  )
-  const deepfakeClass = classList.find((entry) =>
-    /^deepfake$/i.test(String(entry?.class || entry?.label || entry?.name)),
-  )
-  const sourceClass = classList
-    .filter((entry) => {
-      const name = String(entry?.class || entry?.label || entry?.name)
-      return (
-        name &&
-        !/^(ai_generated|not_ai_generated|deepfake|none|inconclusive|inconclusive_video)$/i.test(
-          name,
-        )
+  const classList = Array.isArray(payload?.output)
+    ? payload.output.flatMap((entry) =>
+        Array.isArray(entry?.classes) ? entry.classes : [],
       )
-    })
+    : []
+  const valueOf = (className) =>
+    numberValue(classList.find((entry) => entry?.class === className)?.value)
+  const aiGeneratedProbability =
+    valueOf('ai_generated') ??
+    (valueOf('not_ai_generated') === undefined
+      ? undefined
+      : 1 - valueOf('not_ai_generated'))
+  const deepfakeProbability = valueOf('deepfake')
+  const nonSourceClasses = new Set([
+    'ai_generated',
+    'not_ai_generated',
+    'deepfake',
+    'ai_generated_audio',
+    'not_ai_generated_audio',
+    'none',
+    'inconclusive',
+    'inconclusive_video',
+  ])
+  const sourceClass = classList
+    .filter(
+      (entry) =>
+        typeof entry?.class === 'string' &&
+        !nonSourceClasses.has(entry.class) &&
+        numberValue(entry.value) !== undefined,
+    )
     .sort(
-      (left, right) =>
-        numberValue(right?.score ?? right?.probability) -
-        numberValue(left?.score ?? left?.probability),
+      (left, right) => numberValue(right.value) - numberValue(left.value),
     )[0]
-  const aiProbability = numberValue(
-    typeof ai === 'object'
-      ? (ai.probability ?? ai.score ?? ai.confidence)
-      : ai !== undefined
-        ? ai
-        : /^ai_generated$/i.test(String(generatedValue))
-          ? generatedProbability
-          : /^not_ai_generated$/i.test(String(generatedValue)) &&
-              generatedProbability !== undefined
-            ? 1 - generatedProbability
-            : undefined,
-  )
-  const deepfakeProbability = numberValue(
-    typeof deepfake === 'object'
-      ? (deepfake.probability ?? deepfake.score ?? deepfake.confidence)
-      : (deepfake ?? deepfakeClass?.score),
-  )
-  const generatorName =
-    typeof generator === 'string'
-      ? generator
-      : generator?.name ||
-        generator?.label ||
-        generator?.value ||
-        sourceClass?.class ||
-        sourceClass?.label ||
-        sourceClass?.name
-  const generatorProbability = numberValue(
-    typeof generator === 'object'
-      ? (generator.probability ?? generator.score ?? generator.confidence)
-      : (sourceClass?.score ??
-          sourceClass?.probability ??
-          sourceClass?.confidence),
-  )
-  const deepfakeValue =
-    typeof deepfake === 'object' ? (deepfake.value ?? deepfake.label) : deepfake
-  const aiValue =
-    typeof ai === 'object' ? (ai.value ?? ai.label) : (ai ?? generatedValue)
   const aiDetected =
-    aiValue === true ||
-    /^(yes|true|ai_generated|generated)$/i.test(String(aiValue)) ||
-    (aiProbability !== undefined && aiProbability >= 0.5)
-  const hasExplicitDeepfakeValue =
-    deepfakeValue !== undefined && deepfakeValue !== null
-  const deepfakeDetected = hasExplicitDeepfakeValue
-    ? deepfakeValue === true ||
-      /^(yes|true|deepfake)$/i.test(String(deepfakeValue))
-    : deepfakeProbability !== undefined && deepfakeProbability >= 0.5
+    aiGeneratedProbability !== undefined && aiGeneratedProbability >= 0.9
+  const deepfakeDetected =
+    deepfakeProbability !== undefined && deepfakeProbability >= 0.9
   return {
-    aiGeneratedProbability: aiProbability,
-    generator: generatorName,
-    generatorProbability,
-    deepfake:
-      deepfakeValue === undefined && !deepfakeClass
-        ? undefined
-        : deepfakeDetected,
+    aiGeneratedProbability,
+    generator: sourceClass?.class,
+    generatorProbability: numberValue(sourceClass?.value),
+    deepfake: deepfakeProbability === undefined ? undefined : deepfakeDetected,
     deepfakeProbability,
-    c2paPresent: c2pa?.present ?? c2pa?.detected,
     raw: payload,
     _recognized:
-      aiValue !== undefined ||
-      aiProbability !== undefined ||
-      deepfakeValue !== undefined ||
-      deepfakeProbability !== undefined ||
-      generatorName !== undefined ||
-      c2pa !== undefined,
+      aiGeneratedProbability !== undefined || deepfakeProbability !== undefined,
     _detected: aiDetected || deepfakeDetected,
   }
 }
 
 export async function checkHive(buffer, options = {}) {
+  void buffer
   const apiKeys = getApiKeys(options)
   if (options.enable === false || apiKeys.length === 0) {
     return {
@@ -517,6 +438,14 @@ export async function checkHive(buffer, options = {}) {
       reason: 'fetch_unavailable',
     }
   }
+  if (!options.imageUrl) {
+    return {
+      provider: 'hive',
+      status: 'error',
+      evidence: {},
+      reason: 'missing_image_url',
+    }
+  }
   let lastError
   for (const apiKey of nextRotation('hive', apiKeys)) {
     try {
@@ -525,13 +454,14 @@ export async function checkHive(buffer, options = {}) {
         options.endpoint || HIVE_ENDPOINT,
         {
           method: 'POST',
-          headers: { Authorization: `Token ${apiKey}` },
-          body: makeImageForm(
-            buffer,
-            'media',
-            'image',
-            options.mimeType || 'application/octet-stream',
-          ),
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            input: [{ media_url: options.imageUrl }],
+            processing_mode: 'sync_with_fallback',
+          }),
           proxyOptions: options,
         },
         options.timeoutMs,
