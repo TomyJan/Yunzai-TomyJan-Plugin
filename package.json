@@ -31,7 +31,7 @@
   },
   "dependencies": {
     "@contentauth/c2pa-node": "^0.8.3",
-    "chalk": "^5.6.2",
+    "chalk": "^6.0.0",
     "date-fns": "^4.4.0",
     "iconv-lite": "^0.7.3",
     "pdf-lib-plus-encrypt": "^1.1.0",
@@ -41,13 +41,13 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "conventional-changelog": "^8.1.0",
+    "conventional-changelog": "^8.1.1",
     "conventional-changelog-angular": "^9.2.1",
     "conventional-changelog-cli": "^5.0.0",
     "conventional-changelog-custom-config": "^0.3.1",
-    "eslint": "^10.7.0",
-    "globals": "^17.7.0",
-    "prettier": "^3.9.5"
+    "eslint": "^10.8.1",
+    "globals": "^17.9.0",
+    "prettier": "^3.9.6"
   },
   "prettier": {
     "semi": false,
