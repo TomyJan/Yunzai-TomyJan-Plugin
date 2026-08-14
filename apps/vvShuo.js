@@ -2,6 +2,12 @@ import plugin from '../../../lib/plugins/plugin.js'
 import tjLogger from '../components/logger.js'
 import config from '../components/config.js'
 import { withProxy } from '../model/proxy.js'
+import {
+  VV_SHUO_COMMAND_PATTERN,
+  buildVvShuoSearchUrl,
+  normalizeVvShuoResponse,
+  parseVvShuoRequest,
+} from '../model/vvShuo.js'
 
 export class vvShuoApp extends plugin {
   constructor() {
@@ -16,7 +22,7 @@ export class vvShuoApp extends plugin {
       priority: 1000,
       rule: [
         {
-          reg: '^#?(vv|VV|zvv|ZVV|(张?维为))(ol|OL|在线|增强)?说?(.*)$',
+          reg: VV_SHUO_COMMAND_PATTERN,
           fnc: 'vvShuoSearch',
         },
       ],
@@ -32,28 +38,27 @@ export class vvShuoApp extends plugin {
       return
     }
 
-    const isEnhancedReg = /(ol|OL|在线|增强)/
-    const isEnhanced = isEnhancedReg.test(this.e.msg)
-
-    let content = this.e.msg
-      .replace(/#|zvv|ZVV|vv|VV|张维为|维为|ol|OL|在线|增强|说|：|:/g, '')
-      .trim()
+    const request = parseVvShuoRequest(this.e.msg)
+    const content = request?.content || ''
+    const isEnhanced = request?.enhanced || false
     if (!content) {
       await this.reply('VV 要说什么?', true)
       return
     }
 
     const contentNum = 2
-    const searchApiUrl = `https://api.zvv.quest/${
-      isEnhanced ? 'enhanced' : ''
-    }search?q=${content}&n=${contentNum}`
+    const searchApiUrl = buildVvShuoSearchUrl({
+      content,
+      enhanced: isEnhanced,
+      count: contentNum,
+    })
     tjLogger.debug(
       `VV 说${
         isEnhanced ? '增强版' : ''
       }准备搜索: ${content}, 搜索地址: ${searchApiUrl}`,
     )
 
-    fetch(
+    return fetch(
       searchApiUrl,
       withProxy({}, pluginConfig, pluginConfig.vvShuo.proxy?.enable, {
         feature: 'VV 说',
@@ -82,30 +87,14 @@ export class vvShuoApp extends plugin {
           )}`,
         )
 
-        if (jsonData.code !== 200) {
-          tjLogger.error(
-            `VV说${isEnhanced ? '增强版' : ''}API返回错误: ${jsonData}`,
-          )
-          throw new Error(
-            `VV 说${isEnhanced ? '增强版' : ''}有问题${jsonData.code ? `(${jsonData.code})` : ''}: ${
-              jsonData.msg || '但没说啥问题'
-            }`,
-          )
-        }
-
-        if (!Array.isArray(jsonData.data) || jsonData.data.length === 0) {
-          tjLogger.error(
-            `VV说${
-              isEnhanced ? '增强版' : ''
-            }API返回的数据格式不正确或为空: ${jsonData}`,
-          )
-          throw new Error('VV 好像没说过这个')
-        }
+        const imageUrls = normalizeVvShuoResponse(jsonData, {
+          enhanced: isEnhanced,
+        })
 
         // 发送所有图片
         return Promise.all(
           // eslint-disable-next-line no-undef
-          jsonData.data.map((imgUrl) => this.reply(segment.image(imgUrl))),
+          imageUrls.map((imgUrl) => this.reply(segment.image(imgUrl))),
         )
       })
       .catch((error) => {
