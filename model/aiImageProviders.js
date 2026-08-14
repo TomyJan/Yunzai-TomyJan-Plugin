@@ -636,6 +636,11 @@ function formatProbability(value) {
     : `${(probability * 100).toFixed(1)}%`
 }
 
+function formatNonZeroProbability(value) {
+  const probability = formatProbability(value)
+  return probability === '0.0%' ? undefined : probability
+}
+
 function describeC2paEvidence(result) {
   const evidence = result.evidence || {}
   if (result.status !== 'detected') return '未检测到'
@@ -669,18 +674,21 @@ function describeOpenAiEvidence(result) {
 function describeHiveEvidence(result) {
   const evidence = result.evidence || {}
   const aiProbability = formatProbability(evidence.aiGeneratedProbability)
-  const generatorProbability = formatProbability(evidence.generatorProbability)
-  const deepfakeProbability = formatProbability(evidence.deepfakeProbability)
+  const generatorProbability = formatNonZeroProbability(
+    evidence.generatorProbability,
+  )
+  const deepfakeProbability = formatNonZeroProbability(
+    evidence.deepfakeProbability,
+  )
   const details = []
   if (
     evidence.aiGeneratedProbability >= 0.9 &&
     evidence.generator &&
-    numberValue(evidence.generatorProbability) > 0 &&
     generatorProbability
   ) {
     details.push(`${displayValue(evidence.generator)} ${generatorProbability}`)
   }
-  if (numberValue(evidence.deepfakeProbability) > 0 && deepfakeProbability) {
+  if (deepfakeProbability) {
     details.push(`Deepfake ${deepfakeProbability}`)
   }
   if (aiProbability) {

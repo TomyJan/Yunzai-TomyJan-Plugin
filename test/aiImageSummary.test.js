@@ -216,7 +216,7 @@ test('does not present a low-confidence Hive generator candidate as a source', (
         aiGeneratedProbability: 0.205,
         generator: 'lcm',
         generatorProbability: 0.194,
-        deepfakeProbability: 0,
+        deepfakeProbability: 0.0001,
       },
     },
   ])

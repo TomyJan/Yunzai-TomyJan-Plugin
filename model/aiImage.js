@@ -53,6 +53,51 @@ function writeLog(logger, level, message) {
   logger?.[level]?.(`[AI图片识别] ${message}`)
 }
 
+function debugField(value) {
+  if (value === undefined || value === null) return undefined
+  if (typeof value === 'number' || typeof value === 'boolean') return value
+  return String(value).slice(0, 120)
+}
+
+function providerDebugDetails(result, secrets) {
+  const details = {
+    status: debugField(result.status),
+    reason: debugField(result.reason),
+    httpStatus: debugField(result.httpStatus),
+  }
+  const evidence = result.evidence || {}
+
+  if (result.provider === 'c2pa') {
+    Object.assign(details, {
+      aiGenerated: debugField(evidence.aiGenerated),
+      validationState: debugField(evidence.validationState),
+      issuer: debugField(evidence.issuer),
+      claimGenerator: debugField(evidence.claimGenerator),
+    })
+  } else if (result.provider === 'openai') {
+    details.signals = Array.isArray(result.signals)
+      ? result.signals.map((signal) => ({
+          type: debugField(signal.type),
+          outcome: debugField(signal.outcome),
+          validationState: debugField(signal.validationState),
+          model: debugField(signal.model),
+        }))
+      : []
+  } else if (result.provider === 'hive') {
+    Object.assign(details, {
+      aiGeneratedProbability: debugField(evidence.aiGeneratedProbability),
+      generator: debugField(evidence.generator),
+      generatorProbability: debugField(evidence.generatorProbability),
+      deepfakeProbability: debugField(evidence.deepfakeProbability),
+    })
+  } else if (result.provider === 'sightengine') {
+    details.aiGeneratedProbability = debugField(evidence.aiGeneratedProbability)
+  }
+
+  if (result.error) details.error = debugField(result.error)
+  return redactLogValue(JSON.stringify(details), secrets)
+}
+
 function elapsedMs(now, startedAt) {
   return Math.max(0, Math.round(now() - startedAt))
 }
@@ -277,6 +322,11 @@ async function providerCall(provider, fn, context = {}) {
   }
 
   const duration = elapsedMs(now, startedAt)
+  writeLog(
+    logger,
+    'debug',
+    `${name} 结果: ${providerDebugDetails(result, secrets)}`,
+  )
   if (result.status === 'unavailable') {
     const detail = result.httpStatus
       ? `HTTP ${result.httpStatus}`

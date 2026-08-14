@@ -402,6 +402,58 @@ test('logs the AI image inspection lifecycle and provider durations', async () =
   assert.doesNotMatch(messages.join('\n'), /public\.example|private-query/)
 })
 
+test('logs normalized Hive evidence at debug level without sensitive data', async () => {
+  const logger = createMemoryLogger()
+  const imageUrl = 'https://public.example/image.png?token=private-query'
+  const secret = 'hive-super-secret'
+
+  const result = await inspectAiImage(
+    imageUrl,
+    {
+      aiImage: {
+        c2pa: { enable: false },
+        openai: { enable: false },
+        hive: { enable: true, apiKeys: [secret] },
+        sightengine: { enable: false },
+      },
+    },
+    {
+      logger,
+      downloadImpl: async () => ({
+        buffer: Buffer.from('image'),
+        mimeType: 'image/png',
+      }),
+      fetchImpl: async () =>
+        new Response(
+          JSON.stringify({
+            output: [
+              {
+                classes: [
+                  { class: 'ai_generated', value: 0.8774 },
+                  { class: 'deepfake', value: 0.0001 },
+                  { class: 'gptimage2', value: 0.7012 },
+                ],
+              },
+            ],
+          }),
+          { status: 200 },
+        ),
+    },
+  )
+
+  const debugOutput = logger.entries
+    .filter(([level]) => level === 'debug')
+    .map(([, message]) => message)
+    .join('\n')
+  assert.match(debugOutput, /Hive 结果/)
+  assert.match(debugOutput, /"aiGeneratedProbability":0\.8774/)
+  assert.match(debugOutput, /"deepfakeProbability":0\.0001/)
+  assert.match(debugOutput, /"generator":"gptimage2"/)
+  assert.doesNotMatch(debugOutput, /raw|output|public\.example|private-query/)
+  assert.doesNotMatch(debugOutput, new RegExp(secret))
+  assert.doesNotMatch(result.message, /Deepfake 0\.0%/)
+})
+
 test('redacts image URLs and credentials from provider failure logs', async () => {
   const logger = createMemoryLogger()
   const imageUrl = 'https://public.example/image.png?token=sensitive-query'
