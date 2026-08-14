@@ -410,6 +410,108 @@ test('logs the AI image inspection lifecycle and provider durations', async () =
   assert.doesNotMatch(messages.join('\n'), /public\.example|private-query/)
 })
 
+test('logs the effective network configuration without proxy credentials', async () => {
+  const logger = createMemoryLogger()
+  const proxyUser = 'private-proxy-user'
+  const proxyPassword = 'private-proxy-password'
+  const apiKey = 'private-openai-key'
+
+  await inspectAiImage(
+    'https://public.example/image.png',
+    {
+      proxy: {
+        url: `http://${proxyUser}:${proxyPassword}@proxy.example:8080/path`,
+      },
+      aiImage: {
+        timeoutMs: 4321,
+        maxFileSize: 2 * 1024 * 1024,
+        proxy: { enable: true },
+        c2pa: { enable: false },
+        openai: { enable: true, apiKeys: [apiKey] },
+        hive: { enable: false },
+        sightengine: { enable: false },
+      },
+    },
+    {
+      logger,
+      proxyAgentFactory: () => ({ proxy: true }),
+      downloadImpl: async () => ({
+        buffer: Buffer.from('image'),
+        mimeType: 'image/png',
+      }),
+      fetchImpl: async () =>
+        new Response(
+          JSON.stringify({
+            results: [{ type: 'synthid', outcome: 'not_detected' }],
+          }),
+        ),
+    },
+  )
+
+  const output = logger.entries.map((entry) => entry.join(' ')).join('\n')
+  assert.match(output, /渠道=OpenAI/)
+  assert.match(output, /图片下载=直连/)
+  assert.match(output, /API 代理=启用（http:\/\/proxy\.example:8080）/)
+  assert.match(output, /超时=4321 ms/)
+  assert.match(output, /大小限制=2\.0 MiB/)
+  assert.match(output, /凭据=OpenAI 1/)
+  for (const sensitiveValue of [proxyUser, proxyPassword, apiKey]) {
+    assert.doesNotMatch(output, new RegExp(sensitiveValue))
+  }
+})
+
+test('logs nested network causes and a shared proxy failure diagnosis', async () => {
+  const logger = createMemoryLogger()
+  const secrets = ['openai-key', 'hive-key', 'sight-user', 'sight-secret']
+
+  await inspectAiImage(
+    'https://public.example/image.png',
+    {
+      proxy: { url: 'http://10.1.1.86:7890' },
+      aiImage: {
+        proxy: { enable: true },
+        c2pa: { enable: false },
+        openai: { enable: true, apiKeys: [secrets[0]] },
+        hive: { enable: true, apiKeys: [secrets[1]] },
+        sightengine: {
+          enable: true,
+          credentials: [{ apiUser: secrets[2], apiSecret: secrets[3] }],
+        },
+      },
+    },
+    {
+      logger,
+      proxyAgentFactory: () => ({ proxy: true }),
+      downloadImpl: async () => ({
+        buffer: Buffer.from('image'),
+        mimeType: 'image/png',
+      }),
+      fetchImpl: async () => {
+        const cause = Object.assign(
+          new Error('connect ECONNREFUSED 10.1.1.86:7890'),
+          { code: 'ECONNREFUSED', address: '10.1.1.86', port: 7890 },
+        )
+        throw new TypeError('fetch failed', { cause })
+      },
+    },
+  )
+
+  const output = logger.entries.map((entry) => entry.join(' ')).join('\n')
+  for (const provider of ['OpenAI', 'Hive', 'Sightengine']) {
+    assert.match(
+      output,
+      new RegExp(`${provider} 检测失败: fetch failed.*ECONNREFUSED.*尝试 1/1`),
+    )
+  }
+  assert.match(
+    output,
+    /疑似代理链路异常.*OpenAI、Hive、Sightengine.*ECONNREFUSED.*10\.1\.1\.86:7890/,
+  )
+  for (const secret of secrets) {
+    assert.doesNotMatch(output, new RegExp(secret))
+  }
+})
+
 test('logs normalized Hive evidence at debug level without sensitive data', async () => {
   const logger = createMemoryLogger()
   const imageUrl = 'https://public.example/image.png?token=private-query'

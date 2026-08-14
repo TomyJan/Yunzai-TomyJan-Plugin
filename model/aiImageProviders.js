@@ -68,15 +68,114 @@ function asBuffer(input) {
   return Buffer.from(input || [])
 }
 
-function safeError(error, secrets = []) {
-  const message = error instanceof Error ? error.message : String(error)
+function redactErrorText(value, secrets = []) {
   return secrets
     .map((secret) => String(secret || '').trim())
     .filter(Boolean)
-    .reduce((value, secret) => value.split(secret).join('[redacted]'), message)
+    .reduce(
+      (message, secret) => message.split(secret).join('[redacted]'),
+      String(value || ''),
+    )
     .replace(/https?:\/\/[^\s，。；]+/gi, '[redacted-url]')
     .replace(/Bearer\s+[^\s]+/gi, 'Bearer [redacted]')
     .replace(/(api[_-]?(?:key|secret|user))=([^&\s]+)/gi, '$1=[redacted]')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+function proxySecrets(options = {}) {
+  const rawUrl = String(options.pluginConfig?.proxy?.url || '').trim()
+  if (!rawUrl) return []
+  const secrets = [rawUrl]
+  try {
+    const proxyUrl = new URL(rawUrl)
+    for (const value of [proxyUrl.username, proxyUrl.password]) {
+      if (!value) continue
+      secrets.push(value)
+      try {
+        secrets.push(decodeURIComponent(value))
+      } catch {
+        // The encoded value is still redacted when percent-decoding fails.
+      }
+    }
+  } catch {
+    // The whole malformed URL is already included in the redaction list.
+  }
+  return secrets
+}
+
+function errorDetails(error, secrets = []) {
+  const parts = []
+  const codes = []
+  const visited = new Set()
+
+  function collect(value, depth = 0) {
+    if (value === undefined || value === null || depth > 4) return
+    if (typeof value === 'object') {
+      if (visited.has(value)) return
+      visited.add(value)
+    }
+
+    const code =
+      typeof value?.code === 'string' && value.code.trim()
+        ? value.code.trim()
+        : undefined
+    if (code && !codes.includes(code)) codes.push(code)
+    const name = typeof value?.name === 'string' ? value.name.trim() : ''
+    if (/^(?:AbortError|TimeoutError)$/i.test(name) && !codes.includes(name)) {
+      codes.push(name)
+    }
+
+    let message
+    if (typeof value === 'string') message = value
+    else if (typeof value?.message === 'string') message = value.message
+    else if (code) {
+      const address = String(value?.address || '').trim()
+      const port = String(value?.port || '').trim()
+      message = [code, address && `${address}${port ? `:${port}` : ''}`]
+        .filter(Boolean)
+        .join(' ')
+    }
+    if (
+      message &&
+      code &&
+      !message.toUpperCase().includes(code.toUpperCase())
+    ) {
+      message = `${code}: ${message}`
+    }
+    if (message && !parts.includes(message)) parts.push(message)
+
+    collect(value?.cause, depth + 1)
+    if (Array.isArray(value?.errors)) {
+      for (const nestedError of value.errors.slice(0, 4)) {
+        collect(nestedError, depth + 1)
+      }
+    }
+  }
+
+  collect(error)
+  const fallback = error instanceof Error ? error.message : String(error)
+  return {
+    message: redactErrorText(parts.join(' <- ') || fallback, secrets).slice(
+      0,
+      600,
+    ),
+    codes: codes.slice(0, 6),
+  }
+}
+
+function safeError(error, secrets = []) {
+  return errorDetails(error, secrets).message
+}
+
+function providerErrorDetails(error, credentialSecrets, options) {
+  const secrets = [...credentialSecrets, ...proxySecrets(options)]
+  const details = errorDetails(error, secrets)
+  details.codes = details.codes.filter((code) => {
+    const redacted = redactErrorText(code, secrets)
+    return redacted === code && /^[a-z][a-z0-9_-]{0,63}$/i.test(code)
+  })
+  return details
 }
 
 function getTimeoutSignal(timeoutMs, signal) {
@@ -297,12 +396,15 @@ function normalizeOpenAiSignals(payload) {
 
 export async function checkOpenAi(buffer, options = {}) {
   const apiKeys = getApiKeys(options)
+  const credentialCount = apiKeys.length
   if (options.enable === false || apiKeys.length === 0) {
     return {
       provider: 'openai',
       status: 'unavailable',
       signals: [],
       reason: 'missing_api_key',
+      attempts: 0,
+      credentialCount,
     }
   }
   const fetchImpl = options.fetchImpl || globalThis.fetch
@@ -312,10 +414,14 @@ export async function checkOpenAi(buffer, options = {}) {
       status: 'unavailable',
       signals: [],
       reason: 'fetch_unavailable',
+      attempts: 0,
+      credentialCount,
     }
   }
   let lastError
+  let attempts = 0
   for (const apiKey of nextRotation('openai', apiKeys)) {
+    attempts += 1
     try {
       const payload = await fetchJson(
         fetchImpl,
@@ -345,6 +451,8 @@ export async function checkOpenAi(buffer, options = {}) {
         status,
         signals,
         reason: status === 'error' ? 'invalid_response' : undefined,
+        attempts,
+        credentialCount,
       }
     } catch (error) {
       lastError = error
@@ -354,12 +462,16 @@ export async function checkOpenAi(buffer, options = {}) {
   const status = [401, 403, 404, 429].includes(lastError?.status)
     ? 'unavailable'
     : 'error'
+  const failure = providerErrorDetails(lastError, apiKeys, options)
   return {
     provider: 'openai',
     status,
-    error: safeError(lastError, apiKeys),
+    error: failure.message,
+    errorCodes: failure.codes,
     httpStatus: lastError?.status,
     signals: [],
+    attempts,
+    credentialCount,
   }
 }
 
@@ -429,12 +541,15 @@ function normalizeHive(payload) {
 
 export async function checkHive(buffer, options = {}) {
   const apiKeys = getApiKeys(options)
+  const credentialCount = apiKeys.length
   if (options.enable === false || apiKeys.length === 0) {
     return {
       provider: 'hive',
       status: 'unavailable',
       evidence: {},
       reason: 'missing_api_key',
+      attempts: 0,
+      credentialCount,
     }
   }
   const fetchImpl = options.fetchImpl || globalThis.fetch
@@ -444,10 +559,14 @@ export async function checkHive(buffer, options = {}) {
       status: 'unavailable',
       evidence: {},
       reason: 'fetch_unavailable',
+      attempts: 0,
+      credentialCount,
     }
   }
   let lastError
+  let attempts = 0
   for (const apiKey of nextRotation('hive', apiKeys)) {
+    attempts += 1
     try {
       const form = makeImageForm(
         buffer,
@@ -482,6 +601,8 @@ export async function checkHive(buffer, options = {}) {
         status,
         evidence,
         reason: status === 'error' ? 'invalid_response' : undefined,
+        attempts,
+        credentialCount,
       }
     } catch (error) {
       lastError = error
@@ -491,12 +612,16 @@ export async function checkHive(buffer, options = {}) {
   const status = [401, 403, 404, 429].includes(lastError?.status)
     ? 'unavailable'
     : 'error'
+  const failure = providerErrorDetails(lastError, apiKeys, options)
   return {
     provider: 'hive',
     status,
-    error: safeError(lastError, apiKeys),
+    error: failure.message,
+    errorCodes: failure.codes,
     httpStatus: lastError?.status,
     evidence: {},
+    attempts,
+    credentialCount,
   }
 }
 
@@ -511,12 +636,15 @@ function normalizeSightengine(payload) {
 
 export async function checkSightengine(buffer, options = {}) {
   const credentials = getCredentialPairs(options)
+  const credentialCount = credentials.length
   if (options.enable === false || credentials.length === 0) {
     return {
       provider: 'sightengine',
       status: 'unavailable',
       evidence: {},
       reason: 'missing_credentials',
+      attempts: 0,
+      credentialCount,
     }
   }
   const fetchImpl = options.fetchImpl || globalThis.fetch
@@ -526,10 +654,14 @@ export async function checkSightengine(buffer, options = {}) {
       status: 'unavailable',
       evidence: {},
       reason: 'fetch_unavailable',
+      attempts: 0,
+      credentialCount,
     }
   }
   let lastError
+  let attempts = 0
   for (const credential of nextRotation('sightengine', credentials)) {
+    attempts += 1
     try {
       const url = new URL(options.endpoint || SIGHTENGINE_ENDPOINT)
       const form = makeImageForm(
@@ -561,6 +693,8 @@ export async function checkSightengine(buffer, options = {}) {
             ? 'invalid_response'
             : undefined,
         evidence,
+        attempts,
+        credentialCount,
       }
     } catch (error) {
       lastError = error
@@ -570,15 +704,20 @@ export async function checkSightengine(buffer, options = {}) {
   const status = [401, 403, 404, 429].includes(lastError?.status)
     ? 'unavailable'
     : 'error'
+  const credentialSecrets = credentials.flatMap(({ apiUser, apiSecret }) => [
+    apiUser,
+    apiSecret,
+  ])
+  const failure = providerErrorDetails(lastError, credentialSecrets, options)
   return {
     provider: 'sightengine',
     status,
-    error: safeError(
-      lastError,
-      credentials.flatMap(({ apiUser, apiSecret }) => [apiUser, apiSecret]),
-    ),
+    error: failure.message,
+    errorCodes: failure.codes,
     httpStatus: lastError?.status,
     evidence: {},
+    attempts,
+    credentialCount,
   }
 }
 

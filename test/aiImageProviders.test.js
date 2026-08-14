@@ -354,6 +354,50 @@ test('does not expose credentials in provider errors', async () => {
   assert.doesNotMatch(result.error, new RegExp(secret))
 })
 
+test('preserves nested network causes without exposing credentials', async () => {
+  const apiKey = 'super-secret-openai-key'
+  const proxyPassword = 'super-secret-proxy-password'
+  const cause = Object.assign(
+    new Error(
+      `connect ECONNREFUSED 10.1.1.86:7890 via http://proxy:${proxyPassword}@10.1.1.86:7890 for ${apiKey}`,
+    ),
+    { code: 'ECONNREFUSED', address: '10.1.1.86', port: 7890 },
+  )
+
+  const result = await checkOpenAi(Buffer.from('image'), {
+    apiKeys: [apiKey],
+    fetchImpl: async () => {
+      throw new TypeError('fetch failed', { cause })
+    },
+  })
+
+  assert.equal(result.status, 'error')
+  assert.match(result.error, /fetch failed/)
+  assert.match(result.error, /ECONNREFUSED/)
+  assert.deepEqual(result.errorCodes, ['ECONNREFUSED'])
+  assert.equal(result.attempts, 1)
+  assert.equal(result.credentialCount, 1)
+  assert.doesNotMatch(result.error, new RegExp(apiKey))
+  assert.doesNotMatch(result.error, new RegExp(proxyPassword))
+})
+
+test('does not expose credential-like values from network error codes', async () => {
+  const apiKey = 'super-secret-error-code'
+  const cause = Object.assign(new Error('proxy request failed'), {
+    code: apiKey,
+  })
+
+  const result = await checkOpenAi(Buffer.from('image'), {
+    apiKeys: [apiKey],
+    fetchImpl: async () => {
+      throw new TypeError('fetch failed', { cause })
+    },
+  })
+
+  assert.deepEqual(result.errorCodes, [])
+  assert.doesNotMatch(JSON.stringify(result), new RegExp(apiKey))
+})
+
 test('uploads the downloaded image directly to Hive V3', async () => {
   let request
   const fetchImpl = async (url, init) => {

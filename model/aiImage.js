@@ -17,7 +17,44 @@ const PROVIDER_NAMES = {
   sightengine: 'Sightengine',
 }
 
-function collectSecrets(aiImageConfig) {
+const EXTERNAL_PROVIDERS = ['openai', 'hive', 'sightengine']
+const NETWORK_ERROR_PATTERN =
+  /(?:^|\b)(?:AbortError|TimeoutError|ECONN\w*|ENET\w*|EHOST\w*|ENOTFOUND|EAI_AGAIN|ETIMEDOUT|UND_ERR_\w+|fetch failed|socket|TLS|certificate)(?:\b|$)/i
+
+function parseConfigArray(value) {
+  if (Array.isArray(value)) return value
+  if (typeof value !== 'string' || !value.trim()) return []
+  try {
+    const parsed = JSON.parse(value)
+    return Array.isArray(parsed) ? parsed : []
+  } catch {
+    return []
+  }
+}
+
+function proxySecrets(pluginConfig) {
+  const rawUrl = String(pluginConfig?.proxy?.url || '').trim()
+  if (!rawUrl) return []
+  const values = [rawUrl]
+  try {
+    const proxyUrl = new URL(rawUrl)
+    for (const value of [proxyUrl.username, proxyUrl.password]) {
+      if (!value) continue
+      values.push(value)
+      try {
+        values.push(decodeURIComponent(value))
+      } catch {
+        // The encoded credential is still included in the redaction list.
+      }
+    }
+  } catch {
+    // The whole malformed URL is already included in the redaction list.
+  }
+  return values
+}
+
+function collectSecrets(pluginConfig) {
+  const aiImageConfig = pluginConfig.aiImage || pluginConfig
   return [
     ...(aiImageConfig.openai?.apiKeys || []),
     ...(aiImageConfig.hive?.apiKeys || []),
@@ -25,13 +62,33 @@ function collectSecrets(aiImageConfig) {
       credential?.apiUser,
       credential?.apiSecret,
     ]),
+    ...proxySecrets(pluginConfig),
   ]
     .map((value) => String(value || '').trim())
     .filter(Boolean)
 }
 
 function redactLogValue(value, secrets = []) {
-  let message = value instanceof Error ? value.message : String(value || '')
+  const parts = []
+  const visited = new Set()
+  let current = value
+  for (
+    let depth = 0;
+    current !== undefined && current !== null && depth < 5;
+    depth += 1
+  ) {
+    if (typeof current === 'object') {
+      if (visited.has(current)) break
+      visited.add(current)
+    }
+    const message =
+      current instanceof Error || typeof current?.message === 'string'
+        ? current.message
+        : String(current || '')
+    if (message && !parts.includes(message)) parts.push(message)
+    current = current?.cause
+  }
+  let message = parts.join(' <- ')
   for (const secret of secrets) {
     message = message.split(secret).join('[redacted]')
   }
@@ -44,8 +101,7 @@ function redactLogValue(value, secrets = []) {
 }
 
 export function redactAiImageError(error, pluginConfig = {}) {
-  const aiImageConfig = pluginConfig.aiImage || pluginConfig
-  return redactLogValue(error, collectSecrets(aiImageConfig)) || '未知错误'
+  return redactLogValue(error, collectSecrets(pluginConfig)) || '未知错误'
 }
 
 function writeLog(logger, level, message) {
@@ -63,6 +119,11 @@ function providerDebugDetails(result, secrets) {
     status: debugField(result.status),
     reason: debugField(result.reason),
     httpStatus: debugField(result.httpStatus),
+    attempts: debugField(result.attempts),
+    credentialCount: debugField(result.credentialCount),
+    errorCodes: Array.isArray(result.errorCodes)
+      ? result.errorCodes.map(debugField)
+      : undefined,
   }
   const evidence = result.evidence || {}
 
@@ -97,6 +158,63 @@ function providerDebugDetails(result, secrets) {
   return redactLogValue(JSON.stringify(details), secrets)
 }
 
+function providerAttemptDetail(result) {
+  const attempts = Number(result.attempts)
+  const credentialCount = Number(result.credentialCount)
+  if (
+    !Number.isInteger(attempts) ||
+    !Number.isInteger(credentialCount) ||
+    credentialCount <= 0
+  ) {
+    return ''
+  }
+  return `尝试 ${attempts}/${credentialCount}`
+}
+
+function providerErrorDetail(result, secrets) {
+  const message =
+    result.reason || redactLogValue(result.error, secrets) || '未知错误'
+  const context = []
+  const errorCodes = Array.isArray(result.errorCodes)
+    ? [...new Set(result.errorCodes.map(debugField).filter(Boolean))]
+    : []
+  if (errorCodes.length > 0) context.push(`错误码 ${errorCodes.join('/')}`)
+  const attempt = providerAttemptDetail(result)
+  if (attempt) context.push(attempt)
+  return context.length > 0 ? `${message}（${context.join('；')}）` : message
+}
+
+function isNetworkFailure(result) {
+  if (result.status !== 'error') return false
+  const values = [
+    ...(Array.isArray(result.errorCodes) ? result.errorCodes : []),
+    result.error,
+  ]
+  return values.some((value) => NETWORK_ERROR_PATTERN.test(String(value || '')))
+}
+
+function logSharedProxyFailure(logger, results, proxyState) {
+  if (!proxyState.configured) return
+  const externalResults = results.filter((result) =>
+    EXTERNAL_PROVIDERS.includes(result.provider),
+  )
+  if (externalResults.length < 2 || !externalResults.every(isNetworkFailure)) {
+    return
+  }
+  const providers = externalResults
+    .map(({ provider }) => PROVIDER_NAMES[provider] || provider)
+    .join('、')
+  const errorCodes = [
+    ...new Set(externalResults.flatMap((result) => result.errorCodes || [])),
+  ]
+  const codeSummary = errorCodes.length > 0 ? `（${errorCodes.join('/')}）` : ''
+  writeLog(
+    logger,
+    'warn',
+    `疑似代理链路异常: ${providers} 均发生网络错误${codeSummary}，代理=${proxyState.target}；请检查代理服务是否监听、Bot 或容器到代理地址是否可达，以及代理协议是否为 HTTP/HTTPS`,
+  )
+}
+
 function elapsedMs(now, startedAt) {
   return Math.max(0, Math.round(now() - startedAt))
 }
@@ -111,6 +229,77 @@ function getMaxFileSize(options) {
   return Number.isFinite(maxFileSize) && maxFileSize > 0
     ? maxFileSize
     : 50 * 1024 * 1024
+}
+
+function getEnabledProviders(aiImageConfig) {
+  return [
+    aiImageConfig.c2pa?.enable !== false && 'c2pa',
+    aiImageConfig.openai?.enable !== false && 'openai',
+    aiImageConfig.hive?.enable !== false && 'hive',
+    aiImageConfig.sightengine?.enable === true && 'sightengine',
+  ].filter(Boolean)
+}
+
+function getProxyLogState(pluginConfig, enabled) {
+  if (!enabled) {
+    return { configured: false, label: '关闭（API 直连）' }
+  }
+  const rawUrl = String(pluginConfig?.proxy?.url || '').trim()
+  if (!rawUrl) {
+    return {
+      configured: false,
+      label: '启用但未配置地址（API 直连）',
+    }
+  }
+  try {
+    const proxyUrl = new URL(rawUrl)
+    if (!proxyUrl.host || !['http:', 'https:'].includes(proxyUrl.protocol)) {
+      return {
+        configured: false,
+        label: `启用但协议不受支持（${proxyUrl.protocol || '未知协议'}）`,
+      }
+    }
+    const target = `${proxyUrl.protocol}//${proxyUrl.host}`
+    return {
+      configured: true,
+      target,
+      label: `启用（${target}）`,
+    }
+  } catch {
+    return {
+      configured: false,
+      label: '启用但地址格式无效',
+    }
+  }
+}
+
+function formatFileSizeLimit(bytes) {
+  if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MiB`
+  if (bytes >= 1024) return `${(bytes / 1024).toFixed(1)} KiB`
+  return `${bytes} B`
+}
+
+function providerCredentialCount(provider, aiImageConfig) {
+  if (provider === 'openai') {
+    return parseConfigArray(aiImageConfig.openai?.apiKeys).length
+  }
+  if (provider === 'hive') {
+    return parseConfigArray(aiImageConfig.hive?.apiKeys).length
+  }
+  if (provider === 'sightengine') {
+    return parseConfigArray(aiImageConfig.sightengine?.credentials).length
+  }
+  return 0
+}
+
+function formatCredentialSummary(enabledProviders, aiImageConfig) {
+  const entries = enabledProviders
+    .filter((provider) => EXTERNAL_PROVIDERS.includes(provider))
+    .map(
+      (provider) =>
+        `${PROVIDER_NAMES[provider]} ${providerCredentialCount(provider, aiImageConfig)}`,
+    )
+  return entries.length > 0 ? entries.join('、') : '无'
 }
 
 function guessMimeType(url, response) {
@@ -315,24 +504,23 @@ async function providerCall(provider, fn, context = {}) {
     `${name} 结果: ${providerDebugDetails(result, secrets)}`,
   )
   if (result.status === 'unavailable') {
-    const detail = result.httpStatus
+    const baseDetail = result.httpStatus
       ? `HTTP ${result.httpStatus}`
       : result.reason || redactLogValue(result.error, secrets) || '未知原因'
+    const attempt = providerAttemptDetail(result)
+    const detail = attempt ? `${baseDetail}（${attempt}）` : baseDetail
     writeLog(logger, 'warn', `${name} 不可用: ${detail}，耗时 ${duration} ms`)
   } else if (result.status === 'error') {
-    const detail =
-      result.reason || redactLogValue(result.error, secrets) || '未知错误'
+    const detail = providerErrorDetail(result, secrets)
     writeLog(
       logger,
       'error',
       `${name} 检测失败: ${detail}，耗时 ${duration} ms`,
     )
   } else {
-    writeLog(
-      logger,
-      'info',
-      `${name} 检测完成: ${result.status}，耗时 ${duration} ms`,
-    )
+    const attempt = providerAttemptDetail(result)
+    const status = attempt ? `${result.status}（${attempt}）` : result.status
+    writeLog(logger, 'info', `${name} 检测完成: ${status}，耗时 ${duration} ms`)
   }
   return result
 }
@@ -345,22 +533,28 @@ export async function inspectAiImage(
   const aiImageConfig = pluginConfig.aiImage || pluginConfig
   const logger = dependencies.logger
   const now = dependencies.now || Date.now
-  const secrets = collectSecrets(aiImageConfig)
+  const secrets = collectSecrets(pluginConfig)
   const inspectionStartedAt = now()
-  writeLog(logger, 'info', '开始检测')
-  const providersEnabled =
-    aiImageConfig.c2pa?.enable !== false ||
-    aiImageConfig.openai?.enable !== false ||
-    aiImageConfig.hive?.enable !== false ||
-    aiImageConfig.sightengine?.enable === true
-  if (!providersEnabled) {
+  const timeoutMs = getTimeoutMs(aiImageConfig)
+  const maxFileSize = getMaxFileSize(aiImageConfig)
+  const enabledProviders = getEnabledProviders(aiImageConfig)
+  const proxyState = getProxyLogState(
+    pluginConfig,
+    aiImageConfig.proxy?.enable === true,
+  )
+  writeLog(
+    logger,
+    'info',
+    `开始检测: 渠道=${enabledProviders.map((provider) => PROVIDER_NAMES[provider]).join('、') || '无'}；图片下载=直连；API 代理=${proxyState.label}；超时=${timeoutMs} ms；大小限制=${formatFileSizeLimit(maxFileSize)}；凭据=${formatCredentialSummary(enabledProviders, aiImageConfig)}`,
+  )
+  if (enabledProviders.length === 0) {
     writeLog(logger, 'warn', '未启用任何检测渠道，跳过图片下载')
     return summarizeAiImageResults([], { noProvidersEnabled: true })
   }
   const downloadOptions = {
     ...dependencies,
-    timeoutMs: getTimeoutMs(aiImageConfig),
-    maxFileSize: getMaxFileSize(aiImageConfig),
+    timeoutMs,
+    maxFileSize,
   }
   const downloadStartedAt = now()
   let image
@@ -380,7 +574,6 @@ export async function inspectAiImage(
     'info',
     `图片下载完成: ${image.mimeType}，${image.buffer.length} 字节，耗时 ${elapsedMs(now, downloadStartedAt)} ms`,
   )
-  const timeoutMs = getTimeoutMs(aiImageConfig)
   const providerOptions = {
     ...downloadOptions,
     pluginConfig,
@@ -445,6 +638,7 @@ export async function inspectAiImage(
     )
   }
   const results = await Promise.all(tasks)
+  logSharedProxyFailure(logger, results, proxyState)
   const summary = summarizeAiImageResults(results)
   writeLog(
     logger,
