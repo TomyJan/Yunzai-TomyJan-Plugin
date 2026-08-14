@@ -5,9 +5,11 @@ on:
   push:
     branches:
       - master
+      - dev
   pull_request:
     branches:
       - master
+      - dev
 
 permissions:
   contents: read
@@ -72,5 +74,9 @@ jobs:
         run: pnpm test:c2pa
 
       - name: Run tests
+        if: matrix.os == 'windows-latest'
         run: pnpm test
 
+      - name: Run tests with coverage
+        if: matrix.os == 'ubuntu-latest'
+        run: pnpm test:coverage

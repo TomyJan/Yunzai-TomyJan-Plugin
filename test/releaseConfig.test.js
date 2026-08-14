@@ -23,6 +23,23 @@ test('exposes read-only formatting and test scripts for CI', () => {
     'prettier --check "**/*.js"',
   )
   assert.equal(packageJson.scripts.test, 'node --test')
+  assert.match(
+    packageJson.scripts['test:coverage'],
+    /--experimental-test-coverage/,
+  )
+  assert.match(packageJson.scripts['test:coverage'], /--test-coverage-lines=90/)
+  assert.match(
+    packageJson.scripts['test:coverage'],
+    /--test-coverage-branches=80/,
+  )
+  assert.match(
+    packageJson.scripts['test:coverage'],
+    /--test-coverage-functions=90/,
+  )
+  assert.match(
+    packageJson.scripts['test:coverage'],
+    /--test-coverage-include="?model\//,
+  )
 })
 
 test('uses the Node built-in child_process module without a shadow package', () => {
@@ -59,8 +76,8 @@ test('reinstalls dependencies when updating the plugin', () => {
 
 test('runs read-only release checks for pushes and pull requests', () => {
   assert.deepEqual(workflow.permissions, { contents: 'read' })
-  assert.deepEqual(workflow.on.push.branches, ['master'])
-  assert.deepEqual(workflow.on.pull_request.branches, ['master'])
+  assert.deepEqual(workflow.on.push.branches, ['master', 'dev'])
+  assert.deepEqual(workflow.on.pull_request.branches, ['master', 'dev'])
 
   const jobs = Object.values(workflow.jobs)
   const steps = jobs.flatMap((job) => job.steps)
@@ -86,6 +103,11 @@ test('runs read-only release checks for pushes and pull requests', () => {
   assert.ok(commands.includes('pnpm lint'))
   assert.ok(commands.includes('pnpm test:c2pa'))
   assert.ok(commands.includes('pnpm test'))
+  assert.ok(commands.includes('pnpm test:coverage'))
+  const normalTestStep = steps.find((step) => step.run === 'pnpm test')
+  const coverageStep = steps.find((step) => step.run === 'pnpm test:coverage')
+  assert.equal(normalTestStep?.if, "matrix.os == 'windows-latest'")
+  assert.equal(coverageStep?.if, "matrix.os == 'ubuntu-latest'")
   assert.ok(!commands.includes('pnpm format'))
   assert.ok(!commands.includes('pnpm lint:fix'))
   assert.ok(!commands.some((command) => /git\s+(?:commit|push)/.test(command)))
