@@ -2,9 +2,12 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import test from 'node:test'
 
-const guobaSource = fs
-  .readFileSync(new URL('../guoba.support.js', import.meta.url), 'utf8')
-  .replaceAll('\r\n', '\n')
+import { getGuobaSchemas } from '../model/guobaSchemas.js'
+
+const supportSource = fs.readFileSync(
+  new URL('../guoba.support.js', import.meta.url),
+  'utf8',
+)
 
 const cardLabels = [
   '日志设置',
@@ -65,42 +68,38 @@ const expectedCardFields = {
   其他设置: ['attemptSendNonFriend', 'botQQ'],
 }
 
-function getCardSource(label) {
-  const start = guobaSource.indexOf(
-    `component: 'SOFT_GROUP_BEGIN',\n          label: '${label}'`,
-  )
-  assert.notEqual(start, -1, `缺少锅巴配置卡片：${label}`)
-  const nextStarts = cardLabels
-    .map((nextLabel) =>
-      guobaSource.indexOf(
-        `component: 'SOFT_GROUP_BEGIN',\n          label: '${nextLabel}'`,
-        start + 1,
-      ),
-    )
-    .filter((index) => index > start)
-  const end =
-    nextStarts.length > 0 ? Math.min(...nextStarts) : guobaSource.length
-  return guobaSource.slice(start, end)
+function splitCards(schemas) {
+  const cards = new Map()
+  let currentCard
+  for (const schema of schemas) {
+    if (schema.component === 'SOFT_GROUP_BEGIN') {
+      currentCard = []
+      cards.set(schema.label, currentCard)
+    } else if (currentCard) {
+      currentCard.push(schema)
+    }
+  }
+  return cards
 }
 
 test('uses Guoba soft groups as independent configuration cards', () => {
-  const labels = [
-    ...guobaSource.matchAll(
-      /component: 'SOFT_GROUP_BEGIN',\s*label: '([^']+)'/g,
-    ),
-  ].map((match) => match[1])
+  const schemas = getGuobaSchemas()
+  const labels = schemas
+    .filter((schema) => schema.component === 'SOFT_GROUP_BEGIN')
+    .map((schema) => schema.label)
 
   assert.deepEqual(labels, cardLabels)
-  assert.doesNotMatch(guobaSource, /component: 'Divider'/)
+  assert.equal(
+    schemas.some((schema) => schema.component === 'Divider'),
+    false,
+  )
 })
 
 test('keeps every setting in its expected configuration card', () => {
+  const cards = splitCards(getGuobaSchemas())
   for (const [label, expectedFields] of Object.entries(expectedCardFields)) {
-    const actualFields = [
-      ...getCardSource(label).matchAll(/field: '([^']+)'/g),
-    ].map((match) => match[1])
     assert.deepEqual(
-      actualFields,
+      cards.get(label)?.map((schema) => schema.field),
       expectedFields,
       `锅巴配置卡片字段异常：${label}`,
     )
@@ -108,11 +107,32 @@ test('keeps every setting in its expected configuration card', () => {
 })
 
 test('defines every configuration field exactly once', () => {
-  const actualFields = [...guobaSource.matchAll(/field: '([^']+)'/g)].map(
-    (match) => match[1],
-  )
+  const actualFields = getGuobaSchemas()
+    .map((schema) => schema.field)
+    .filter(Boolean)
   const expectedFields = Object.values(expectedCardFields).flat()
 
   assert.deepEqual(actualFields, expectedFields)
   assert.equal(new Set(actualFields).size, actualFields.length)
+})
+
+test('returns an isolated schema copy for each Guoba request', () => {
+  const first = getGuobaSchemas()
+  const second = getGuobaSchemas()
+
+  first[0].label = 'changed'
+  first.find((schema) => schema.componentProps)?.componentProps.options?.pop()
+
+  assert.equal(second[0].label, '日志设置')
+  assert.equal(
+    second.find((schema) => schema.field === 'logger.logLevel').componentProps
+      .options.length,
+    4,
+  )
+})
+
+test('uses the shared schemas in the Guoba runtime adapter', () => {
+  assert.match(supportSource, /from '.\/model\/guobaSchemas\.js'/)
+  assert.match(supportSource, /schemas: getGuobaSchemas\(\)/)
+  assert.doesNotMatch(supportSource, /schemas:\s*\[/)
 })

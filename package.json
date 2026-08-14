@@ -26,7 +26,7 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "test": "node --test",
-    "test:coverage": "node --test --experimental-test-coverage --test-coverage-include=\"model/aiImage.js\" --test-coverage-include=\"model/aiImageConfig.js\" --test-coverage-include=\"model/aiImageMessage.js\" --test-coverage-include=\"model/aiImageProviders.js\" --test-coverage-include=\"model/eduAuthRules.js\" --test-coverage-include=\"model/httpPath.js\" --test-coverage-include=\"model/jmBlacklist.js\" --test-coverage-include=\"model/jmDownloadResult.js\" --test-coverage-include=\"model/jmOption.js\" --test-coverage-include=\"model/proxy.js\" --test-coverage-include=\"model/runCommand.js\" --test-coverage-include=\"model/vvShuo.js\" --test-coverage-lines=90 --test-coverage-branches=80 --test-coverage-functions=90",
+    "test:coverage": "node --test --experimental-test-coverage --test-coverage-include=\"model/aiImage.js\" --test-coverage-include=\"model/aiImageConfig.js\" --test-coverage-include=\"model/aiImageMessage.js\" --test-coverage-include=\"model/aiImageProviders.js\" --test-coverage-include=\"model/eduAuthRules.js\" --test-coverage-include=\"model/guobaSchemas.js\" --test-coverage-include=\"model/httpPath.js\" --test-coverage-include=\"model/jmBlacklist.js\" --test-coverage-include=\"model/jmDownloadResult.js\" --test-coverage-include=\"model/jmOption.js\" --test-coverage-include=\"model/proxy.js\" --test-coverage-include=\"model/runCommand.js\" --test-coverage-include=\"model/vvShuo.js\" --test-coverage-lines=90 --test-coverage-branches=80 --test-coverage-functions=90",
     "test:c2pa": "node --test native-tests/c2paNative.js",
     "changelog": "conventional-changelog -p angular -i CHANGELOG.md -s -r 0"
   },

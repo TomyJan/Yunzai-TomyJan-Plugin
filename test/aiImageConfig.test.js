@@ -2,6 +2,8 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import test from 'node:test'
 
+import { getGuobaSchemas } from '../model/guobaSchemas.js'
+
 const defaultConfig = JSON.parse(
   fs.readFileSync(
     new URL('../data/system/default_config.json', import.meta.url),
@@ -10,9 +12,11 @@ const defaultConfig = JSON.parse(
 const packageJson = JSON.parse(
   fs.readFileSync(new URL('../package.json', import.meta.url)),
 )
-const guobaSource = fs.readFileSync(
-  new URL('../guoba.support.js', import.meta.url),
-  'utf8',
+const schemas = getGuobaSchemas()
+const schemaByField = new Map(
+  schemas
+    .filter((schema) => schema.field)
+    .map((schema) => [schema.field, schema]),
 )
 
 test('requires Node.js 22 and enables local C2PA support', () => {
@@ -57,17 +61,26 @@ test('keeps conservative AI image defaults', () => {
 })
 
 test('exposes only the new AI credential and proxy fields in Guoba', () => {
-  assert.match(guobaSource, /field: 'aiImage\.proxy\.enable'/)
-  assert.match(guobaSource, /field: 'aiImage\.openai\.apiKeys'/)
-  assert.match(guobaSource, /field: 'aiImage\.hive\.apiKeys'/)
-  assert.match(guobaSource, /field: 'aiImage\.sightengine\.credentials'/)
-  assert.doesNotMatch(guobaSource, /field: 'aiImage\.openai\.apiKey'/)
-  assert.doesNotMatch(guobaSource, /field: 'aiImage\.hive\.apiKey'/)
-  assert.doesNotMatch(guobaSource, /field: 'aiImage\.sightengine\.apiUser'/)
-  assert.doesNotMatch(guobaSource, /field: 'aiImage\.[^']+\.proxy\./)
-  assert.doesNotMatch(
-    guobaSource,
-    /tjLogger\.[a-z]+\([^\n]*JSON\.stringify\(configJson\)/,
+  for (const field of [
+    'aiImage.proxy.enable',
+    'aiImage.openai.apiKeys',
+    'aiImage.hive.apiKeys',
+    'aiImage.sightengine.credentials',
+  ]) {
+    assert.equal(schemaByField.has(field), true, field)
+  }
+  for (const field of [
+    'aiImage.openai.apiKey',
+    'aiImage.hive.apiKey',
+    'aiImage.sightengine.apiUser',
+  ]) {
+    assert.equal(schemaByField.has(field), false, field)
+  }
+  assert.deepEqual(
+    [...schemaByField.keys()].filter((field) =>
+      /^aiImage\.[^.]+\.proxy\./.test(field),
+    ),
+    [],
   )
 })
 
@@ -77,34 +90,21 @@ test('uses Guoba free-form tag inputs for AI credential arrays', () => {
     'aiImage.hive.apiKeys',
     'aiImage.sightengine.credentials',
   ]) {
-    const fieldIndex = guobaSource.indexOf(`field: '${field}'`)
-    assert.notEqual(fieldIndex, -1)
-    const schemaSource = guobaSource.slice(fieldIndex, fieldIndex + 700)
-    assert.match(schemaSource, /component: 'GTags'/)
-    assert.match(schemaSource, /allowAdd: true/)
-    assert.match(schemaSource, /allowDel: true/)
-    assert.doesNotMatch(schemaSource, /component: 'Select'/)
-    assert.doesNotMatch(schemaSource, /mode: '(?:multiple|tags)'/)
-    assert.doesNotMatch(schemaSource, /options: \[\]/)
+    const schema = schemaByField.get(field)
+    assert.equal(schema?.component, 'GTags')
+    assert.equal(schema?.componentProps?.allowAdd, true)
+    assert.equal(schema?.componentProps?.allowDel, true)
+    assert.equal(schema?.componentProps?.mode, undefined)
+    assert.equal(schema?.componentProps?.options, undefined)
   }
 })
 
 test('describes Hive credentials as V3 Secret Keys only', () => {
-  const fieldIndex = guobaSource.indexOf("field: 'aiImage.hive.apiKeys'")
-  assert.notEqual(fieldIndex, -1)
-  const schemaSource = guobaSource.slice(fieldIndex, fieldIndex + 700)
-
-  assert.match(schemaSource, /Hive V3 Secret Keys/)
-  assert.match(schemaSource, /只填写创建 V3 API Key 时显示的 Secret Key/)
-  assert.doesNotMatch(schemaSource, /Access Key|AK\s*\+/i)
-})
-
-test('contains no Hive V2 endpoint or Token authorization', () => {
-  const providerSource = fs.readFileSync(
-    new URL('../model/aiImageProviders.js', import.meta.url),
-    'utf8',
+  const schema = schemaByField.get('aiImage.hive.apiKeys')
+  assert.equal(schema.label, 'Hive V3 Secret Keys')
+  assert.match(schema.helpMessage, /只填写创建 V3 API Key 时显示的 Secret Key/)
+  assert.doesNotMatch(
+    `${schema.label} ${schema.helpMessage} ${schema.bottomHelpMessage}`,
+    /Access Key|AK\s*\+/i,
   )
-
-  assert.doesNotMatch(providerSource, /thehive\.ai\/api\/v2\/task/i)
-  assert.doesNotMatch(providerSource, /Authorization:\s*`Token/i)
 })

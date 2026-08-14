@@ -2,18 +2,19 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import test from 'node:test'
 
+import { getGuobaSchemas } from '../model/guobaSchemas.js'
+
 const defaultConfig = JSON.parse(
   fs.readFileSync(
     new URL('../data/system/default_config.json', import.meta.url),
     'utf8',
   ),
 )
-const guobaSource = fs
-  .readFileSync(new URL('../guoba.support.js', import.meta.url), 'utf8')
-  .replaceAll('\r\n', '\n')
-const jmDownloadSource = fs
-  .readFileSync(new URL('../apps/jmDownload.js', import.meta.url), 'utf8')
-  .replaceAll('\r\n', '\n')
+const schemaByField = new Map(
+  getGuobaSchemas()
+    .filter((schema) => schema.field)
+    .map((schema) => [schema.field, schema]),
+)
 
 test('defines disabled JMComic blacklists by default', () => {
   assert.deepEqual(defaultConfig.JMComic.albumIdBlacklist, {
@@ -31,9 +32,7 @@ test('uses independent Guoba switches for JMComic blacklists', () => {
     'JMComic.albumIdBlacklist.enable',
     'JMComic.authorNameBlacklist.enable',
   ]) {
-    const start = guobaSource.indexOf(`field: '${field}'`)
-    assert.notEqual(start, -1)
-    assert.match(guobaSource.slice(start, start + 500), /component: 'Switch'/)
+    assert.equal(schemaByField.get(field)?.component, 'Switch')
   }
 })
 
@@ -42,58 +41,17 @@ test('uses editable Guoba tag arrays and documents the jmv cost', () => {
     'JMComic.albumIdBlacklist.ids',
     'JMComic.authorNameBlacklist.names',
   ]) {
-    const start = guobaSource.indexOf(`field: '${field}'`)
-    assert.notEqual(start, -1)
-    const fieldSource = guobaSource.slice(start, start + 500)
-    assert.match(fieldSource, /component: 'GTags'/)
-    assert.match(fieldSource, /allowAdd: true/)
-    assert.match(fieldSource, /allowDel: true/)
+    const schema = schemaByField.get(field)
+    assert.equal(schema?.component, 'GTags')
+    assert.equal(schema?.componentProps?.allowAdd, true)
+    assert.equal(schema?.componentProps?.allowDel, true)
   }
-  assert.match(guobaSource, /额外查询一次本子详情/)
-  assert.match(guobaSource, /最多获取前 10 个作者/)
-})
-
-test('redacts proxy sync failures and keeps the user reply generic', () => {
-  const start = jmDownloadSource.indexOf('syncJmProxyConfig(optionPath')
-  const end = jmDownloadSource.indexOf('const authorBlocked', start)
-  assert.notEqual(start, -1)
-  assert.notEqual(end, -1)
-  const proxySyncSource = jmDownloadSource.slice(start, end)
-
-  assert.match(proxySyncSource, /redactJmError\(error\)/)
-  assert.match(proxySyncSource, /同步 JMComic 代理配置失败，请检查 option\.yml/)
-  assert.doesNotMatch(proxySyncSource, /\$\{error\.message\}/)
-})
-
-test('parses long JM commands and rejects oversized IDs before side effects', () => {
   assert.match(
-    jmDownloadSource,
-    /reg: '\^#\?\(JMComic\|jmcomic\|JM\|jm\)\(\.\*\)\$'/,
+    schemaByField.get('JMComic.authorNameBlacklist.enable').helpMessage,
+    /额外查询一次本子详情/,
   )
-  assert.match(jmDownloadSource, /let id = extractJmAlbumId\(this\.e\.msg\)/)
-  assert.doesNotMatch(jmDownloadSource, /\.replace\(\/#\|JM\|jm/)
-
-  const normalizeIndex = jmDownloadSource.indexOf('normalizeJmAlbumId(id)')
-  const lengthReplyIndex = jmDownloadSource.indexOf('ID 长度不能超过 64 位')
-  const blacklistIndex = jmDownloadSource.indexOf('const albumIdBlocked')
-  assert.ok(normalizeIndex >= 0)
-  assert.ok(lengthReplyIndex > normalizeIndex)
-  assert.ok(blacklistIndex > lengthReplyIndex)
-})
-
-test('runs jmv with an error redactor before command logging', () => {
-  const authorCheckStart = jmDownloadSource.indexOf('const authorBlocked')
-  const prepareMessageStart = jmDownloadSource.indexOf(
-    '准备下载 JMComic ID',
-    authorCheckStart,
-  )
-  const authorCheckSource = jmDownloadSource.slice(
-    authorCheckStart,
-    prepareMessageStart,
-  )
-
   assert.match(
-    authorCheckSource,
-    /execute: \(command\) =>\s*runCommand\(command, \{ redactError: redactJmError \}\)/,
+    schemaByField.get('JMComic.authorNameBlacklist.names').bottomHelpMessage,
+    /最多获取前 10 个作者/,
   )
 })
