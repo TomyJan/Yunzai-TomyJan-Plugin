@@ -1,3 +1,20 @@
+## [0.3.1-rel](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/compare/v0.3.0-rel...v0.3.1-rel) (2026-08-14)
+
+### Bug Fixes
+
+* **锅巴:** 修复数组配置输入方式 ([06951fa](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/06951fa3cdfeb48c346fbe0628d6b4e15c7eb941))
+* **命令执行:** 防止 JMComic 日志泄露凭据 ([70b488b](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/70b488b0cbd6edc28b55689c1977dc5d317f98da))
+* **AI图片:** 精简检测渠道结果文案 ([fbd46eb](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/fbd46eb8d6dddaf4ce1b2dbe71dfe408256de3d9))
+* **AI图片:** 修正概率明细并补充调试日志 ([0dabe22](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/0dabe222da37754c114b3f2845b740f5245092e4))
+* **AI图片:** 优化 Hive 检测与结果反馈 ([2065899](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/20658994b0923b19c4b2a6b4c880aec21ff9ab42))
+* **JMComic:** 强化下载命令与 ID 前置校验 ([20220da](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/20220da8334423c2445101591edc98d19c755c28))
+
+### Features
+
+* **JMComic:** 接入可配置下载黑名单 ([66053b5](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/66053b5413fe8b1f8e332b385a96399c3bd6dab3))
+* **JMComic:** 添加 jmv 作者前置查询 ([9539576](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/95395760b618ed38e71e770a435c331167c40cdd))
+* **JMComic:** 添加黑名单匹配规则 ([5c98eaf](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/5c98eaf644232298aba60803ef3937b4b55ad32c))
+
 # [0.3.0-rel](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/compare/v0.2.0-rel...v0.3.0-rel) (2026-08-13)
 
 ### Bug Fixes
