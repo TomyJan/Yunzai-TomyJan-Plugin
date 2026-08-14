@@ -105,7 +105,15 @@ pnpm -C ./plugins/Yunzai-TomyJan-Plugin/ --ignore-workspace test:c2pa
     "sendFilePolicy": 1, // 发送文件策略, 0=只发文件, 1=优先文件, 2=只发链接
     "archiveDownloadedImg": false, // 是否归档下载的图片到 `./data/JMComic/archive/download/`, 若开启, 归档将同时将用作下载加速
     "archiveConvertedPdf": false, // 是否归档转换后的 PDF 到 `./data/JMComic/archive/convert/`, 若为加密 PDF 则文件名会加上密码, 请确保设置的密码没有不可用于文件名的字符
-    "proxy": { "enable": false } // 是否使用上方统一代理, 开启后会同步至 JMComic option.yml
+    "proxy": { "enable": false }, // 是否使用上方统一代理, 开启后会同步至 JMComic option.yml
+    "albumIdBlacklist": {
+      "enable": false,
+      "ids": []
+    },
+    "authorNameBlacklist": {
+      "enable": false,
+      "names": []
+    }
   },
   "vvShuo": {
     // VV 说 功能配置
@@ -143,6 +151,32 @@ pnpm -C ./plugins/Yunzai-TomyJan-Plugin/ --ignore-workspace test:c2pa
   "botQQ": 0 // 机器人 QQ 号, 使用第三方适配器或者其他多账号框架时可能需要配置
 }
 ```
+
+#### JMComic 黑名单配置
+
+本子 ID 黑名单和作者名称黑名单拥有独立开关，可以只启用其中一项。建议通过锅巴配置；也可以编辑 `config/config.json`：
+
+```json
+{
+  "JMComic": {
+    "albumIdBlacklist": {
+      "enable": true,
+      "ids": ["123", "456"]
+    },
+    "authorNameBlacklist": {
+      "enable": true,
+      "names": ["example", "Alice"]
+    }
+  }
+}
+```
+
+- 本子 ID 会按十进制数字字符串匹配并忽略前导零，数字值和字符串值等价。
+- 作者名称去除首尾空白后进行完整匹配，英文名称不区分大小写，不使用包含或模糊匹配。
+- 启用作者名称黑名单后，每次下载前会通过 `jmv` 额外查询一次本子详情，因此会增加等待时间。
+- `jmv` 最多输出前 10 个作者，作者名称黑名单只能检查这些可见作者。
+- 作者前置查询失败、没有输出或无法解析作者字段时会停止下载，不会继续创建缓存或执行下载。
+- 该功能复用 `jmcomic` 安装时提供的 `jmv`，插件不会新增 `.py` 文件、npm 依赖或额外 Python 依赖。
 
 #### AI 图片识别配置
 
