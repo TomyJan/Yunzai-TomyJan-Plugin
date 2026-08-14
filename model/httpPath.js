@@ -1,3 +1,4 @@
+import fs from 'node:fs'
 import path from 'node:path'
 
 const CONTENT_TYPES = {
@@ -10,6 +11,15 @@ const CONTENT_TYPES = {
   '.gif': 'image/gif',
   '.svg': 'image/svg+xml',
   '.pdf': 'application/pdf',
+}
+
+function isPathInside(root, candidate) {
+  const relative = path.relative(root, candidate)
+  return (
+    relative !== '..' &&
+    !relative.startsWith(`..${path.sep}`) &&
+    !path.isAbsolute(relative)
+  )
 }
 
 export function resolvePublicFile(rootDir, requestUrl) {
@@ -43,15 +53,20 @@ export function resolvePublicFile(rootDir, requestUrl) {
   if (path.isAbsolute(relativePath)) return null
 
   const filePath = path.resolve(root, relativePath)
-  const relativeToRoot = path.relative(root, filePath)
-  if (
-    relativeToRoot === '..' ||
-    relativeToRoot.startsWith(`..${path.sep}`) ||
-    path.isAbsolute(relativeToRoot)
-  ) {
+  return isPathInside(root, filePath) ? filePath : null
+}
+
+export function resolveExistingPublicFile(rootDir, filePath) {
+  if (typeof rootDir !== 'string' || typeof filePath !== 'string') return null
+
+  try {
+    const realRoot = fs.realpathSync(rootDir)
+    const realFile = fs.realpathSync(filePath)
+    if (!isPathInside(realRoot, realFile)) return null
+    return fs.statSync(realFile).isFile() ? realFile : null
+  } catch {
     return null
   }
-  return filePath
 }
 
 export function getContentType(filePath) {

@@ -1,8 +1,15 @@
 import assert from 'node:assert/strict'
+import fs from 'node:fs'
+import os from 'node:os'
 import path from 'node:path'
+import process from 'node:process'
 import test from 'node:test'
 
-import { getContentType, resolvePublicFile } from '../model/httpPath.js'
+import {
+  getContentType,
+  resolveExistingPublicFile,
+  resolvePublicFile,
+} from '../model/httpPath.js'
 
 const rootDir = path.resolve('data/httpServer/root')
 
@@ -42,6 +49,33 @@ test('does not confuse a sibling with a shared root prefix', () => {
     resolvePublicFile(rootDir, `/../${siblingName}/secret.txt`),
     null,
   )
+})
+
+test('rejects existing files reached through a symlink outside the root', (t) => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'http-path-'))
+  t.after(() => fs.rmSync(tempDir, { recursive: true, force: true }))
+
+  const root = path.join(tempDir, 'root')
+  const outside = path.join(tempDir, 'outside')
+  fs.mkdirSync(root)
+  fs.mkdirSync(outside)
+  fs.writeFileSync(path.join(root, 'public.txt'), 'public')
+  fs.writeFileSync(path.join(outside, 'secret.txt'), 'secret')
+  fs.symlinkSync(
+    outside,
+    path.join(root, 'escape'),
+    process.platform === 'win32' ? 'junction' : 'dir',
+  )
+
+  const publicPath = resolvePublicFile(root, '/public.txt')
+  const escapedPath = resolvePublicFile(root, '/escape/secret.txt')
+
+  assert.equal(
+    resolveExistingPublicFile(root, publicPath),
+    fs.realpathSync(publicPath),
+  )
+  assert.equal(resolveExistingPublicFile(root, escapedPath), null)
+  assert.equal(resolveExistingPublicFile(root, root), null)
 })
 
 test('maps supported HTTP file extensions case-insensitively', () => {

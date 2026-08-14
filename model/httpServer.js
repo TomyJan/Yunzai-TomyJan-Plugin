@@ -5,7 +5,11 @@ import fs from 'fs'
 import path from 'path'
 import tjLogger from '../components/logger.js'
 import crypto from 'crypto'
-import { getContentType, resolvePublicFile } from './httpPath.js'
+import {
+  getContentType,
+  resolveExistingPublicFile,
+  resolvePublicFile,
+} from './httpPath.js'
 
 class httpServer {
   constructor() {
@@ -68,8 +72,8 @@ class httpServer {
         )
 
         try {
-          const filePath = resolvePublicFile(this.rootDir, req.url)
-          if (!filePath) {
+          const requestedFilePath = resolvePublicFile(this.rootDir, req.url)
+          if (!requestedFilePath) {
             tjLogger.warn(
               `HTTP服务器: 访问被拒绝, 请求路径: ${req.url}, clientIp=${clientIp}`,
             )
@@ -79,15 +83,27 @@ class httpServer {
 
           // 在路径检查部分添加调试日志
           tjLogger.debug(
-            `HTTP服务器: 路径检查 - 文件路径: ${filePath}, 根目录: ${this.rootDir}`,
+            `HTTP服务器: 路径检查 - 文件路径: ${requestedFilePath}, 根目录: ${this.rootDir}`,
           )
 
           // 检查文件是否存在
-          if (!fs.existsSync(filePath)) {
+          if (!fs.existsSync(requestedFilePath)) {
             tjLogger.warn(
               `HTTP服务器: 文件未找到, 请求路径: ${req.url}, clientIp=${clientIp}`,
             )
             this.sendErrorResponse(res, 404, '文件未找到')
+            return
+          }
+
+          const filePath = resolveExistingPublicFile(
+            this.rootDir,
+            requestedFilePath,
+          )
+          if (!filePath) {
+            tjLogger.warn(
+              `HTTP服务器: 实际文件路径越界, 请求路径: ${req.url}, clientIp=${clientIp}`,
+            )
+            this.sendErrorResponse(res, 403, '访问被拒绝')
             return
           }
 
