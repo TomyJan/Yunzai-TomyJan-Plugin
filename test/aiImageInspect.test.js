@@ -246,7 +246,7 @@ test('validates every redirect target before following it', async () => {
   assert.equal(requests, 1)
 })
 
-test('shares one proxy switch across download and external providers', async () => {
+test('uses the AI image proxy only for external provider APIs', async () => {
   const dispatchers = []
   const proxyAgentFactory = (url) => ({ proxyUrl: url })
   const pluginConfig = {
@@ -289,9 +289,17 @@ test('shares one proxy switch across download and external providers', async () 
   })
 
   assert.equal(dispatchers.length, 4)
+  const downloadRequest = dispatchers.find(({ url }) =>
+    url.includes('public.example'),
+  )
+  assert.equal(downloadRequest?.dispatcher, undefined)
+  const providerRequests = dispatchers.filter(
+    ({ url }) => !url.includes('public.example'),
+  )
+  assert.equal(providerRequests.length, 3)
   assert.deepEqual(
-    dispatchers.map(({ dispatcher }) => dispatcher),
-    Array(4).fill({ proxyUrl: 'http://proxy.example:8080' }),
+    providerRequests.map(({ dispatcher }) => dispatcher),
+    Array(3).fill({ proxyUrl: 'http://proxy.example:8080' }),
   )
 })
 

@@ -9,7 +9,6 @@ import {
   checkSightengine,
   summarizeAiImageResults,
 } from './aiImageProviders.js'
-import { withProxy } from './proxy.js'
 
 const PROVIDER_NAMES = {
   c2pa: 'C2PA',
@@ -260,23 +259,11 @@ async function downloadImage(url, options = {}) {
     throw new Error('当前 Node 环境没有可用的 fetch')
   let currentUrl = await validateRemoteUrl(url, options)
   for (let redirects = 0; redirects <= 3; redirects += 1) {
-    const response = await fetchImpl(
-      currentUrl,
-      withProxy(
-        {
-          method: 'GET',
-          redirect: 'manual',
-          signal: AbortSignal.timeout(getTimeoutMs(options)),
-        },
-        options.pluginConfig,
-        options.proxyEnabled,
-        {
-          feature: 'AI 图片识别',
-          proxyAgentFactory: options.proxyAgentFactory,
-          warn: options.warn,
-        },
-      ),
-    )
+    const response = await fetchImpl(currentUrl, {
+      method: 'GET',
+      redirect: 'manual',
+      signal: AbortSignal.timeout(getTimeoutMs(options)),
+    })
     if ([301, 302, 303, 307, 308].includes(response.status)) {
       if (redirects === 3) throw new Error('图片重定向次数过多')
       const location = response.headers?.get?.('location')
@@ -370,18 +357,15 @@ export async function inspectAiImage(
     writeLog(logger, 'warn', '未启用任何检测渠道，跳过图片下载')
     return summarizeAiImageResults([], { noProvidersEnabled: true })
   }
-  const proxyEnabled = aiImageConfig.proxy?.enable === true
-  const sharedOptions = {
+  const downloadOptions = {
     ...dependencies,
-    pluginConfig,
-    proxyEnabled,
     timeoutMs: getTimeoutMs(aiImageConfig),
     maxFileSize: getMaxFileSize(aiImageConfig),
   }
   const downloadStartedAt = now()
   let image
   try {
-    image = await downloadImage(imageUrl, sharedOptions)
+    image = await downloadImage(imageUrl, downloadOptions)
   } catch (error) {
     const safeMessage = redactAiImageError(error, pluginConfig)
     writeLog(
@@ -398,7 +382,9 @@ export async function inspectAiImage(
   )
   const timeoutMs = getTimeoutMs(aiImageConfig)
   const providerOptions = {
-    ...sharedOptions,
+    ...downloadOptions,
+    pluginConfig,
+    proxyEnabled: aiImageConfig.proxy?.enable === true,
     timeoutMs,
     mimeType: image.mimeType,
     imageUrl,

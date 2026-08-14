@@ -134,7 +134,7 @@ pnpm -C ./plugins/Yunzai-TomyJan-Plugin/ --ignore-workspace test:c2pa
     "enable": false, // 是否启用 AI 图片识别
     "timeoutMs": 15000, // 图片下载和单个检测渠道的超时时间
     "maxFileSize": 52428800, // 图片大小上限, 默认 50 MiB
-    "proxy": { "enable": false }, // 图片下载和外部检测渠道是否使用上方统一代理
+    "proxy": { "enable": false }, // 外部检测 API 是否使用上方统一代理
     "c2pa": { "enable": true }, // 是否启用本地 C2PA 检测
     "openai": { "enable": true, "apiKeys": [] }, // OpenAI API Key 列表
     "hive": { "enable": true, "apiKeys": [] }, // Hive V3 Secret Key 列表
@@ -216,7 +216,7 @@ pnpm -C ./plugins/Yunzai-TomyJan-Plugin/ --ignore-workspace test:c2pa
 
 OpenAI 和 Hive 的 `apiKeys`、Sightengine 的 `credentials` 都可以配置多项。每次识别会轮换起始凭据；当前凭据遇到鉴权失败或限流时，会自动尝试下一项。启用了多少个检测渠道，每张图片就会并行使用多少个渠道，它们不是主备关系。
 
-全插件只配置一个代理地址 `proxy.url`，各功能分别通过自己的 `proxy.enable` 决定是否使用。`aiImage.proxy.enable` 控制图片下载、OpenAI、Hive 和 Sightengine；本地 C2PA 始终直连。`JMComic.proxy.enable` 开启后，插件会将统一代理地址同步到 `data/JMComic/option.yml` 的 `client.postman.meta_data.proxies`。
+全插件只配置一个代理地址 `proxy.url`，各功能分别通过自己的 `proxy.enable` 决定是否使用。`aiImage.proxy.enable` 只控制 OpenAI、Hive 和 Sightengine API；待检测图片下载（包括重定向）和本地 C2PA 始终直连。`JMComic.proxy.enable` 开启后，插件会将统一代理地址同步到 `data/JMComic/option.yml` 的 `client.postman.meta_data.proxies`。
 
 ## 功能介绍
 

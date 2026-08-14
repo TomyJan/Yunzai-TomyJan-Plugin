@@ -172,9 +172,9 @@ const schemas = [
   },
   {
     field: 'aiImage.proxy.enable',
-    label: '使用代理',
-    helpMessage: '图片下载和所有外部检测渠道使用全局代理地址',
-    bottomHelpMessage: '本地 C2PA 检测不使用代理',
+    label: 'API 使用代理',
+    helpMessage: 'OpenAI、Hive 和 Sightengine API 请求使用全局代理地址',
+    bottomHelpMessage: '图片下载和本地 C2PA 检测始终直连',
     component: 'Switch',
   },
   {
