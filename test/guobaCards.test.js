@@ -24,6 +24,10 @@ const expectedCardFields = {
   'JMComic 功能设置': [
     'JMComic.enable',
     'JMComic.proxy.enable',
+    'JMComic.albumIdBlacklist.enable',
+    'JMComic.albumIdBlacklist.ids',
+    'JMComic.authorNameBlacklist.enable',
+    'JMComic.authorNameBlacklist.names',
     'JMComic.pdfPassword',
     'JMComic.sendPdfPassword',
     'JMComic.sendFilePolicy',

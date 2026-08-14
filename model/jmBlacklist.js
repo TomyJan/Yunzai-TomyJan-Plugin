@@ -16,6 +16,27 @@ function normalizeAuthorName(value) {
     .toLowerCase()
 }
 
+export function redactJmError(value, maxLength = 300) {
+  const limit =
+    Number.isInteger(maxLength) && maxLength > 0 ? maxLength : 300
+  const message = value instanceof Error ? value.message : String(value ?? '')
+  const redacted = message
+    .replace(/https?:\/\/[^\s，。；]+/gi, '[redacted-url]')
+    .replace(
+      /((?:set-)?cookie|authorization)\s*:\s*[^\r\n]*/gi,
+      '$1: [redacted]',
+    )
+    .replace(/\bBearer\s+[^\s，。；]+/gi, 'Bearer [redacted]')
+    .replace(
+      /(\b(?:(?:[a-z0-9]+)[_-])*(?:password|passwd|secret|token|session|credential|api[_-]?(?:key|secret|user)|access[_-]?token|user(?:name)?)\s*[=:]\s*)(?:"[^"]*"|'[^']*'|[^&\s,;]+)/gi,
+      '$1[redacted]',
+    )
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, limit)
+  return redacted || '未知错误'
+}
+
 export function parseJmvAuthors(output) {
   const match = String(output ?? '')
     .split(/\r?\n/)

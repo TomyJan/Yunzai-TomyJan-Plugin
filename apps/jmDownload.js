@@ -11,6 +11,12 @@ import { _DataPath, pluginAuthor } from '../data/system/pluginConstants.js'
 import common from '../../../lib/common/common.js'
 import fs from 'fs'
 import { syncJmProxyConfig } from '../model/jmOption.js'
+import {
+  checkJmBlacklists,
+  loadJmvAuthors,
+  normalizeJmAlbumId,
+  redactJmError,
+} from '../model/jmBlacklist.js'
 
 export class jmDownloadApp extends plugin {
   constructor() {
@@ -53,6 +59,19 @@ export class jmDownloadApp extends plugin {
       return
     }
 
+    id = normalizeJmAlbumId(id)
+
+    const albumIdBlocked = await checkJmBlacklists({
+      albumId: id,
+      albumIdBlacklist: pluginConfig.JMComic.albumIdBlacklist,
+      authorNameBlacklist: { enable: false, names: [] },
+    })
+    if (albumIdBlocked?.type === 'albumId') {
+      tjLogger.info(`JMComic ID ${id} 命中本子 ID 黑名单`)
+      await this.reply(`JMComic ID: ${id} 已被加入黑名单，禁止下载`, true)
+      return
+    }
+
     // 检查 JMComic 命令是否存在
     if (!jmDownload.commandExists) {
       tjLogger.info('JMComic 命令不存在, 任务终止')
@@ -66,8 +85,50 @@ export class jmDownloadApp extends plugin {
       return
     }
 
-    // 去除 id 可能存在的开头的 0
-    id = parseInt(id).toString()
+    const optionPath = `${_DataPath}/JMComic/option.yml`
+    try {
+      syncJmProxyConfig(optionPath, {
+        enable: pluginConfig.JMComic.proxy?.enable,
+        url: pluginConfig.proxy?.url,
+      })
+    } catch (error) {
+      tjLogger.error(
+        `JMComic ${id} 同步代理配置失败: ${redactJmError(error)}`,
+      )
+      await this.reply('同步 JMComic 代理配置失败，请检查 option.yml', true)
+      return
+    }
+
+    try {
+      const authorBlocked = await checkJmBlacklists({
+        albumId: id,
+        albumIdBlacklist: { enable: false, ids: [] },
+        authorNameBlacklist: pluginConfig.JMComic.authorNameBlacklist,
+        loadAuthors: () =>
+          loadJmvAuthors({
+            albumId: id,
+            optionPath,
+            execute: runCommand,
+          }),
+      })
+      if (authorBlocked?.type === 'authorName') {
+        tjLogger.info(
+          `JMComic ID ${id} 命中作者名称黑名单: ${authorBlocked.value}`,
+        )
+        await this.reply(
+          `JMComic 作者「${authorBlocked.value}」已被加入黑名单，禁止下载`,
+          true,
+        )
+        return
+      }
+    } catch (error) {
+      tjLogger.warn(`JMComic ${id} 作者前置检查失败: ${redactJmError(error)}`)
+      await this.reply(
+        'JMComic 作者前置检查失败，已停止下载，请检查 jmv 是否可用',
+        true,
+      )
+      return
+    }
 
     let msg = `准备下载 JMComic ID: ${id}`
     let jmPrepareMsg = await this.reply(msg, true)
@@ -113,18 +174,6 @@ export class jmDownloadApp extends plugin {
     }
     // 开始下载
     tjLogger.info(`开始下载 JMComic ID: ${id}`)
-    const optionPath = `${_DataPath}/JMComic/option.yml`
-    try {
-      syncJmProxyConfig(optionPath, {
-        enable: pluginConfig.JMComic.proxy?.enable,
-        url: pluginConfig.proxy?.url,
-      })
-    } catch (error) {
-      tjLogger.error(`同步 JMComic 代理配置失败: ${error.message}`)
-      jmDownload.delTempFile(1, downloadPath, false, id)
-      await this.reply(`同步 JMComic 代理配置失败: ${error.message}`, true)
-      return
-    }
     const command = `jmcomic ${id} --option="${optionPath}"`
     const commandResult = await runCommand(command)
 

@@ -6,6 +6,7 @@ import {
   loadJmvAuthors,
   normalizeJmAlbumId,
   parseJmvAuthors,
+  redactJmError,
 } from '../model/jmBlacklist.js'
 
 test('normalizes decimal JM album IDs without numeric precision loss', () => {
@@ -219,4 +220,32 @@ test('rejects an invalid album ID before invoking jmv', async () => {
     /无效的 JMComic ID/,
   )
   assert.equal(executionCount, 0)
+})
+
+test('redacts sensitive jmv errors into a bounded single-line summary', () => {
+  const error = new Error(
+    [
+      'request http://user:password@127.0.0.1:7890/path?api_key=secret-key',
+      'Cookie: session=secret',
+      'Authorization: Bearer token-value',
+      'api_key=secret-key',
+      'user=plain-user token=plain-token password=plain-password secret=plain-secret',
+      'proxy_password="proxy-pass"',
+      "client_secret: 'client-secret'",
+      "refresh_token='refresh-token'",
+      "service_credential: 'credential-value'",
+      `details ${'x'.repeat(500)}`,
+    ].join('\n'),
+  )
+  const summary = redactJmError(error)
+
+  assert.doesNotMatch(
+    summary,
+    /session=secret|token-value|secret-key|plain-user|plain-token|plain-password|plain-secret|proxy-pass|client-secret|refresh-token|credential-value/,
+  )
+  assert.doesNotMatch(summary, /https?:\/\//)
+  assert.doesNotMatch(summary, /[\r\n]/)
+  assert.ok(summary.length <= 300)
+  assert.equal(redactJmError(null), '未知错误')
+  assert.equal(redactJmError(''), '未知错误')
 })

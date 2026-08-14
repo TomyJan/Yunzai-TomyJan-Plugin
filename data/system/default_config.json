@@ -17,6 +17,14 @@
     "archiveConvertedPdf": false,
     "proxy": {
       "enable": false
+    },
+    "albumIdBlacklist": {
+      "enable": false,
+      "ids": []
+    },
+    "authorNameBlacklist": {
+      "enable": false,
+      "names": []
     }
   },
   "vvShuo": {

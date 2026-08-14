@@ -117,6 +117,43 @@ export function supportGuoba() {
           component: 'Switch',
         },
         {
+          field: 'JMComic.albumIdBlacklist.enable',
+          label: '启用本子 ID 黑名单',
+          helpMessage: '下载前检查规范化后的 JMComic 本子 ID',
+          bottomHelpMessage: '更改即时生效',
+          component: 'Switch',
+        },
+        {
+          field: 'JMComic.albumIdBlacklist.ids',
+          label: '本子 ID 黑名单',
+          helpMessage: '逐项添加禁止下载的 JMComic 本子 ID',
+          bottomHelpMessage: '数字与数字字符串等价，前导零会被忽略',
+          component: 'GTags',
+          componentProps: {
+            allowAdd: true,
+            allowDel: true,
+          },
+        },
+        {
+          field: 'JMComic.authorNameBlacklist.enable',
+          label: '启用作者名称黑名单',
+          helpMessage:
+            '启用后每次下载前会额外查询一次本子详情，会影响响应速度',
+          bottomHelpMessage: '更改即时生效',
+          component: 'Switch',
+        },
+        {
+          field: 'JMComic.authorNameBlacklist.names',
+          label: '作者名称黑名单',
+          helpMessage: '逐项添加禁止下载的作者名称，英文不区分大小写',
+          bottomHelpMessage: 'jmv 最多获取前 10 个作者，仅检查这些可见作者',
+          component: 'GTags',
+          componentProps: {
+            allowAdd: true,
+            allowDel: true,
+          },
+        },
+        {
           field: 'JMComic.pdfPassword',
           label: 'PDF 密码',
           helpMessage: '设置 JMComic 功能发送的 PDF 密码',
