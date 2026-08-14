@@ -13,6 +13,7 @@ import fs from 'fs'
 import { syncJmProxyConfig } from '../model/jmOption.js'
 import {
   checkJmBlacklists,
+  extractJmAlbumId,
   loadJmvAuthors,
   normalizeJmAlbumId,
   redactJmError,
@@ -31,7 +32,7 @@ export class jmDownloadApp extends plugin {
       priority: 1000,
       rule: [
         {
-          reg: '^#?(JM|jm|JMComic|jmcomic)(.*)$',
+          reg: '^#?(JMComic|jmcomic|JM|jm)(.*)$',
           fnc: 'jmDownload',
         },
       ],
@@ -47,7 +48,7 @@ export class jmDownloadApp extends plugin {
       return
     }
 
-    let id = this.e.msg.replace(/#|JM|jm|JMComic|jmcomic|：|:/g, '').trim()
+    let id = extractJmAlbumId(this.e.msg)
     if (!id) {
       await this.reply('不带 ID 我怎么下嘛!', true)
       return
@@ -59,7 +60,12 @@ export class jmDownloadApp extends plugin {
       return
     }
 
-    id = normalizeJmAlbumId(id)
+    const normalizedId = normalizeJmAlbumId(id)
+    if (!normalizedId) {
+      await this.reply('ID 长度不能超过 64 位', true)
+      return
+    }
+    id = normalizedId
 
     const albumIdBlocked = await checkJmBlacklists({
       albumId: id,

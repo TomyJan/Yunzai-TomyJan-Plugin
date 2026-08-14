@@ -64,3 +64,19 @@ test('redacts proxy sync failures and keeps the user reply generic', () => {
   assert.match(proxySyncSource, /同步 JMComic 代理配置失败，请检查 option\.yml/)
   assert.doesNotMatch(proxySyncSource, /\$\{error\.message\}/)
 })
+
+test('parses long JM commands and rejects oversized IDs before side effects', () => {
+  assert.match(
+    jmDownloadSource,
+    /reg: '\^#\?\(JMComic\|jmcomic\|JM\|jm\)\(\.\*\)\$'/,
+  )
+  assert.match(jmDownloadSource, /let id = extractJmAlbumId\(this\.e\.msg\)/)
+  assert.doesNotMatch(jmDownloadSource, /\.replace\(\/#\|JM\|jm/)
+
+  const normalizeIndex = jmDownloadSource.indexOf('normalizeJmAlbumId(id)')
+  const lengthReplyIndex = jmDownloadSource.indexOf('ID 长度不能超过 64 位')
+  const blacklistIndex = jmDownloadSource.indexOf('const albumIdBlocked')
+  assert.ok(normalizeIndex >= 0)
+  assert.ok(lengthReplyIndex > normalizeIndex)
+  assert.ok(blacklistIndex > lengthReplyIndex)
+})

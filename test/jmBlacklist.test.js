@@ -3,11 +3,19 @@ import test from 'node:test'
 
 import {
   checkJmBlacklists,
+  extractJmAlbumId,
   loadJmvAuthors,
   normalizeJmAlbumId,
   parseJmvAuthors,
   redactJmError,
 } from '../model/jmBlacklist.js'
+
+test('extracts album IDs from complete JM command variants', () => {
+  assert.equal(extractJmAlbumId('#JMComic 123'), '123')
+  assert.equal(extractJmAlbumId('#jmcomic：00123'), '00123')
+  assert.equal(extractJmAlbumId('JM: 123'), '123')
+  assert.equal(extractJmAlbumId('not a JM command'), null)
+})
 
 test('normalizes decimal JM album IDs without numeric precision loss', () => {
   assert.equal(normalizeJmAlbumId('000123'), '123')
@@ -21,6 +29,9 @@ test('normalizes decimal JM album IDs without numeric precision loss', () => {
   assert.equal(normalizeJmAlbumId(Number.MAX_SAFE_INTEGER + 1), null)
   assert.equal(normalizeJmAlbumId(-1), null)
   assert.equal(normalizeJmAlbumId(1.5), null)
+  assert.equal(normalizeJmAlbumId('1'.repeat(64)), '1'.repeat(64))
+  assert.equal(normalizeJmAlbumId('1'.repeat(65)), null)
+  assert.equal(normalizeJmAlbumId(`${'0'.repeat(100)}1`), '1')
   assert.equal(normalizeJmAlbumId('12x'), null)
   assert.equal(normalizeJmAlbumId(''), null)
 })

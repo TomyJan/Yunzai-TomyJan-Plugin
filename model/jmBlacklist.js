@@ -1,3 +1,12 @@
+export const JM_ALBUM_ID_MAX_LENGTH = 64
+
+export function extractJmAlbumId(message) {
+  const match = String(message ?? '').match(
+    /^#?(?:jmcomic|jm)\s*[：:]?\s*(.*)$/iu,
+  )
+  return match ? match[1].trim() : null
+}
+
 export function normalizeJmAlbumId(value) {
   if (
     typeof value === 'number' &&
@@ -7,7 +16,8 @@ export function normalizeJmAlbumId(value) {
   }
   const text = String(value ?? '').trim()
   if (!/^\d+$/.test(text)) return null
-  return text.replace(/^0+(?=\d)/, '')
+  const normalized = text.replace(/^0+(?=\d)/, '')
+  return normalized.length <= JM_ALBUM_ID_MAX_LENGTH ? normalized : null
 }
 
 function normalizeAuthorName(value) {
