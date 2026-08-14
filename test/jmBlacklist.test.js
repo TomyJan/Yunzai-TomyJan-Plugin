@@ -35,9 +35,7 @@ test('parses all author names exposed by jmv', () => {
     ['Alice', 'Bob', 'Carol'],
   )
   assert.deepEqual(
-    parseJmvAuthors(
-      '📖 标题: 作者: SafeTitle\n  ✍️ 作者: BlockedAuthor\n',
-    ),
+    parseJmvAuthors('📖 标题: 作者: SafeTitle\n  ✍️ 作者: BlockedAuthor\n'),
     ['BlockedAuthor'],
   )
 })
@@ -146,10 +144,7 @@ test('loads authors with jmv and the active option file', async () => {
     },
   })
 
-  assert.equal(
-    command,
-    'jmv 123 --option="/bot/data/JMComic/option.yml" --yes',
-  )
+  assert.equal(command, 'jmv 123 --option="/bot/data/JMComic/option.yml" --yes')
   assert.deepEqual(authors, ['Alice', 'Bob'])
 })
 

@@ -137,8 +137,7 @@ export function supportGuoba() {
         {
           field: 'JMComic.authorNameBlacklist.enable',
           label: '启用作者名称黑名单',
-          helpMessage:
-            '启用后每次下载前会额外查询一次本子详情，会影响响应速度',
+          helpMessage: '启用后每次下载前会额外查询一次本子详情，会影响响应速度',
           bottomHelpMessage: '更改即时生效',
           component: 'Switch',
         },

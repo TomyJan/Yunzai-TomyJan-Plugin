@@ -61,9 +61,6 @@ test('redacts proxy sync failures and keeps the user reply generic', () => {
   const proxySyncSource = jmDownloadSource.slice(start, end)
 
   assert.match(proxySyncSource, /redactJmError\(error\)/)
-  assert.match(
-    proxySyncSource,
-    /同步 JMComic 代理配置失败，请检查 option\.yml/,
-  )
+  assert.match(proxySyncSource, /同步 JMComic 代理配置失败，请检查 option\.yml/)
   assert.doesNotMatch(proxySyncSource, /\$\{error\.message\}/)
 })

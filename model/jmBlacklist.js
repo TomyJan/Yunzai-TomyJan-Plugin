@@ -17,8 +17,7 @@ function normalizeAuthorName(value) {
 }
 
 export function redactJmError(value, maxLength = 300) {
-  const limit =
-    Number.isInteger(maxLength) && maxLength > 0 ? maxLength : 300
+  const limit = Number.isInteger(maxLength) && maxLength > 0 ? maxLength : 300
   const message = value instanceof Error ? value.message : String(value ?? '')
   const redacted = message
     .replace(/https?:\/\/[^\s，。；]+/gi, '[redacted-url]')

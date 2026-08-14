@@ -92,9 +92,7 @@ export class jmDownloadApp extends plugin {
         url: pluginConfig.proxy?.url,
       })
     } catch (error) {
-      tjLogger.error(
-        `JMComic ${id} 同步代理配置失败: ${redactJmError(error)}`,
-      )
+      tjLogger.error(`JMComic ${id} 同步代理配置失败: ${redactJmError(error)}`)
       await this.reply('同步 JMComic 代理配置失败，请检查 option.yml', true)
       return
     }
