@@ -7,6 +7,11 @@
     - icon: vvshuo
       title: "#vv赢 #vvol鸣潮"
       desc: 搜索 VV 的名言
+- group: 实用功能
+  list:
+    - icon: tomyjan
+      title: "#ai图 + 图片/引用图片"
+      desc: 检测图片中的 AI 生成或来源信号
 - group: EDU 认证
   list:
     - icon: eduauth
