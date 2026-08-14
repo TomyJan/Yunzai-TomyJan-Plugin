@@ -176,7 +176,7 @@ pnpm -C ./plugins/Yunzai-TomyJan-Plugin/ --ignore-workspace test:c2pa
 ```
 
 - **C2PA：** 本地读取并验证 Content Credentials，无需申请 API Key，也不会请求外部检测服务。
-- **OpenAI：** 在 [OpenAI Platform](https://platform.openai.com/api-keys) 创建 API Key，调用 [Content Provenance API](https://developers.openai.com/api/docs/guides/content-provenance) 检查 OpenAI 支持的 C2PA 和 SynthID 信号。该接口可能尚未向所有组织开放；未开放时会返回 HTTP 404。官方未公布固定免费额度，可在账户的用量和限额页面查看实际权限。
+- **OpenAI：** 在 [OpenAI Platform](https://platform.openai.com/api-keys) 创建 API Key，授予 Model capabilities -> Images (/v1/images) 即可，调用 [Content Provenance API](https://developers.openai.com/api/docs/guides/content-provenance) 检查 OpenAI 支持的 C2PA 和 SynthID 信号。该接口可能尚未向所有组织开放；未开放时会返回 HTTP 404。官方未公布固定免费额度，可在账户的用量和限额页面查看实际权限。
 - **Hive V3：** 在 [Hive 控制台](https://thehive.ai/) 创建 V3 API Key 时会得到 Access Key (AK) 和 Secret Key (SK)。AK 是控制台中的公开标识，不参与接口鉴权；本插件的 `apiKeys` **只填写 SK**，请求使用 `Authorization: Bearer <SK>`。AI 图片检测公开标价为每 1000 张 6 美元，官方未承诺固定免费额度，实际额度以控制台为准。
 - **Sightengine：** 在 [Sightengine 控制台](https://dashboard.sightengine.com/) 的 API Credentials 页面获取 `api_user` 和 `api_secret`，按一组一个 JSON 对象填写。免费试用量和正式价格以 [价格页](https://sightengine.com/pricing) 及账户控制台为准。
 
