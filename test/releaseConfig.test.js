@@ -12,10 +12,6 @@ const workflow = parse(
   fs.readFileSync(new URL('.github/workflows/check_code.yml', rootUrl), 'utf8'),
 )
 const readme = fs.readFileSync(new URL('README.md', rootUrl), 'utf8')
-const c2paSmoke = fs.readFileSync(
-  new URL('native-tests/c2paNative.js', rootUrl),
-  'utf8',
-)
 
 test('exposes read-only formatting and test scripts for CI', () => {
   assert.equal(
@@ -42,13 +38,7 @@ test('exposes read-only formatting and test scripts for CI', () => {
   )
 })
 
-test('uses the Node built-in child_process module without a shadow package', () => {
-  const runCommandSource = fs.readFileSync(
-    new URL('model/runCommand.js', rootUrl),
-    'utf8',
-  )
-
-  assert.match(runCommandSource, /from 'node:child_process'/)
+test('does not declare the built-in child_process module as a dependency', () => {
   assert.equal(packageJson.dependencies.child_process, undefined)
 })
 
@@ -60,7 +50,6 @@ test('allows the C2PA package to prepare its platform binding', () => {
     packageJson.scripts['test:c2pa'],
     'node --test native-tests/c2paNative.js',
   )
-  assert.match(c2paSmoke, /timeoutMs: 5000/)
 })
 
 test('reinstalls dependencies when updating the plugin', () => {

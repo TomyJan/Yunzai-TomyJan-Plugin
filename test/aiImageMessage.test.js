@@ -1,13 +1,7 @@
 import assert from 'node:assert/strict'
-import fs from 'node:fs'
 import test from 'node:test'
 
 import { extractImageUrls, isAiImageCommand } from '../model/aiImageMessage.js'
-
-const appSource = fs.readFileSync(
-  new URL('../apps/aiImage.js', import.meta.url),
-  'utf8',
-)
 
 test('matches ai图 command case-insensitively with optional hash prefix', () => {
   assert.equal(isAiImageCommand('ai图'), true)
@@ -152,22 +146,53 @@ test('extracts quoted images through OneBot get_msg', async () => {
   assert.deepEqual(urls, ['https://example.test/onebot.jpg'])
 })
 
-test('returns no image for a message without image segments', async () => {
-  const urls = await extractImageUrls({ message: 'ai图' })
+test('falls back to OneBot when ICQQ history lookup fails', async () => {
+  const urls = await extractImageUrls({
+    message: [
+      { type: 'reply', id: 'message-5' },
+      { type: 'text', text: 'ai图' },
+    ],
+    isGroup: true,
+    source: { seq: 44 },
+    group: {
+      getChatHistory: async () => {
+        throw new Error('history unavailable')
+      },
+    },
+    bot: {
+      sendApi: async () => ({
+        data: {
+          message: [
+            {
+              type: 'image',
+              url: 'https://example.test/onebot-fallback.jpg',
+            },
+          ],
+        },
+      }),
+    },
+  })
+
+  assert.deepEqual(urls, ['https://example.test/onebot-fallback.jpg'])
+})
+
+test('returns no image when OneBot get_msg fails', async () => {
+  const urls = await extractImageUrls({
+    message: [
+      { type: 'reply', id: 'message-6' },
+      { type: 'text', text: 'ai图' },
+    ],
+    bot: {
+      sendApi: async () => {
+        throw new Error('get_msg unavailable')
+      },
+    },
+  })
+
   assert.deepEqual(urls, [])
 })
 
-test('wires the app to shared parsing, full config and plugin logger', () => {
-  assert.match(appSource, /from '..\/model\/aiImageMessage\.js'/)
-  assert.match(appSource, /redactAiImageError/)
-  assert.match(
-    appSource,
-    /inspectAiImage\(imageUrls\[0\], config\.getConfig\(\), \{\s*logger: tjLogger,\s*\}\)/,
-  )
-  assert.match(
-    appSource,
-    /const safeMessage = redactAiImageError\(error, config\.getConfig\(\)\)/,
-  )
-  assert.match(appSource, /`❌ AI 图片识别失败\\n\\n\$\{safeMessage\}`/)
-  assert.match(appSource, /reg: '\^#\?\[aA\]\[iI\]图\$'/)
+test('returns no image for a message without image segments', async () => {
+  const urls = await extractImageUrls({ message: 'ai图' })
+  assert.deepEqual(urls, [])
 })

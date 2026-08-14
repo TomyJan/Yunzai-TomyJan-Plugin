@@ -10,6 +10,29 @@ function failingNodeCommand(secret) {
   return `"${process.execPath}" -e "${script}"`
 }
 
+test('returns successful command output and logs the result', async () => {
+  const debugLogs = []
+  const warnings = []
+  const script = "process.stdout.write('done');process.stderr.write('notice')"
+  const command = `"${process.execPath}" -e "${script}"`
+
+  const result = await runCommand(command, {
+    logger: {
+      debug(message) {
+        debugLogs.push(String(message))
+      },
+      warn(message) {
+        warnings.push(String(message))
+      },
+    },
+  })
+
+  assert.deepEqual(result, { output: 'done', err: 'notice', failed: false })
+  assert.equal(warnings.length, 0)
+  assert.match(debugLogs[0], /开始执行命令/)
+  assert.match(debugLogs[1], /结果: done/)
+})
+
 test('redacts command errors before the first warning is logged', async () => {
   const warnings = []
   const result = await runCommand(failingNodeCommand('top-secret'), {
