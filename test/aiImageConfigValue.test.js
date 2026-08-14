@@ -131,7 +131,7 @@ test('keeps API key arrays native and serializes Sightengine entries for Guoba',
   assert.deepEqual(config.aiImage.openai.apiKeys, ['openai-key'])
 })
 
-test('parses Sightengine credential arrays submitted by Guoba multiple select', () => {
+test('parses Sightengine credential arrays submitted by Guoba GTags', () => {
   assert.deepEqual(
     parseSightengineCredentials([
       '{"apiUser":" first ","apiSecret":" secret-1 "}',

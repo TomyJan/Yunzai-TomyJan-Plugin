@@ -71,7 +71,7 @@ test('exposes only the new AI credential and proxy fields in Guoba', () => {
   )
 })
 
-test('uses Guoba native multiple selects for AI credential arrays', () => {
+test('uses Guoba free-form tag inputs for AI credential arrays', () => {
   for (const field of [
     'aiImage.openai.apiKeys',
     'aiImage.hive.apiKeys',
@@ -80,10 +80,12 @@ test('uses Guoba native multiple selects for AI credential arrays', () => {
     const fieldIndex = guobaSource.indexOf(`field: '${field}'`)
     assert.notEqual(fieldIndex, -1)
     const schemaSource = guobaSource.slice(fieldIndex, fieldIndex + 700)
-    assert.match(schemaSource, /component: 'Select'/)
+    assert.match(schemaSource, /component: 'GTags'/)
     assert.match(schemaSource, /allowAdd: true/)
     assert.match(schemaSource, /allowDel: true/)
-    assert.match(schemaSource, /mode: 'multiple'/)
+    assert.doesNotMatch(schemaSource, /component: 'Select'/)
+    assert.doesNotMatch(schemaSource, /mode: '(?:multiple|tags)'/)
+    assert.doesNotMatch(schemaSource, /options: \[\]/)
   }
 })
 

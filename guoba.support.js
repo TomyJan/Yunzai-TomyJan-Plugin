@@ -234,12 +234,10 @@ export function supportGuoba() {
           label: 'OpenAI API keys',
           helpMessage: '逐项添加 OpenAI API key',
           bottomHelpMessage: '401/403/404/429 时自动尝试下一个 key',
-          component: 'Select',
+          component: 'GTags',
           componentProps: {
             allowAdd: true,
             allowDel: true,
-            mode: 'multiple',
-            options: [],
           },
         },
         {
@@ -254,12 +252,10 @@ export function supportGuoba() {
           label: 'Hive V3 Secret Keys',
           helpMessage: '只填写创建 V3 API Key 时显示的 Secret Key',
           bottomHelpMessage: '401/403/429 时自动尝试下一个 Secret Key',
-          component: 'Select',
+          component: 'GTags',
           componentProps: {
             allowAdd: true,
             allowDel: true,
-            mode: 'multiple',
-            options: [],
           },
         },
         {
@@ -275,12 +271,10 @@ export function supportGuoba() {
           helpMessage:
             '逐项添加 JSON 对象，例如 {"apiUser":"user","apiSecret":"secret"}',
           bottomHelpMessage: '401/403/429 时自动尝试下一组凭据',
-          component: 'Select',
+          component: 'GTags',
           componentProps: {
             allowAdd: true,
             allowDel: true,
-            mode: 'multiple',
-            options: [],
           },
         },
         {
