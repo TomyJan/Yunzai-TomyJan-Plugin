@@ -6,7 +6,7 @@
 
 **架构：** `model/aiImageProviders.js` 只负责各渠道协议与结果归一化；`model/aiImage.js` 编排图片下载、并发渠道和日志；`apps/aiImage.js` 注入插件 logger。配置仍使用多值数组，Hive 数组只保存 V3 SK。
 
-**技术栈：** Node.js 22、原生 Fetch/JSON、Node Test Runner、ESLint、Prettier。
+**技术栈：** Node.js 22、原生 Fetch/FormData、Node Test Runner、ESLint、Prettier。
 
 ---
 
@@ -27,17 +27,17 @@
 
 - [ ] **步骤 1：编写失败测试**
 
-在 `test/aiImageProviders.test.js` 断言端点为 `/api/v3/hive/ai-generated-and-deepfake-content-detection`、请求头为 `Bearer <SK>`、正文是包含 `media_url` 和 `sync_with_fallback` 的 JSON，并用 `output[].classes[].value` 得到结果。
+在 `test/aiImageProviders.test.js` 断言端点为 `/api/v3/hive/ai-generated-and-deepfake-content-detection`、请求头为 `Bearer <SK>`、正文是包含 `media` 图片二进制和 `sync_with_fallback` 的 FormData，并用 `output[].classes[].value` 得到结果。
 
 - [ ] **步骤 2：验证红灯**
 
 运行：`node --test test/aiImageProviders.test.js`
 
-预期：测试因当前 V2 端点、Token 鉴权和 multipart 正文失败。
+预期：测试因当前 V2 端点、Token 鉴权或错误的 multipart 字段失败。
 
 - [ ] **步骤 3：实现 V3 最小代码**
 
-将 `checkHive` 改为接收图片 URL，构造官方 V3 JSON 请求；将 Hive 归一化器限制为 `output[].classes[]` 和 `value`，AI 图片及 deepfake 阈值均为 `0.9`。
+将 `checkHive` 改为复用插件已下载的图片 Buffer，以 `media` 字段构造 V3 multipart 请求，并设置 `processing_mode=sync_with_fallback`；将 Hive 归一化器限制为 `output[].classes[]` 和 `value`，AI 图片及 deepfake 阈值均为 `0.9`。
 
 - [ ] **步骤 4：验证绿灯**
 
@@ -93,7 +93,7 @@
 
 - [ ] **步骤 1：编写失败测试**
 
-在 `test/aiImageSummary.test.js` 分别断言可信来源、概率命中、未检出、未配置和失败的标题、结论、可信度及固定状态图标。
+在 `test/aiImageSummary.test.js` 分别断言可信来源、概率命中、未检出、未配置和失败的标题、结论、可信度、具体证据及固定状态图标。
 
 - [ ] **步骤 2：验证红灯**
 
@@ -103,7 +103,7 @@
 
 - [ ] **步骤 3：实现最小排版**
 
-重构 `summarizeAiImageResults` 的展示文本，保留现有判定优先级，加入固定区块和图标，不把“未检出”表达成“非 AI”。
+重构 `summarizeAiImageResults` 的展示文本，保留现有判定优先级，加入固定区块和图标。Hive 与 Sightengine 显示概率，OpenAI 仅列出命中的信号名，C2PA 显示签发者、生成工具和校验状态；不把“未检出”表达成“非 AI”。
 
 - [ ] **步骤 4：验证绿灯**
 

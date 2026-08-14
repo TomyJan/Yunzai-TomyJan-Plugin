@@ -428,7 +428,6 @@ function normalizeHive(payload) {
 }
 
 export async function checkHive(buffer, options = {}) {
-  void buffer
   const apiKeys = getApiKeys(options)
   if (options.enable === false || apiKeys.length === 0) {
     return {
@@ -447,17 +446,16 @@ export async function checkHive(buffer, options = {}) {
       reason: 'fetch_unavailable',
     }
   }
-  if (!options.imageUrl) {
-    return {
-      provider: 'hive',
-      status: 'error',
-      evidence: {},
-      reason: 'missing_image_url',
-    }
-  }
   let lastError
   for (const apiKey of nextRotation('hive', apiKeys)) {
     try {
+      const form = makeImageForm(
+        buffer,
+        'media',
+        'image',
+        options.mimeType || 'application/octet-stream',
+      )
+      form.append('processing_mode', 'sync_with_fallback')
       const payload = await fetchJson(
         fetchImpl,
         options.endpoint || HIVE_ENDPOINT,
@@ -465,12 +463,8 @@ export async function checkHive(buffer, options = {}) {
           method: 'POST',
           headers: {
             Authorization: `Bearer ${apiKey}`,
-            'Content-Type': 'application/json',
           },
-          body: JSON.stringify({
-            input: [{ media_url: options.imageUrl }],
-            processing_mode: 'sync_with_fallback',
-          }),
+          body: form,
           proxyOptions: options,
         },
         options.timeoutMs,
@@ -615,8 +609,6 @@ const PROVIDER_NAMES = {
 }
 
 const STATUS_NAMES = {
-  detected: '检测到支持的信号',
-  not_detected: '未发现支持的信号',
   unavailable: '未配置或不可用',
   error: '检测失败',
 }
@@ -624,7 +616,6 @@ const STATUS_NAMES = {
 const REASON_NAMES = {
   disabled: '已禁用',
   missing_api_key: '未配置 API Key',
-  missing_image_url: '缺少可供 Hive 读取的图片地址',
   missing_credentials: '未配置 API 凭据',
   fetch_unavailable: '当前 Node 环境不支持网络请求',
   component_unavailable: '本地检测组件不可用',
@@ -638,9 +629,93 @@ const HTTP_STATUS_NAMES = {
   429: '请求频率受限',
 }
 
+function displayValue(value, maxLength = 80) {
+  return String(value || '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, maxLength)
+}
+
+function formatProbability(value) {
+  const probability = numberValue(value)
+  return probability === undefined
+    ? undefined
+    : `${(probability * 100).toFixed(1)}%`
+}
+
+function describeC2paEvidence(result) {
+  const evidence = result.evidence || {}
+  if (result.status !== 'detected') return '未检测到'
+
+  const details = []
+  if (evidence.issuer) details.push(`签发者：${displayValue(evidence.issuer)}`)
+  if (evidence.claimGenerator)
+    details.push(`生成工具：${displayValue(evidence.claimGenerator)}`)
+  if (evidence.validationState)
+    details.push(`校验：${displayValue(evidence.validationState)}`)
+  return details.length > 0 ? details.join('，') : '已检测到'
+}
+
+function signalName(type) {
+  const normalized = displayValue(type || '未知信号')
+  return (
+    { synthid: 'SynthID', c2pa: 'C2PA' }[normalized.toLowerCase()] || normalized
+  )
+}
+
+function describeOpenAiEvidence(result) {
+  if (result.status !== 'detected') return '未检测到'
+  const signals = Array.isArray(result.signals)
+    ? result.signals
+        .filter((signal) => signal.outcome === 'detected')
+        .map((signal) => signalName(signal.type))
+    : []
+  return signals.length > 0 ? [...new Set(signals)].join('、') : '已检测到'
+}
+
+function describeHiveEvidence(result) {
+  const evidence = result.evidence || {}
+  const aiProbability = formatProbability(evidence.aiGeneratedProbability)
+  const generatorProbability = formatProbability(evidence.generatorProbability)
+  const deepfakeProbability = formatProbability(evidence.deepfakeProbability)
+  const details = []
+  if (
+    evidence.aiGeneratedProbability >= 0.9 &&
+    evidence.generator &&
+    generatorProbability
+  ) {
+    details.push(`${displayValue(evidence.generator)} ${generatorProbability}`)
+  }
+  if (deepfakeProbability) details.push(`Deepfake ${deepfakeProbability}`)
+  if (aiProbability) {
+    const suffix = details.length > 0 ? `（${details.join('，')}）` : ''
+    return `AI 生成概率 ${aiProbability}${suffix}`
+  }
+  if (details.length > 0) return details.join('，')
+  return result.status === 'detected' ? '已检测到' : '未检测到'
+}
+
+function describeSightengineEvidence(result) {
+  const probability = formatProbability(result.evidence?.aiGeneratedProbability)
+  if (probability) return `AI 生成概率 ${probability}`
+  return result.status === 'detected' ? '已检测到' : '未检测到'
+}
+
+function describeProviderEvidence(result) {
+  return {
+    c2pa: describeC2paEvidence,
+    openai: describeOpenAiEvidence,
+    hive: describeHiveEvidence,
+    sightengine: describeSightengineEvidence,
+  }[result.provider]?.(result)
+}
+
 function describeProviderStatus(result) {
   if (result.status === 'detected' || result.status === 'not_detected') {
-    return STATUS_NAMES[result.status]
+    return (
+      describeProviderEvidence(result) ||
+      (result.status === 'detected' ? '已检测到相关信号' : '未检测到相关信号')
+    )
   }
   if (REASON_NAMES[result.reason]) return REASON_NAMES[result.reason]
 
@@ -711,7 +786,7 @@ export function summarizeAiImageResults(results = [], options = {}) {
       conclusion = '检测到 OpenAI SynthID 信号'
     } else {
       const issuer = trusted.evidence?.issuer
-        ? `（签发者：${trusted.evidence.issuer}）`
+        ? `（签发者：${displayValue(trusted.evidence.issuer)}）`
         : ''
       conclusion = `检测到可信 C2PA 来源凭证${issuer}`
     }
@@ -719,7 +794,12 @@ export function summarizeAiImageResults(results = [], options = {}) {
     verdict = 'detected'
     confidence = 'medium'
     verdictIcon = '⚠️'
-    conclusion = '检测到 AI 生成或篡改信号（概率模型），请结合来源凭证复核'
+    const hasProbabilisticDetection = detected.some((result) =>
+      ['hive', 'sightengine'].includes(result.provider),
+    )
+    conclusion = hasProbabilisticDetection
+      ? '检测到 AI 生成或篡改信号（概率模型），请结合来源凭证复核'
+      : '检测到来源信号，请结合其他渠道复核'
   } else if (unavailable.length > 0 || errors.length > 0) {
     verdictIcon = '⚠️'
     conclusion = '检测渠道不可用或失败，无法形成可靠结论'

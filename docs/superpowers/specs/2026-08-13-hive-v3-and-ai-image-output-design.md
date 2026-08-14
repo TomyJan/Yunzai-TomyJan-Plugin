@@ -11,21 +11,19 @@ Hive 控制台创建 V3 API Key 后会同时展示 Access Key（AK）和 Secret 
 ```http
 POST /api/v3/hive/ai-generated-and-deepfake-content-detection
 Authorization: Bearer <SECRET_KEY>
-Content-Type: application/json
+Content-Type: multipart/form-data; boundary=...
 ```
 
 AK 是控制台中的公开标识，不参与请求鉴权。现有 `aiImage.hive.apiKeys` 保持字符串数组结构，但数组元素的语义改为 V3 SK。锅巴与 README 均明确只填写 SK，不要求保存 AK。
 
-请求使用官方公开的 URL 输入格式：
+请求直接上传图片二进制：
 
-```json
-{
-  "input": [{ "media_url": "https://example.com/image.png" }],
-  "processing_mode": "sync_with_fallback"
-}
+```text
+media=<图片二进制>
+processing_mode=sync_with_fallback
 ```
 
-插件仍先下载图片，以便验证格式和大小并供 C2PA、OpenAI、Sightengine 使用。Hive 单独接收同一个公网原始 URL。公开资料没有给出 V3 Base64 输入字段，因此不实现猜测性的 Data URL 或二进制字段。
+插件先下载并校验图片，再将同一个 Buffer 直接上传给 C2PA、OpenAI、Hive 和 Sightengine。Hive 的 V3 接口要求图片字段名为 `media`；不能使用 `image` 字段或 Data URL。直接上传还能避免 Hive 二次抓取 QQ 等平台的临时图片 URL，消除该链路引起的超时。
 
 V3 响应从 `output[].classes[]` 读取，分数位于 `value`。`ai_generated` 和 `deepfake` 使用 Hive 官方建议的 `0.9` 阈值；生成来源取排除结果类后的最高分项。归一化器只支持 V3 响应结构。
 
@@ -51,10 +49,10 @@ V3 响应从 `output[].classes[]` 读取，分数位于 `value`。`ai_generated`
 📊 可信度：中
 
 检测渠道：
-✅ C2PA：检测到支持的信号
-ℹ️ OpenAI：未发现支持的信号
-⏸️ Hive：未配置 V3 Secret Key
-❌ Sightengine：请求超时
+ℹ️ C2PA：未检测到
+ℹ️ OpenAI：未检测到
+✅ Hive：AI 生成概率 97.6%（flux 87.3%，Deepfake 31.4%）
+ℹ️ Sightengine：AI 生成概率 8.2%
 
 ℹ️ 未检出不代表图片一定不是 AI 生成。
 ```
@@ -72,4 +70,4 @@ README 简要说明命令、四个渠道、凭据格式、轮换、代理和判�
 
 ## 测试与提交
 
-测试覆盖 V3 端点、Bearer SK、JSON 请求、`value` 响应、0.9 阈值、多 SK 轮换、旧 Hive 单 Key 丢弃、日志过程与脱敏、四类回复排版，以及仓库中不存在 Hive V2 端点或 Token 鉴权。先提交规格与计划，再提交实现、测试和 README，确保功能提交原子化。
+测试覆盖 V3 端点、Bearer SK、`media` 二进制上传、`value` 响应、0.9 阈值、多 SK 轮换、旧 Hive 单 Key 丢弃、日志过程与脱敏、各渠道具体证据排版，以及仓库中不存在 Hive V2 端点或 Token 鉴权。先提交规格与计划，再提交实现、测试和 README，确保功能提交原子化。

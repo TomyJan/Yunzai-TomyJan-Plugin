@@ -354,7 +354,7 @@ test('does not expose credentials in provider errors', async () => {
   assert.doesNotMatch(result.error, new RegExp(secret))
 })
 
-test('calls Hive V3 with a media URL and Secret Key', async () => {
+test('uploads the downloaded image directly to Hive V3', async () => {
   let request
   const fetchImpl = async (url, init) => {
     request = { url, init }
@@ -377,8 +377,8 @@ test('calls Hive V3 with a media URL and Secret Key', async () => {
 
   const result = await checkHive(Buffer.from('image'), {
     apiKeys: ['hive-v3-secret-key'],
-    imageUrl: 'https://public.example/image.png',
     fetchImpl,
+    mimeType: 'image/png',
   })
 
   assert.equal(
@@ -387,11 +387,13 @@ test('calls Hive V3 with a media URL and Secret Key', async () => {
   )
   assert.equal(request.init.method, 'POST')
   assert.equal(request.init.headers.Authorization, 'Bearer hive-v3-secret-key')
-  assert.equal(request.init.headers['Content-Type'], 'application/json')
-  assert.deepEqual(JSON.parse(request.init.body), {
-    input: [{ media_url: 'https://public.example/image.png' }],
-    processing_mode: 'sync_with_fallback',
-  })
+  assert.equal(request.init.headers['Content-Type'], undefined)
+  assert.equal(request.init.body instanceof FormData, true)
+  assert.equal(request.init.body.get('processing_mode'), 'sync_with_fallback')
+  const media = request.init.body.get('media')
+  assert.equal(media.type, 'image/png')
+  assert.equal(Buffer.from(await media.arrayBuffer()).toString(), 'image')
+  assert.equal(request.init.body.has('input'), false)
   assert.equal(result.provider, 'hive')
   assert.equal(result.status, 'detected')
   assert.equal(result.evidence.aiGeneratedProbability, 0.98)
