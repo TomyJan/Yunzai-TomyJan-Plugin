@@ -13,13 +13,11 @@ import path from 'path'
 import formatDistanceToNow from 'date-fns/formatDistanceToNow'
 import zhCN from 'date-fns/locale/zh-CN'
 import { Buffer } from 'buffer'
-import { isWin } from '../data/system/pluginConstants.js'
-import { exec } from 'node:child_process'
-import iconv from 'iconv-lite'
 import pkg from 'pdf-lib-plus-encrypt'
 const { PDFDocument } = pkg
 import sharp from 'sharp'
 import { withProxy } from './proxy.js'
+import { runCommand as runCommandImpl } from './runCommand.js'
 
 /**
  * 程序延时
@@ -258,27 +256,13 @@ export async function sendMsgFriend(uin, msg) {
 /**
  * 执行命令
  * @param {string} command 命令
+ * @param {object} [options] 执行选项
  * @returns {Promise<{output: string, err: string, failed: boolean}>} 命令执行结果
  */
-export async function runCommand(command) {
-  tjLogger.debug(`开始执行命令: ${command}`)
-  return await new Promise((resolve) => {
-    exec(
-      command,
-      { encoding: isWin ? 'buffer' : 'utf8' },
-      (error, stdout, stderr) => {
-        const output = (isWin ? iconv.decode(stdout, 'gbk') : stdout).trim()
-        const err = (isWin ? iconv.decode(stderr, 'gbk') : stderr).trim()
-
-        if (error) {
-          tjLogger.warn(`执行命令 ${command} 出错: ${err}`)
-        } else {
-          tjLogger.debug(`执行命令 ${command} 结果: ${output}`)
-        }
-
-        resolve({ output, err, failed: Boolean(error) })
-      },
-    )
+export async function runCommand(command, options = {}) {
+  return runCommandImpl(command, {
+    ...options,
+    logger: options.logger ?? tjLogger,
   })
 }
 

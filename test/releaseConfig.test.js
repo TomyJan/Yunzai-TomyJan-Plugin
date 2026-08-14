@@ -26,12 +26,12 @@ test('exposes read-only formatting and test scripts for CI', () => {
 })
 
 test('uses the Node built-in child_process module without a shadow package', () => {
-  const utilsSource = fs.readFileSync(
-    new URL('model/utils.js', rootUrl),
+  const runCommandSource = fs.readFileSync(
+    new URL('model/runCommand.js', rootUrl),
     'utf8',
   )
 
-  assert.match(utilsSource, /from 'node:child_process'/)
+  assert.match(runCommandSource, /from 'node:child_process'/)
   assert.equal(packageJson.dependencies.child_process, undefined)
 })
 

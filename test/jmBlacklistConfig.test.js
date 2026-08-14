@@ -80,3 +80,20 @@ test('parses long JM commands and rejects oversized IDs before side effects', ()
   assert.ok(lengthReplyIndex > normalizeIndex)
   assert.ok(blacklistIndex > lengthReplyIndex)
 })
+
+test('runs jmv with an error redactor before command logging', () => {
+  const authorCheckStart = jmDownloadSource.indexOf('const authorBlocked')
+  const prepareMessageStart = jmDownloadSource.indexOf(
+    '准备下载 JMComic ID',
+    authorCheckStart,
+  )
+  const authorCheckSource = jmDownloadSource.slice(
+    authorCheckStart,
+    prepareMessageStart,
+  )
+
+  assert.match(
+    authorCheckSource,
+    /execute: \(command\) =>\s*runCommand\(command, \{ redactError: redactJmError \}\)/,
+  )
+})

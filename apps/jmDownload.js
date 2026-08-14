@@ -112,7 +112,8 @@ export class jmDownloadApp extends plugin {
           loadJmvAuthors({
             albumId: id,
             optionPath,
-            execute: runCommand,
+            execute: (command) =>
+              runCommand(command, { redactError: redactJmError }),
           }),
       })
       if (authorBlocked?.type === 'authorName') {
