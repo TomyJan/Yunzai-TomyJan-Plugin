@@ -622,13 +622,6 @@ const REASON_NAMES = {
   invalid_response: '响应格式无法识别',
 }
 
-const HTTP_STATUS_NAMES = {
-  401: 'API 凭据无效',
-  403: 'API 凭据无权限',
-  404: '无接口权限或接口未开放',
-  429: '请求频率受限',
-}
-
 function displayValue(value, maxLength = 80) {
   return String(value || '')
     .replace(/\s+/g, ' ')
@@ -682,11 +675,14 @@ function describeHiveEvidence(result) {
   if (
     evidence.aiGeneratedProbability >= 0.9 &&
     evidence.generator &&
+    numberValue(evidence.generatorProbability) > 0 &&
     generatorProbability
   ) {
     details.push(`${displayValue(evidence.generator)} ${generatorProbability}`)
   }
-  if (deepfakeProbability) details.push(`Deepfake ${deepfakeProbability}`)
+  if (numberValue(evidence.deepfakeProbability) > 0 && deepfakeProbability) {
+    details.push(`Deepfake ${deepfakeProbability}`)
+  }
   if (aiProbability) {
     const suffix = details.length > 0 ? `（${details.join('，')}）` : ''
     return `AI 生成概率 ${aiProbability}${suffix}`
@@ -721,10 +717,7 @@ function describeProviderStatus(result) {
 
   const httpStatus = Number(result.httpStatus)
   if (Number.isInteger(httpStatus)) {
-    const description =
-      HTTP_STATUS_NAMES[httpStatus] ||
-      (httpStatus >= 500 ? '服务端异常' : '请求失败')
-    return `${description}（HTTP ${httpStatus}）`
+    return `API HTTP ${httpStatus}`
   }
 
   const error = safeError(result.error).trim()

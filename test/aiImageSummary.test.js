@@ -221,8 +221,26 @@ test('does not present a low-confidence Hive generator candidate as a source', (
     },
   ])
 
-  assert.match(summary.message, /Hive：AI 生成概率 20\.5%（Deepfake 0\.0%）/)
-  assert.doesNotMatch(summary.message, /最可能来源|lcm/)
+  assert.match(summary.message, /Hive：AI 生成概率 20\.5%/)
+  assert.doesNotMatch(summary.message, /最可能来源|lcm|Deepfake|20\.5%（/)
+})
+
+test('omits zero-probability Hive details without leaving separators', () => {
+  const summary = summarizeAiImageResults([
+    {
+      provider: 'hive',
+      status: 'detected',
+      evidence: {
+        aiGeneratedProbability: 1,
+        generator: 'gptimage2',
+        generatorProbability: 0.999,
+        deepfakeProbability: 0,
+      },
+    },
+  ])
+
+  assert.match(summary.message, /Hive：AI 生成概率 100\.0%（gptimage2 99\.9%）/)
+  assert.doesNotMatch(summary.message, /Deepfake|99\.9%，|，）/)
 })
 
 test('explains missing provider credentials without changing the verdict', () => {
@@ -256,8 +274,8 @@ test('explains provider HTTP and timeout failures', () => {
     {
       provider: 'openai',
       status: 'unavailable',
-      error: 'HTTP 404',
-      httpStatus: 404,
+      error: 'HTTP 403',
+      httpStatus: 403,
     },
     {
       provider: 'hive',
@@ -277,8 +295,8 @@ test('explains provider HTTP and timeout failures', () => {
     },
   ])
 
-  assert.match(summary.message, /OpenAI：无接口权限或接口未开放（HTTP 404）/)
-  assert.match(summary.message, /Hive：请求频率受限（HTTP 429）/)
+  assert.match(summary.message, /OpenAI：API HTTP 403/)
+  assert.match(summary.message, /Hive：API HTTP 429/)
   assert.match(summary.message, /Sightengine：请求超时/)
   assert.match(summary.message, /C2PA：本地检测组件不可用/)
   assert.match(summary.message, /⏸️ OpenAI：/)
