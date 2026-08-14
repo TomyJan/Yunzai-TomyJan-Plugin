@@ -32,6 +32,20 @@ export function parseJmvAuthors(output) {
     .filter(Boolean)
 }
 
+export async function loadJmvAuthors({ albumId, optionPath, execute }) {
+  const normalizedId = normalizeJmAlbumId(albumId)
+  if (!normalizedId) throw new Error('无效的 JMComic ID')
+
+  const result = await execute(
+    `jmv ${normalizedId} --option="${optionPath}" --yes`,
+  )
+  if (result?.failed || !result?.output) {
+    const detail = result?.err ? `: ${result.err}` : ''
+    throw new Error(`jmv 查询失败${detail}`)
+  }
+  return parseJmvAuthors(result.output)
+}
+
 export async function checkJmBlacklists({
   albumId,
   albumIdBlacklist,

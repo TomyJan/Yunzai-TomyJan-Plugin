@@ -3,6 +3,7 @@ import test from 'node:test'
 
 import {
   checkJmBlacklists,
+  loadJmvAuthors,
   normalizeJmAlbumId,
   parseJmvAuthors,
 } from '../model/jmBlacklist.js'
@@ -131,4 +132,91 @@ test('rethrows author lookup failures when author checks are enabled', async () 
     }),
     (error) => error === failure,
   )
+})
+
+test('loads authors with jmv and the active option file', async () => {
+  let command = ''
+  const authors = await loadJmvAuthors({
+    albumId: '123',
+    optionPath: '/bot/data/JMComic/option.yml',
+    execute: async (value) => {
+      command = value
+      return { output: '  ✍️ 作者:  Alice, Bob', err: '' }
+    },
+  })
+
+  assert.equal(
+    command,
+    'jmv 123 --option="/bot/data/JMComic/option.yml" --yes',
+  )
+  assert.deepEqual(authors, ['Alice', 'Bob'])
+})
+
+test('fails closed when jmv has no output', async () => {
+  await assert.rejects(
+    loadJmvAuthors({
+      albumId: '123',
+      optionPath: '/bot/data/JMComic/option.yml',
+      execute: async () => ({ output: '', err: 'jmv: command not found' }),
+    }),
+    /jmv 查询失败: jmv: command not found/,
+  )
+})
+
+test('fails closed when jmv exits unsuccessfully with output', async () => {
+  await assert.rejects(
+    loadJmvAuthors({
+      albumId: '123',
+      optionPath: '/bot/data/JMComic/option.yml',
+      execute: async () => ({
+        output: '✍️ 作者: Alice',
+        err: 'process exited 1',
+        failed: true,
+      }),
+    }),
+    /jmv 查询失败/,
+  )
+})
+
+test('rethrows jmv execution failures', async () => {
+  const failure = new Error('execution failed')
+
+  await assert.rejects(
+    loadJmvAuthors({
+      albumId: '123',
+      optionPath: '/bot/data/JMComic/option.yml',
+      execute: async () => {
+        throw failure
+      },
+    }),
+    (error) => error === failure,
+  )
+})
+
+test('rejects jmv output without an author field', async () => {
+  await assert.rejects(
+    loadJmvAuthors({
+      albumId: '123',
+      optionPath: '/bot/data/JMComic/option.yml',
+      execute: async () => ({ output: '📖 标题: Example', err: '' }),
+    }),
+    /无法解析 jmv 作者字段/,
+  )
+})
+
+test('rejects an invalid album ID before invoking jmv', async () => {
+  let executionCount = 0
+
+  await assert.rejects(
+    loadJmvAuthors({
+      albumId: '12x',
+      optionPath: '/bot/data/JMComic/option.yml',
+      execute: async () => {
+        executionCount += 1
+        return { output: '✍️ 作者: Alice', err: '' }
+      },
+    }),
+    /无效的 JMComic ID/,
+  )
+  assert.equal(executionCount, 0)
 })

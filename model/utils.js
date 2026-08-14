@@ -258,7 +258,7 @@ export async function sendMsgFriend(uin, msg) {
 /**
  * 执行命令
  * @param {string} command 命令
- * @returns {Promise<{output: string, err: string}>} 命令执行结果
+ * @returns {Promise<{output: string, err: string, failed: boolean}>} 命令执行结果
  */
 export async function runCommand(command) {
   tjLogger.debug(`开始执行命令: ${command}`)
@@ -276,7 +276,7 @@ export async function runCommand(command) {
           tjLogger.debug(`执行命令 ${command} 结果: ${output}`)
         }
 
-        resolve({ output, err })
+        resolve({ output, err, failed: Boolean(error) })
       },
     )
   })
