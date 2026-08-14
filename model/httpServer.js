@@ -5,6 +5,7 @@ import fs from 'fs'
 import path from 'path'
 import tjLogger from '../components/logger.js'
 import crypto from 'crypto'
+import { getContentType, resolvePublicFile } from './httpPath.js'
 
 class httpServer {
   constructor() {
@@ -67,17 +68,8 @@ class httpServer {
         )
 
         try {
-          let filePath = path.join(
-            this.rootDir,
-            req.url === '/' ? 'index.html' : req.url,
-          )
-
-          // 规范化路径，以便在 Windows 上进行正确的路径比较
-          const normalizedFilePath = path.normalize(filePath)
-          const normalizedRootDir = path.normalize(this.rootDir)
-
-          // 安全检查：确保请求的文件在根目录下
-          if (!normalizedFilePath.startsWith(normalizedRootDir)) {
+          const filePath = resolvePublicFile(this.rootDir, req.url)
+          if (!filePath) {
             tjLogger.warn(
               `HTTP服务器: 访问被拒绝, 请求路径: ${req.url}, clientIp=${clientIp}`,
             )
@@ -87,7 +79,7 @@ class httpServer {
 
           // 在路径检查部分添加调试日志
           tjLogger.debug(
-            `HTTP服务器: 路径检查 - 规范化文件路径: ${normalizedFilePath}, 规范化根目录: ${normalizedRootDir}`,
+            `HTTP服务器: 路径检查 - 文件路径: ${filePath}, 根目录: ${this.rootDir}`,
           )
 
           // 检查文件是否存在
@@ -109,20 +101,7 @@ class httpServer {
               return
             }
 
-            // 根据文件扩展名设置 Content-Type
-            const ext = path.extname(filePath)
-            const contentTypes = {
-              '.html': 'text/html',
-              '.css': 'text/css',
-              '.js': 'application/javascript',
-              '.json': 'application/json',
-              '.png': 'image/png',
-              '.jpg': 'image/jpeg',
-              '.gif': 'image/gif',
-              '.svg': 'image/svg+xml',
-              '.pdf': 'application/pdf',
-            }
-            const contentType = contentTypes[ext] || 'application/octet-stream'
+            const contentType = getContentType(filePath)
 
             // 设置响应头
             res.writeHead(200, {
