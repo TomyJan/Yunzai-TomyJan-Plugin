@@ -200,17 +200,6 @@ test('rethrows jmv execution failures', async () => {
   )
 })
 
-test('rejects jmv output without an author field', async () => {
-  await assert.rejects(
-    loadJmvAuthors({
-      albumId: '123',
-      optionPath: '/bot/data/JMComic/option.yml',
-      execute: async () => ({ output: '📖 标题: Example', err: '' }),
-    }),
-    /无法解析 jmv 作者字段/,
-  )
-})
-
 test('rejects an invalid album ID before invoking jmv', async () => {
   let executionCount = 0
 

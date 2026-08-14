@@ -18,6 +18,7 @@ import {
   normalizeJmAlbumId,
   redactJmError,
 } from '../model/jmBlacklist.js'
+import { classifyJmDownloadResult } from '../model/jmDownloadResult.js'
 
 export class jmDownloadApp extends plugin {
   constructor() {
@@ -181,66 +182,27 @@ export class jmDownloadApp extends plugin {
     tjLogger.info(`开始下载 JMComic ID: ${id}`)
     const command = `jmcomic ${id} --option="${optionPath}"`
     const commandResult = await runCommand(command)
+    const downloadResult = classifyJmDownloadResult(commandResult)
 
     // 下载完成, 撤回准备消息
     if (this.e.group) this.e.group.recallMsg(jmPrepareMsg.message_id)
     if (this.e.private) this.e.private.recallMsg(jmPrepareMsg.message_id)
 
-    if (!commandResult.output) {
+    if (downloadResult.type === 'no_output') {
       // 运行出现错误
       jmDownload.delTempFile(1, downloadPath, false, id)
       await this.reply(
-        `下载失败, 请检查 ID 是否正确. 错误信息: ${commandResult.err}`,
+        `下载失败, 请检查 ID 是否正确. 错误信息: ${downloadResult.message}`,
         true,
       )
       return
-    } else if (commandResult.output.includes('jmcomic.jm_exception')) {
+    } else if (downloadResult.type === 'known_error') {
       // 命令结果有 JMComic 的报错
       jmDownload.delTempFile(1, downloadPath, false, id)
-      // 出错了, 取回 jmcomic 报错的内容
-      const match = commandResult.output.match(
-        /jmcomic\.jm_exception\.[^\s(]+.*?,\s*[^(\s]+\s*\(([^)]+)\)/,
-      )
-      if (match) {
-        let errorMessage = match[1].trim()
-
-        // 移除可能的单引号或双引号
-        errorMessage = errorMessage.replace(/^['"]|['"]$/g, '')
-
-        // 尝试解析可能的 JSON 错误信息
-        try {
-          const errorObj = JSON.parse(errorMessage)
-          errorMessage = errorObj.errorMsg || errorMessage
-        } catch {
-          // 如果不是 JSON 格式,保持原样
-        }
-
-        // 处理特定错误消息
-        if (commandResult.output.includes('请求的本子不存在')) {
-          errorMessage = '此 ID 不存在或登录可见'
-        }
-
-        tjLogger.warn(`下载 JMComic ${id} 失败: ${errorMessage}`)
-        this.reply(
-          `下载失败, 错误信息: \n${errorMessage.replace(/\\n/g, '\n').trim()}`,
-          true,
-        )
-      } else {
-        // 未能识别的错误,发送完整日志
-        tjLogger.warn(`下载 JMComic ${id} 失败: 无法识别的错误`)
-        let msg = await common.makeForwardMsg(
-          this.e,
-          [
-            'JM 下载失败, 未识别的错误, 日志如下: ',
-            commandResult.output.replace(/\\n/g, '\n').trim(),
-            '请向机器人主人或插件开发者反馈此问题',
-          ],
-          'JM 下载失败',
-        )
-        await this.reply(msg, true)
-        return
-      }
-    } else if (commandResult.output.includes('本子下载完成')) {
+      tjLogger.warn(`下载 JMComic ${id} 失败: ${downloadResult.message}`)
+      await this.reply(`下载失败, 错误信息: \n${downloadResult.message}`, true)
+      return
+    } else if (downloadResult.type === 'success') {
       // 下载成功
       let downloadSuccessMsg = await this.reply('下载成功, 准备转换...', true)
       // 先给目录重命名加上时间戳后缀防止同时重复下载冲突
@@ -308,7 +270,7 @@ export class jmDownloadApp extends plugin {
         this.e,
         [
           'JM 下载失败, 未识别的错误, 日志如下: ',
-          commandResult.output.replace(/\\n/g, '\n').trim(),
+          downloadResult.output,
           '请向机器人主人或插件开发者反馈此问题',
         ],
         'JM 下载失败',
