@@ -24,6 +24,7 @@
 ### 任务 1：黑名单规则与 `jmv` 解析
 
 **文件：**
+
 - 创建：`test/jmBlacklist.test.js`
 - 创建：`model/jmBlacklist.js`
 
@@ -118,7 +119,9 @@ export function normalizeJmAlbumId(value) {
 }
 
 function normalizeAuthorName(value) {
-  return String(value ?? '').trim().toLowerCase()
+  return String(value ?? '')
+    .trim()
+    .toLowerCase()
 }
 
 export function parseJmvAuthors(output) {
@@ -157,10 +160,7 @@ export async function checkJmBlacklists({
   if (!authorNameBlacklist?.enable) return null
   const authors = await loadAuthors()
   const blockedAuthors = new Set(
-    (Array.isArray(authorNameBlacklist.names)
-      ? authorNameBlacklist.names
-      : []
-    )
+    (Array.isArray(authorNameBlacklist.names) ? authorNameBlacklist.names : [])
       .map(normalizeAuthorName)
       .filter(Boolean),
   )
@@ -191,6 +191,7 @@ git commit -m "feat(JMComic): 添加黑名单匹配规则"
 ### 任务 2：`jmv` 作者查询与失败关闭
 
 **文件：**
+
 - 修改：`test/jmBlacklist.test.js`
 - 修改：`model/jmBlacklist.js`
 
@@ -211,10 +212,7 @@ test('loads authors with jmv and the active option file', async () => {
       return { output: '  ✍️ 作者:  Alice, Bob', err: '' }
     },
   })
-  assert.equal(
-    command,
-    'jmv 123 --option="/bot/data/JMComic/option.yml" --yes',
-  )
+  assert.equal(command, 'jmv 123 --option="/bot/data/JMComic/option.yml" --yes')
   assert.deepEqual(authors, ['Alice', 'Bob'])
 })
 
@@ -284,6 +282,7 @@ git commit -m "feat(JMComic): 添加 jmv 作者前置查询"
 ### 任务 3：接入下载流程与配置界面
 
 **文件：**
+
 - 创建：`test/jmBlacklistConfig.test.js`
 - 修改：`data/system/default_config.json`
 - 修改：`guoba.support.js`
@@ -416,6 +415,7 @@ git commit -m "feat(JMComic): 接入可配置下载黑名单"
 ### 任务 4：README 与发布验证
 
 **文件：**
+
 - 修改：`README.md`
 
 - [ ] **步骤 1：补充配置与限制说明**
