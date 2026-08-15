@@ -1,5 +1,7 @@
 import { Buffer } from 'node:buffer'
 
+import { fetch as undiciFetch } from 'undici'
+
 import { withProxy } from './proxy.js'
 
 const OPENAI_ENDPOINT = 'https://api.openai.com/v1/content_provenance_checks'
@@ -407,7 +409,7 @@ export async function checkOpenAi(buffer, options = {}) {
       credentialCount,
     }
   }
-  const fetchImpl = options.fetchImpl || globalThis.fetch
+  const fetchImpl = options.fetchImpl || undiciFetch
   if (typeof fetchImpl !== 'function') {
     return {
       provider: 'openai',
@@ -552,7 +554,7 @@ export async function checkHive(buffer, options = {}) {
       credentialCount,
     }
   }
-  const fetchImpl = options.fetchImpl || globalThis.fetch
+  const fetchImpl = options.fetchImpl || undiciFetch
   if (typeof fetchImpl !== 'function') {
     return {
       provider: 'hive',
@@ -647,7 +649,7 @@ export async function checkSightengine(buffer, options = {}) {
       credentialCount,
     }
   }
-  const fetchImpl = options.fetchImpl || globalThis.fetch
+  const fetchImpl = options.fetchImpl || undiciFetch
   if (typeof fetchImpl !== 'function') {
     return {
       provider: 'sightengine',

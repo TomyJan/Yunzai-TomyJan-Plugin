@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import { Buffer } from 'node:buffer'
+import { createServer } from 'node:net'
 import test from 'node:test'
 
 import {
@@ -121,6 +122,54 @@ test('uses the shared proxy settings without provider-local proxy fields', async
     { proxyUrl: 'http://proxy.example:8080' },
     undefined,
   ])
+})
+
+test('uses a fetch implementation compatible with the proxy dispatcher by default', async () => {
+  let connections = 0
+  const proxyServer = createServer((socket) => {
+    connections += 1
+    socket.destroy()
+  })
+  await new Promise((resolve, reject) => {
+    proxyServer.once('error', reject)
+    proxyServer.listen(0, '127.0.0.1', resolve)
+  })
+  const { port } = proxyServer.address()
+  const proxyOptions = {
+    pluginConfig: { proxy: { url: `http://127.0.0.1:${port}` } },
+    proxyEnabled: true,
+    timeoutMs: 1000,
+  }
+
+  try {
+    const results = await Promise.all([
+      checkOpenAi(Buffer.from('image'), {
+        ...proxyOptions,
+        apiKeys: ['openai-key'],
+        endpoint: 'https://openai.invalid/check',
+      }),
+      checkHive(Buffer.from('image'), {
+        ...proxyOptions,
+        apiKeys: ['hive-key'],
+        endpoint: 'https://hive.invalid/check',
+      }),
+      checkSightengine(Buffer.from('image'), {
+        ...proxyOptions,
+        credentials: [{ apiUser: 'sight-user', apiSecret: 'sight-secret' }],
+        endpoint: 'https://sightengine.invalid/check',
+      }),
+    ])
+
+    assert.ok(connections > 0, 'API fetch should reach the proxy dispatcher')
+    assert.ok(
+      results.every(
+        (result) => !result.errorCodes?.includes('UND_ERR_INVALID_ARG'),
+      ),
+      'API fetch and proxy dispatcher must use the same Undici interface',
+    )
+  } finally {
+    await new Promise((resolve) => proxyServer.close(resolve))
+  }
 })
 
 test('normalizes a trusted active C2PA manifest and AI action', async () => {

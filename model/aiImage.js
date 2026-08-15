@@ -198,15 +198,28 @@ function logSharedProxyFailure(logger, results, proxyState) {
   const externalResults = results.filter((result) =>
     EXTERNAL_PROVIDERS.includes(result.provider),
   )
-  if (externalResults.length < 2 || !externalResults.every(isNetworkFailure)) {
-    return
-  }
+  if (externalResults.length < 2) return
   const providers = externalResults
     .map(({ provider }) => PROVIDER_NAMES[provider] || provider)
     .join('、')
   const errorCodes = [
     ...new Set(externalResults.flatMap((result) => result.errorCodes || [])),
   ]
+  if (
+    externalResults.every(
+      (result) =>
+        result.status === 'error' &&
+        result.errorCodes?.includes('UND_ERR_INVALID_ARG'),
+    )
+  ) {
+    writeLog(
+      logger,
+      'warn',
+      `HTTP 客户端或代理配置异常: ${providers} 均返回 UND_ERR_INVALID_ARG，代理=${proxyState.target}；请检查代理地址格式与协议是否为 HTTP/HTTPS，并确认插件 HTTP 客户端与 ProxyAgent 使用同一版本的 Undici`,
+    )
+    return
+  }
+  if (!externalResults.every(isNetworkFailure)) return
   const codeSummary = errorCodes.length > 0 ? `（${errorCodes.join('/')}）` : ''
   writeLog(
     logger,

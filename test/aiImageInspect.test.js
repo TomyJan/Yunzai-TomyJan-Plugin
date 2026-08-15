@@ -512,6 +512,52 @@ test('logs nested network causes and a shared proxy failure diagnosis', async ()
   }
 })
 
+test('classifies shared dispatcher argument errors as local client configuration failures', async () => {
+  const logger = createMemoryLogger()
+
+  await inspectAiImage(
+    'https://public.example/image.png',
+    {
+      proxy: { url: 'http://proxy.example:8080' },
+      aiImage: {
+        proxy: { enable: true },
+        c2pa: { enable: false },
+        openai: { enable: true, apiKeys: ['openai-key'] },
+        hive: { enable: true, apiKeys: ['hive-key'] },
+        sightengine: {
+          enable: true,
+          credentials: [{ apiUser: 'sight-user', apiSecret: 'sight-secret' }],
+        },
+      },
+    },
+    {
+      logger,
+      proxyAgentFactory: () => ({ proxy: true }),
+      downloadImpl: async () => ({
+        buffer: Buffer.from('image'),
+        mimeType: 'image/png',
+      }),
+      fetchImpl: async () => {
+        const cause = Object.assign(
+          new Error('invalid onRequestStart method'),
+          {
+            code: 'UND_ERR_INVALID_ARG',
+          },
+        )
+        throw new TypeError('fetch failed', { cause })
+      },
+    },
+  )
+
+  const output = logger.entries.map((entry) => entry.join(' ')).join('\n')
+  assert.match(
+    output,
+    /HTTP 客户端或代理配置异常.*OpenAI、Hive、Sightengine.*UND_ERR_INVALID_ARG/,
+  )
+  assert.match(output, /代理地址格式与协议.*Undici/)
+  assert.doesNotMatch(output, /疑似代理链路异常/)
+})
+
 test('logs normalized Hive evidence at debug level without sensitive data', async () => {
   const logger = createMemoryLogger()
   const imageUrl = 'https://public.example/image.png?token=private-query'
