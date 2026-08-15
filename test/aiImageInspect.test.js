@@ -558,6 +558,47 @@ test('classifies shared dispatcher argument errors as local client configuration
   assert.doesNotMatch(output, /疑似代理链路异常/)
 })
 
+test('logs a redacted API response summary for provider HTTP errors', async () => {
+  const logger = createMemoryLogger()
+  const secret = 'private-openai-key'
+
+  await inspectAiImage(
+    'https://public.example/image.png',
+    {
+      aiImage: {
+        c2pa: { enable: false },
+        openai: { enable: true, apiKeys: [secret] },
+        hive: { enable: false },
+        sightengine: { enable: false },
+      },
+    },
+    {
+      logger,
+      downloadImpl: async () => ({
+        buffer: Buffer.from('image'),
+        mimeType: 'image/png',
+      }),
+      fetchImpl: async () =>
+        new Response(
+          JSON.stringify({
+            error: {
+              code: 'invalid_image',
+              message: `unsupported image for ${secret}`,
+            },
+          }),
+          { status: 400 },
+        ),
+    },
+  )
+
+  const output = logger.entries.map((entry) => entry.join(' ')).join('\n')
+  assert.match(
+    output,
+    /OpenAI 检测失败: HTTP 400（API 响应 \[invalid_image\] unsupported image for \[redacted\]；尝试 1\/1）/,
+  )
+  assert.doesNotMatch(output, new RegExp(secret))
+})
+
 test('logs normalized Hive evidence at debug level without sensitive data', async () => {
   const logger = createMemoryLogger()
   const imageUrl = 'https://public.example/image.png?token=private-query'

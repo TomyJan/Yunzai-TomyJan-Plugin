@@ -124,6 +124,7 @@ function providerDebugDetails(result, secrets) {
     errorCodes: Array.isArray(result.errorCodes)
       ? result.errorCodes.map(debugField)
       : undefined,
+    apiError: debugField(result.apiError),
   }
   const evidence = result.evidence || {}
 
@@ -179,6 +180,8 @@ function providerErrorDetail(result, secrets) {
     ? [...new Set(result.errorCodes.map(debugField).filter(Boolean))]
     : []
   if (errorCodes.length > 0) context.push(`错误码 ${errorCodes.join('/')}`)
+  const apiError = redactLogValue(result.apiError, secrets)
+  if (apiError) context.push(`API 响应 ${apiError}`)
   const attempt = providerAttemptDetail(result)
   if (attempt) context.push(attempt)
   return context.length > 0 ? `${message}（${context.join('；')}）` : message

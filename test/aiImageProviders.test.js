@@ -3,6 +3,8 @@ import { Buffer } from 'node:buffer'
 import { createServer } from 'node:net'
 import test from 'node:test'
 
+import { FormData as UndiciFormData, Request as UndiciRequest } from 'undici'
+
 import {
   checkC2pa,
   checkHive,
@@ -170,6 +172,30 @@ test('uses a fetch implementation compatible with the proxy dispatcher by defaul
   } finally {
     await new Promise((resolve) => proxyServer.close(resolve))
   }
+})
+
+test('serializes provider image forms as multipart with the Undici client', async () => {
+  let serializedRequest
+  const result = await checkOpenAi(Buffer.from('image'), {
+    apiKeys: ['openai-key'],
+    mimeType: 'image/jpeg',
+    fetchImpl: async (url, init) => {
+      serializedRequest = new UndiciRequest(url, init)
+      return new Response(
+        JSON.stringify({
+          results: [{ type: 'synthid', outcome: 'not_detected' }],
+        }),
+      )
+    },
+  })
+
+  const contentType = serializedRequest.headers.get('content-type')
+  const body = await serializedRequest.text()
+  assert.match(contentType, /^multipart\/form-data; boundary=/)
+  assert.match(body, /name="file"; filename="image"/)
+  assert.match(body, /Content-Type: image\/jpeg/)
+  assert.match(body, /\r\nimage\r\n/)
+  assert.equal(result.status, 'not_detected')
 })
 
 test('normalizes a trusted active C2PA manifest and AI action', async () => {
@@ -374,7 +400,7 @@ test('uploads OpenAI content provenance multipart and normalizes signals', async
   )
   assert.equal(request.init.method, 'POST')
   assert.equal(request.init.headers.Authorization, 'Bearer secret-key')
-  assert.equal(request.init.body instanceof FormData, true)
+  assert.equal(request.init.body instanceof UndiciFormData, true)
   assert.equal(result.status, 'detected')
   assert.deepEqual(
     result.signals.map(({ type, outcome }) => ({ type, outcome })),
@@ -401,6 +427,30 @@ test('does not expose credentials in provider errors', async () => {
 
   assert.equal(result.status, 'error')
   assert.doesNotMatch(result.error, new RegExp(secret))
+})
+
+test('returns a redacted API response summary for HTTP errors', async () => {
+  const secret = 'super-secret-openai-key'
+  const result = await checkOpenAi(Buffer.from('image'), {
+    apiKeys: [secret],
+    fetchImpl: async () =>
+      new Response(
+        JSON.stringify({
+          error: {
+            code: 'invalid_image',
+            message: `unsupported image for ${secret}`,
+          },
+        }),
+        { status: 400 },
+      ),
+  })
+
+  assert.equal(result.status, 'error')
+  assert.equal(
+    result.apiError,
+    '[invalid_image] unsupported image for [redacted]',
+  )
+  assert.doesNotMatch(JSON.stringify(result), new RegExp(secret))
 })
 
 test('preserves nested network causes without exposing credentials', async () => {
@@ -481,7 +531,7 @@ test('uploads the downloaded image directly to Hive V3', async () => {
   assert.equal(request.init.method, 'POST')
   assert.equal(request.init.headers.Authorization, 'Bearer hive-v3-secret-key')
   assert.equal(request.init.headers['Content-Type'], undefined)
-  assert.equal(request.init.body instanceof FormData, true)
+  assert.equal(request.init.body instanceof UndiciFormData, true)
   assert.equal(request.init.body.get('processing_mode'), 'sync_with_fallback')
   const media = request.init.body.get('media')
   assert.equal(media.type, 'image/png')

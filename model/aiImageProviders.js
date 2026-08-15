@@ -1,6 +1,6 @@
-import { Buffer } from 'node:buffer'
+import { Buffer, File } from 'node:buffer'
 
-import { fetch as undiciFetch } from 'undici'
+import { fetch as undiciFetch, FormData as UndiciFormData } from 'undici'
 
 import { withProxy } from './proxy.js'
 
@@ -177,7 +177,30 @@ function providerErrorDetails(error, credentialSecrets, options) {
     const redacted = redactErrorText(code, secrets)
     return redacted === code && /^[a-z][a-z0-9_-]{0,63}$/i.test(code)
   })
+  details.apiError = apiErrorSummary(error?.body, secrets)
   return details
+}
+
+function apiErrorSummary(body, secrets) {
+  const errorObject =
+    body?.error && typeof body.error === 'object' ? body.error : undefined
+  const firstError = Array.isArray(body?.errors) ? body.errors[0] : undefined
+  const sources = [errorObject, firstError, body].filter(
+    (value) => value && typeof value === 'object',
+  )
+  const scalarText = (value) =>
+    typeof value === 'string' || typeof value === 'number'
+      ? String(value).trim()
+      : ''
+  const code = sources
+    .map((value) => scalarText(value.code) || scalarText(value.type))
+    .find(Boolean)
+  const message =
+    sources
+      .map((value) => scalarText(value.message) || scalarText(value.detail))
+      .find(Boolean) || scalarText(body?.error)
+  const summary = [code && `[${code}]`, message].filter(Boolean).join(' ')
+  return redactErrorText(summary, secrets).slice(0, 300) || undefined
 }
 
 function getTimeoutSignal(timeoutMs, signal) {
@@ -376,11 +399,10 @@ function makeImageForm(
   filename = 'image',
   mimeType = 'application/octet-stream',
 ) {
-  const form = new FormData()
+  const form = new UndiciFormData()
   form.append(
     fieldName,
-    new Blob([asBuffer(buffer)], { type: mimeType }),
-    filename,
+    new File([asBuffer(buffer)], filename, { type: mimeType }),
   )
   return form
 }
@@ -470,6 +492,7 @@ export async function checkOpenAi(buffer, options = {}) {
     status,
     error: failure.message,
     errorCodes: failure.codes,
+    apiError: failure.apiError,
     httpStatus: lastError?.status,
     signals: [],
     attempts,
@@ -620,6 +643,7 @@ export async function checkHive(buffer, options = {}) {
     status,
     error: failure.message,
     errorCodes: failure.codes,
+    apiError: failure.apiError,
     httpStatus: lastError?.status,
     evidence: {},
     attempts,
@@ -716,6 +740,7 @@ export async function checkSightengine(buffer, options = {}) {
     status,
     error: failure.message,
     errorCodes: failure.codes,
+    apiError: failure.apiError,
     httpStatus: lastError?.status,
     evidence: {},
     attempts,
