@@ -1,3 +1,14 @@
+## [0.3.2-rel](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/compare/v0.3.1-rel...v0.3.2-rel) (2026-08-15)
+
+### Bug Fixes
+
+* **帮助菜单:** 添加 AI 图片识别入口 ([e84757a](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/e84757ad2c4aa783950b5571d2dc3814c1bfcc71))
+* **AI图片:** 补充代理故障诊断日志 ([eff7a94](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/eff7a945e07d9732faadf9476a6c87105f169b92))
+* **AI图片:** 仅为检测 API 启用代理 ([c18428b](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/c18428bc2f28dd21bda3cd1a253d5585b6256616))
+* **AI图片:** 修复代理客户端版本不兼容 ([c81dd53](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/c81dd5315b9834f47b7f89ccd6858fd7994e2513))
+* **AI图片:** 修复代理上传请求体序列化 ([996a4c6](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/996a4c6b4cf0ba8ee0e0a8b1e75eacc258fab9fd))
+* **HTTP服务:** 阻止符号链接越界访问 ([0a75739](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/commit/0a75739041f569ce665711848c3b49cefe60a0fe))
+
 ## [0.3.1-rel](https://github.com/TomyJan/Yunzai-TomyJan-Plugin/compare/v0.3.0-rel...v0.3.1-rel) (2026-08-14)
 
 ### Bug Fixes
