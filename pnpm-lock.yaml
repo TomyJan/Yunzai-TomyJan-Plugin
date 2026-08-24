@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       '@contentauth/c2pa-node':
-        specifier: ^0.8.3
-        version: 0.8.3
+        specifier: ^0.9.1
+        version: 0.9.1
       chalk:
         specifier: ^6.0.0
         version: 6.0.0
@@ -68,9 +68,15 @@ packages:
     resolution: {integrity: sha512-qSs4ifwzKJSV39ucNjsvc6WVHs6b7S03sOh2OcHF9UHfVPqWWALUsNUVzhSBiItjRZoLHx7nIarVjqKVusUZ1Q==}
     engines: {node: '>=6.9.0'}
 
-  '@contentauth/c2pa-node@0.8.3':
-    resolution: {integrity: sha512-kd9E65qLRjK6QXMx6LZ99m+VXllIGFXcst0sseTnJ4C2DNX292ZXXFppa/OcUPLeZmc6JHtAJBZAWYGu8X6m2A==}
+  '@contentauth/c2pa-node@0.9.1':
+    resolution: {integrity: sha512-YswlLS5KlfenAzNnqFbAT2WLyxaUe8psUTbs8ieHpFvD/LoPunaH5qgx4KLX5HkjBKEsrtqruoo9B7VhipQzLA==}
     engines: {node: '>=22'}
+
+  '@contentauth/c2pa-types@0.7.3':
+    resolution: {integrity: sha512-R1F0R13/m8W7c4OJQw2jilnYcQEHItaRgQEnUt2KpcPFLl4VG1Bblg1UVMQG8oFH3hG2mXf19eBHeMzxGdKWEQ==}
+
+  '@contentauth/c2pa-utilities@0.2.1':
+    resolution: {integrity: sha512-9pFE528LJKvksGcSQrMbQhJWEPPN/5GMcSSkaJAJ1NQZ3oknmpVkLRjWkYBTlSjBBWQ5zbQCtgjlO+4ox9EJCw==}
 
   '@conventional-changelog/git-client@1.0.1':
     resolution: {integrity: sha512-PJEqBwAleffCMETaVm/fUgHldzBE35JFk3/9LL6NUA5EXa3qednu+UT6M7E5iBu3zIQZCULYIiZ90fBYHt6xUw==}
@@ -999,6 +1005,10 @@ packages:
   traverse@0.3.9:
     resolution: {integrity: sha512-iawgk0hLP3SxGKDfnDJf8wTz4p2qImnyihM5Hh/sGvQ3K37dPi/w8sRhdNIxYA1TwFwc5mDhIJq+O0RsvXBKdQ==}
 
+  ts-deepmerge@8.0.0:
+    resolution: {integrity: sha512-133O+10nJmVI8w5xeVZPEv5PIrv7iaUae07wv1aH8XJH95Ur6YIhWAPhPyP1YPlbPS9fCVcNIZTu7m8urRVF0A==}
+    engines: {node: '>=14.13.1'}
+
   tslib@1.14.1:
     resolution: {integrity: sha512-Xni35NKzjgMrwevysHTCArtLDpPvye8zV/0E4EyYn43P7/7qvQwPh9BGkHewbMulVntbigmcT7rdX3BNo9wRJg==}
 
@@ -1084,8 +1094,10 @@ snapshots:
 
   '@babel/helper-validator-identifier@7.28.5': {}
 
-  '@contentauth/c2pa-node@0.8.3':
+  '@contentauth/c2pa-node@0.9.1':
     dependencies:
+      '@contentauth/c2pa-types': 0.7.3
+      '@contentauth/c2pa-utilities': 0.2.1
       cargo-cp-artifact: 0.1.9
       cli-progress: 3.12.0
       debug: 4.4.3
@@ -1097,6 +1109,13 @@ snapshots:
       unzipper: 0.10.14
     transitivePeerDependencies:
       - supports-color
+
+  '@contentauth/c2pa-types@0.7.3': {}
+
+  '@contentauth/c2pa-utilities@0.2.1':
+    dependencies:
+      '@contentauth/c2pa-types': 0.7.3
+      ts-deepmerge: 8.0.0
 
   '@conventional-changelog/git-client@1.0.1(conventional-commits-filter@6.0.1)(conventional-commits-parser@6.4.0)':
     dependencies:
@@ -1958,6 +1977,8 @@ snapshots:
       temp-dir: 3.0.0
 
   traverse@0.3.9: {}
+
+  ts-deepmerge@8.0.0: {}
 
   tslib@1.14.1: {}
 
