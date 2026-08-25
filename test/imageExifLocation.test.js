@@ -7,7 +7,6 @@ import {
   extractGps,
   formatExifReply,
   formatLocation,
-  getGeocodingAttribution,
 } from '../model/imageExifLocation.js'
 
 const configuredGeocoder = {
@@ -197,31 +196,8 @@ test('formats the requested reply with configurable honorific', () => {
     '请问是上海市松江区泗泾镇的小明吗？',
   )
   assert.equal(
-    formatExifReply(
-      '上海市松江区泗泾镇',
-      '小明',
-      '先生',
-      '© OpenStreetMap contributors',
-    ),
-    '请问是上海市松江区泗泾镇的小明 先生吗？\n位置数据：© OpenStreetMap contributors',
-  )
-})
-
-test('uses provider attribution unless explicitly overridden', () => {
-  assert.equal(
-    getGeocodingAttribution({ provider: 'nominatim', attribution: '' }),
-    '© OpenStreetMap contributors',
-  )
-  assert.equal(
-    getGeocodingAttribution({ provider: 'amap', attribution: '' }),
-    '高德开放平台',
-  )
-  assert.equal(
-    getGeocodingAttribution({
-      provider: 'amap',
-      attribution: '自定义位置服务',
-    }),
-    '自定义位置服务',
+    formatExifReply('上海市松江区泗泾镇', '小明', '先生'),
+    '请问是上海市松江区泗泾镇的小明 先生吗？',
   )
 })
 

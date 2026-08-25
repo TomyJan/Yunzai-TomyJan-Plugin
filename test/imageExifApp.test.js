@@ -62,7 +62,7 @@ test('logs image processing in natural language without sensitive values', async
   assert.doesNotMatch(logText, /first\.jpg|小明|10001/u)
 })
 
-test('uses the selected provider default attribution in replies', async () => {
+test('does not append provider attribution to replies', async () => {
   const result = await processImageExifEvent(
     privateImageEvent(),
     {
@@ -75,10 +75,7 @@ test('uses the selected provider default attribution in replies', async () => {
     },
   )
 
-  assert.equal(
-    result.message,
-    '请问是上海市松江区的小明 先生吗？\n位置数据：高德开放平台',
-  )
+  assert.equal(result.message, '请问是上海市松江区的小明 先生吗？')
 })
 
 test('processes all chat scopes when enabled and skips imageless events', async () => {
@@ -380,7 +377,7 @@ test('downloads only the first image and produces the requested reply', async ()
   assert.equal(downloaded[0].options.maxFileSize, 20 * 1024 * 1024)
   assert.deepEqual(result, {
     status: 'reply',
-    message: '请问是上海市松江区泗泾镇的群名片 先生吗？\n位置数据：位置服务商',
+    message: '请问是上海市松江区泗泾镇的群名片 先生吗？',
   })
 })
 

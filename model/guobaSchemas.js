@@ -294,13 +294,6 @@ const schemas = [
     '仅高德模式使用；鉴权、配额或限流失败时自动轮换',
   ),
   {
-    field: 'imageExif.attribution',
-    label: '位置数据署名',
-    helpMessage: '成功回复第二行展示的数据来源或许可署名',
-    bottomHelpMessage: '留空时自动使用所选提供商的默认署名',
-    component: 'Input',
-  },
-  {
     field: 'imageExif.proxy.enable',
     label: '地理编码使用代理',
     helpMessage: '反向地理编码请求是否使用全局代理地址',

@@ -60,7 +60,6 @@ const expectedCardFields = {
     'imageExif.maxFileSize',
     'imageExif.geocodingEndpoint',
     'imageExif.amap.apiKeys',
-    'imageExif.attribution',
     'imageExif.proxy.enable',
   ],
   'EDU 认证设置': [

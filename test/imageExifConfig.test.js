@@ -17,7 +17,6 @@ test('keeps automatic EXIF location replies disabled with no chat scope fields',
     timeoutMs: 10000,
     maxFileSize: 20971520,
     geocodingEndpoint: 'https://nominatim.openstreetmap.org/reverse',
-    attribution: '',
     amap: { apiKeys: [] },
     proxy: { enable: false },
   })

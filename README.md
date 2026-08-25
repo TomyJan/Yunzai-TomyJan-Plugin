@@ -148,7 +148,6 @@ pnpm -C ./plugins/Yunzai-TomyJan-Plugin/ --ignore-workspace test:c2pa
     "timeoutMs": 10000, // 图片下载和地理编码超时
     "maxFileSize": 20971520, // 图片大小上限，默认 20 MiB
     "geocodingEndpoint": "https://nominatim.openstreetmap.org/reverse", // Nominatim reverse API
-    "attribution": "", // 留空时使用提供商默认署名
     "amap": { "apiKeys": [] }, // 高德开放平台 Web 服务 Key 列表
     "proxy": { "enable": false } // 反向地理编码是否使用上方统一代理
   },
@@ -253,7 +252,6 @@ OpenAI 和 Hive 的 `apiKeys`、Sightengine 的 `credentials` 都可以配置多
 - 公共 Nominatim 受 [OSMF 使用政策](https://operations.osmfoundation.org/policies/nominatim/) 约束。插件使用明确的 User-Agent、单请求队列、一小时缓存，并将 Nominatim 请求限制为每秒最多一次；管理员仍需自行确认图片内容、总调用量和使用场景符合政策。需要更稳定的服务等级时，请改用自建或商业 Nominatim 兼容服务。
 - 高德调用固定使用官方 HTTPS 逆地理编码接口，并在请求前将 EXIF 的 WGS-84 坐标转换为高德使用的 GCJ-02 坐标。高德当前为符合条件的个人非商业开发者提供基础 LBS 月配额，但商业用途、技术服务许可、免费期限、QPS 和配额均以 [官方定价说明](https://lbs.amap.com/upgrade#price) 与 [高德开放平台控制台](https://console.amap.com/) 为准，插件不承诺免费或无限调用。
 - 高德 `apiKeys` 支持多项并轮换起始 Key。当前 Key 遇到鉴权、配额或限流类错误时，会自动尝试下一项；参数错误或无法识别的响应不会盲目轮换。
-- `attribution` 非空时覆盖默认署名；留空时 Nominatim 显示 `© OpenStreetMap contributors`，高德显示“高德开放平台”。
 - 插件最多并发处理 2 张图片；地理编码最多排队 20 条、缓存 500 个坐标一小时。Nominatim 每秒最多请求一次，高德请求仍通过统一队列并受账号配额约束。繁忙时新图片会静默跳过。
 - `imageExif.proxy.enable` 控制 Nominatim 和高德反向地理编码请求是否使用统一代理；图片下载始终直连，并沿用私网地址阻断、重定向次数、超时和大小限制。
 

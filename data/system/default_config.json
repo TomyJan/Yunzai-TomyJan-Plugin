@@ -73,7 +73,6 @@
     "timeoutMs": 10000,
     "maxFileSize": 20971520,
     "geocodingEndpoint": "https://nominatim.openstreetmap.org/reverse",
-    "attribution": "",
     "amap": {
       "apiKeys": []
     },

@@ -11,10 +11,6 @@ const CACHE_TTL_MS = 60 * 60 * 1000
 const MAX_PENDING_REQUESTS = 20
 const DEFAULT_NOMINATIM_ENDPOINT = 'https://nominatim.openstreetmap.org/reverse'
 const AMAP_ENDPOINT = 'https://restapi.amap.com/v3/geocode/regeo'
-const PROVIDER_ATTRIBUTIONS = {
-  nominatim: '© OpenStreetMap contributors',
-  amap: '高德开放平台',
-}
 const AMAP_RETRYABLE_CODES = new Set([
   '10001',
   '10002',
@@ -116,29 +112,15 @@ export function formatLocation(address) {
   return unique.length > 0 ? unique.join('') : undefined
 }
 
-export function formatExifReply(
-  location,
-  name,
-  honorific = '先生',
-  attribution,
-) {
+export function formatExifReply(location, name, honorific = '先生') {
   const safeLocation = sanitizeMessageText(location, 128) || ''
   const safeName = sanitizeMessageText(name, 32) || '朋友'
   const suffix = sanitizeMessageText(honorific, 16)
-  const source = sanitizeMessageText(attribution, 80)
-  const message = `请问是${safeLocation}的${safeName}${suffix ? ` ${suffix}` : ''}吗？`
-  return source ? `${message}\n位置数据：${source}` : message
+  return `请问是${safeLocation}的${safeName}${suffix ? ` ${suffix}` : ''}吗？`
 }
 
 function getProvider(config) {
   return config?.provider === 'amap' ? 'amap' : 'nominatim'
-}
-
-export function getGeocodingAttribution(config = {}) {
-  return (
-    sanitizeMessageText(config.attribution, 80) ||
-    PROVIDER_ATTRIBUTIONS[getProvider(config)]
-  )
 }
 
 function getGeocodingConfig(pluginConfig) {

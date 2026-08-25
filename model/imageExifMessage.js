@@ -7,7 +7,6 @@ import {
   extractGps as defaultExtractGps,
   formatExifReply,
   formatLocation,
-  getGeocodingAttribution,
 } from './imageExifLocation.js'
 import { getSenderDisplayName } from './imageExifPolicy.js'
 import { getImageUrlsFromMessage } from './aiImageMessage.js'
@@ -372,7 +371,6 @@ export async function processImageExifEvent(
         location,
         getSenderDisplayName(event),
         imageExifConfig.honorific,
-        getGeocodingAttribution(imageExifConfig),
       ),
     }
   } finally {
