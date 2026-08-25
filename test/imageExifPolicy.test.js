@@ -1,51 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import {
-  getSenderDisplayName,
-  shouldInspectImageEvent,
-} from '../model/imageExifPolicy.js'
-
-test('allows private messages by default and respects the private switch', () => {
-  const event = { isPrivate: true, user_id: 10001 }
-
-  assert.equal(shouldInspectImageEvent(event, {}), true)
-  assert.equal(shouldInspectImageEvent(event, { allowPrivate: false }), false)
-})
-
-test('allows group messages only when the group is in the allowlist', () => {
-  const event = { isGroup: true, group_id: 725571000, user_id: 10001 }
-
-  assert.equal(shouldInspectImageEvent(event, { allowedGroups: [] }), false)
-  assert.equal(
-    shouldInspectImageEvent(event, { allowedGroups: ['725571000'] }),
-    true,
-  )
-  assert.equal(
-    shouldInspectImageEvent(event, { allowedGroups: [725571000] }),
-    true,
-  )
-  assert.equal(
-    shouldInspectImageEvent(event, { allowedGroups: ['123456'] }),
-    false,
-  )
-  assert.equal(
-    shouldInspectImageEvent(event, {
-      allowedGroups: '123456, 725571000，999999',
-    }),
-    true,
-  )
-})
-
-test('supports private event markers used by different adapters', () => {
-  assert.equal(shouldInspectImageEvent({ message_type: 'private' }, {}), true)
-  assert.equal(shouldInspectImageEvent({ friend: {} }, {}), true)
-})
-
-test('does not treat unknown events as private messages', () => {
-  assert.equal(shouldInspectImageEvent({}, {}), false)
-  assert.equal(shouldInspectImageEvent({ isPrivate: false }, {}), false)
-})
+import { getSenderDisplayName } from '../model/imageExifPolicy.js'
 
 test('uses group card before sender and event nicknames', () => {
   assert.equal(

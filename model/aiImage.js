@@ -18,6 +18,7 @@ const PROVIDER_NAMES = {
 }
 
 const EXTERNAL_PROVIDERS = ['openai', 'hive', 'sightengine']
+const DEFAULT_DOWNLOAD_MIME_TYPES = ['image/png', 'image/jpeg', 'image/webp']
 const NETWORK_ERROR_PATTERN =
   /(?:^|\b)(?:AbortError|TimeoutError|ECONN\w*|ENET\w*|EHOST\w*|ENOTFOUND|EAI_AGAIN|ETIMEDOUT|UND_ERR_\w+|fetch failed|socket|TLS|certificate)(?:\b|$)/i
 
@@ -318,18 +319,44 @@ function formatCredentialSummary(enabledProviders, aiImageConfig) {
   return entries.length > 0 ? entries.join('、') : '无'
 }
 
-function guessMimeType(url, response) {
+function guessMimeType(url, response, mimeTypeHint) {
   const contentType = response?.headers?.get?.('content-type') || ''
-  if (/^image\/(png|jpeg|webp)$/i.test(contentType.split(';')[0].trim())) {
-    return contentType.split(';')[0].trim().toLowerCase()
+  const normalizedContentType = contentType.split(';')[0].trim().toLowerCase()
+  if (/^image\/(png|jpeg|webp|heic|heif)$/i.test(normalizedContentType)) {
+    return normalizedContentType
   }
   const extension = String(url).split('?')[0].split('.').pop()?.toLowerCase()
-  return {
+  const extensionMimeType = {
     jpg: 'image/jpeg',
     jpeg: 'image/jpeg',
     png: 'image/png',
     webp: 'image/webp',
+    heic: 'image/heic',
+    heif: 'image/heif',
   }[extension]
+  if (extensionMimeType) return extensionMimeType
+  if (
+    !normalizedContentType ||
+    normalizedContentType === 'application/octet-stream'
+  ) {
+    return (
+      String(mimeTypeHint || '')
+        .trim()
+        .toLowerCase() || undefined
+    )
+  }
+}
+
+function getAllowedMimeTypes(options) {
+  const configured = Array.isArray(options.allowedMimeTypes)
+    ? options.allowedMimeTypes
+    : DEFAULT_DOWNLOAD_MIME_TYPES
+  return new Set(
+    configured
+      .filter((value) => typeof value === 'string')
+      .map((value) => value.trim().toLowerCase())
+      .filter(Boolean),
+  )
 }
 
 function isPrivateAddress(address) {
@@ -438,12 +465,18 @@ async function readResponseBuffer(response, maxFileSize) {
 }
 
 async function downloadImage(url, options = {}) {
+  const allowedMimeTypes = getAllowedMimeTypes(options)
   if (typeof options.downloadImpl === 'function') {
     const image = await options.downloadImpl(url, options)
-    if (
-      !image?.buffer ||
-      !/^image\/(png|jpeg|webp)$/i.test(image.mimeType || '')
-    ) {
+    const reportedMimeType = String(image?.mimeType || '').toLowerCase()
+    const hintedMimeType = String(options.mimeTypeHint || '').toLowerCase()
+    const mimeType = allowedMimeTypes.has(reportedMimeType)
+      ? reportedMimeType
+      : ['', 'application/octet-stream'].includes(reportedMimeType) &&
+          allowedMimeTypes.has(hintedMimeType)
+        ? hintedMimeType
+        : undefined
+    if (!image?.buffer || !mimeType) {
       throw new Error('仅支持 PNG、JPEG、WebP 图片')
     }
     if (
@@ -456,7 +489,7 @@ async function downloadImage(url, options = {}) {
       throw new Error('图片超过大小限制')
     return {
       buffer: Buffer.from(image.buffer),
-      mimeType: image.mimeType.toLowerCase(),
+      mimeType,
     }
   }
   const fetchImpl = options.fetchImpl || globalThis.fetch
@@ -488,8 +521,10 @@ async function downloadImage(url, options = {}) {
       throw new Error('图片超过大小限制')
     }
     const buffer = await readResponseBuffer(response, getMaxFileSize(options))
-    const mimeType = guessMimeType(currentUrl, response)
-    if (!mimeType) throw new Error('仅支持 PNG、JPEG、WebP 图片')
+    const mimeType = guessMimeType(currentUrl, response, options.mimeTypeHint)
+    if (!mimeType || !allowedMimeTypes.has(mimeType)) {
+      throw new Error('仅支持 PNG、JPEG、WebP 图片')
+    }
     return { buffer, mimeType }
   }
   throw new Error('图片下载失败')

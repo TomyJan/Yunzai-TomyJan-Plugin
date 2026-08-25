@@ -1,4 +1,5 @@
 import exifr from 'exifr'
+import { fetch as undiciFetch } from 'undici'
 
 import { sanitizeMessageText } from './imageExifPolicy.js'
 import { withProxy } from './proxy.js'
@@ -43,29 +44,50 @@ function isValidCoordinate(value, minimum, maximum) {
   return Number.isFinite(value) && value >= minimum && value <= maximum
 }
 
-function safeExceptionType(error) {
-  const name = error?.name
-  return ['AbortError', 'TimeoutError', 'TypeError'].includes(name)
-    ? name
-    : 'Error'
+function safeNetworkReason(error) {
+  const names = new Set()
+  const codes = new Set()
+  let current = error
+  for (let depth = 0; current && depth < 5; depth += 1) {
+    if (typeof current.name === 'string') names.add(current.name)
+    if (typeof current.code === 'string') codes.add(current.code)
+    current = current.cause
+  }
+  if (names.has('SyntaxError')) return '响应不是有效的 JSON'
+  if (
+    names.has('AbortError') ||
+    names.has('TimeoutError') ||
+    codes.has('ETIMEDOUT')
+  ) {
+    return '请求超时'
+  }
+  if (codes.has('UND_ERR_CONNECT_TIMEOUT')) return '连接超时'
+  if (codes.has('ENOTFOUND') || codes.has('EAI_AGAIN')) return 'DNS 解析失败'
+  if (codes.has('ECONNREFUSED')) return '连接被拒绝'
+  if (codes.has('ECONNRESET')) return '连接被重置'
+  if (
+    [...codes].some((code) =>
+      /^(?:CERT_|ERR_TLS_|DEPTH_ZERO_SELF_SIGNED_CERT)/u.test(code),
+    )
+  ) {
+    return 'TLS 证书校验失败'
+  }
+  if ([...codes].some((code) => /PROXY/u.test(code))) return '代理连接失败'
+  return '未知网络错误'
 }
 
 export async function extractGps(buffer, dependencies = {}) {
   const gpsReader = dependencies.gpsReader || exifr.gps
-  try {
-    const gps = await gpsReader(buffer)
-    const latitude = gps?.latitude
-    const longitude = gps?.longitude
-    if (
-      !isValidCoordinate(latitude, -90, 90) ||
-      !isValidCoordinate(longitude, -180, 180)
-    ) {
-      return undefined
-    }
-    return { latitude, longitude }
-  } catch {
+  const gps = await gpsReader(buffer)
+  const latitude = gps?.latitude
+  const longitude = gps?.longitude
+  if (
+    !isValidCoordinate(latitude, -90, 90) ||
+    !isValidCoordinate(longitude, -180, 180)
+  ) {
     return undefined
   }
+  return { latitude, longitude }
 }
 
 function firstAddressValue(address, keys) {
@@ -234,7 +256,7 @@ function delay(milliseconds) {
 }
 
 export function createReverseGeocoder(dependencies = {}) {
-  const fetchImpl = dependencies.fetchImpl || globalThis.fetch
+  const fetchImpl = dependencies.fetchImpl || undiciFetch
   const now = dependencies.now || Date.now
   const sleep = dependencies.sleep || delay
   const setTimer = dependencies.setTimeoutImpl || setTimeout
@@ -300,7 +322,7 @@ export function createReverseGeocoder(dependencies = {}) {
     endpoint.searchParams.set('lat', String(gps.latitude))
     endpoint.searchParams.set('lon', String(gps.longitude))
     const startedAt = now()
-    log('debug', 'provider=nominatim request=started attempt=1')
+    log('debug', '正在请求 Nominatim 反向地理编码服务（第 1 次尝试）')
     try {
       const response = await fetchImpl(
         endpoint,
@@ -309,7 +331,7 @@ export function createReverseGeocoder(dependencies = {}) {
       if (!response?.ok) {
         log(
           'warn',
-          `provider=nominatim request=failed httpStatus=${Number(response?.status) || 0}`,
+          `Nominatim 请求失败，HTTP 状态码：${Number(response?.status) || 0}`,
         )
         return undefined
       }
@@ -321,18 +343,18 @@ export function createReverseGeocoder(dependencies = {}) {
           ? body.address
           : undefined
       if (!address) {
-        log('warn', 'provider=nominatim response=invalid httpStatus=200')
+        log('warn', 'Nominatim 返回成功响应，但其中没有可用的地址信息')
         return undefined
       }
       log(
         'info',
-        `provider=nominatim request=succeeded httpStatus=${Number(response.status) || 200} durationMs=${Math.max(0, now() - startedAt)}`,
+        `Nominatim 位置查询成功，HTTP 状态码：${Number(response.status) || 200}，耗时：${Math.max(0, now() - startedAt)} ms`,
       )
       return address
     } catch (error) {
       log(
         'error',
-        `provider=nominatim request=exception type=${safeExceptionType(error)}`,
+        `Nominatim 请求失败：${safeNetworkReason(error)}，耗时：${Math.max(0, now() - startedAt)} ms`,
       )
       return undefined
     }
@@ -369,7 +391,7 @@ export function createReverseGeocoder(dependencies = {}) {
   async function requestAmap(gps, pluginConfig, config) {
     const keys = getAmapKeys(config)
     if (keys.length === 0) {
-      log('warn', 'provider=amap request=skipped reason=no_api_key')
+      log('warn', '未配置高德 Web 服务 Key，无法查询图片位置')
       return undefined
     }
     const startIndex = amapKeyIndex % keys.length
@@ -390,7 +412,7 @@ export function createReverseGeocoder(dependencies = {}) {
       const startedAt = now()
       log(
         'debug',
-        `provider=amap request=started attempt=${attempt} totalKeys=${keys.length}`,
+        `正在请求高德反向地理编码服务（第 ${attempt} 次尝试，共配置 ${keys.length} 个 Key）`,
       )
       try {
         const response = await fetchImpl(
@@ -401,7 +423,7 @@ export function createReverseGeocoder(dependencies = {}) {
           const status = Number(response?.status) || 0
           log(
             'warn',
-            `provider=amap request=failed httpStatus=${status} attempt=${attempt}`,
+            `高德请求失败，HTTP 状态码：${status}，当前为第 ${attempt} 次尝试`,
           )
           if ([401, 403, 429].includes(status)) continue
           return undefined
@@ -410,12 +432,12 @@ export function createReverseGeocoder(dependencies = {}) {
         if (body?.status === '1') {
           const address = normalizeAmapAddress(body)
           if (!address) {
-            log('warn', 'provider=amap response=invalid httpStatus=200')
+            log('warn', '高德返回成功响应，但其中没有可用的地址信息')
             return undefined
           }
           log(
             'info',
-            `provider=amap request=succeeded httpStatus=${Number(response.status) || 200} attempt=${attempt} durationMs=${Math.max(0, now() - startedAt)}`,
+            `高德位置查询成功，HTTP 状态码：${Number(response.status) || 200}，第 ${attempt} 次尝试，耗时：${Math.max(0, now() - startedAt)} ms`,
           )
           return address
         }
@@ -423,13 +445,15 @@ export function createReverseGeocoder(dependencies = {}) {
         const apiCode = /^\d{5}$/u.test(rawApiCode) ? rawApiCode : 'unknown'
         log(
           'warn',
-          `provider=amap request=failed apiCode=${apiCode} attempt=${attempt}`,
+          apiCode === 'unknown'
+            ? `高德返回了无法识别的错误码，当前为第 ${attempt} 次尝试`
+            : `高德请求失败，错误码：${apiCode}，当前为第 ${attempt} 次尝试`,
         )
         if (!AMAP_RETRYABLE_CODES.has(apiCode)) return undefined
       } catch (error) {
         log(
           'error',
-          `provider=amap request=exception type=${safeExceptionType(error)} attempt=${attempt}`,
+          `高德请求失败：${safeNetworkReason(error)}，第 ${attempt} 次尝试，耗时：${Math.max(0, now() - startedAt)} ms`,
         )
         return undefined
       }
@@ -452,31 +476,37 @@ export function createReverseGeocoder(dependencies = {}) {
     if (!endpoint) {
       log(
         'warn',
-        `provider=${provider} request=skipped reason=invalid_endpoint`,
+        `${provider === 'amap' ? '高德' : 'Nominatim'} 位置服务地址无效，已停止查询`,
       )
       return undefined
     }
     if (provider === 'amap' && getAmapKeys(config).length === 0) {
-      log('warn', 'provider=amap request=skipped reason=no_api_key')
+      log('warn', '未配置高德 Web 服务 Key，无法查询图片位置')
       return undefined
     }
     const key = coordinateCacheKey(provider, endpoint, gps)
     const cached = cache.get(key)
     if (cached) {
       if (cached.expiresAt > now()) {
-        log('debug', `provider=${provider} cache=hit`)
+        log(
+          'debug',
+          `已命中${provider === 'amap' ? '高德' : 'Nominatim'}位置缓存，无需再次请求服务`,
+        )
         return cached.pending
       }
       deleteCacheEntry(key, cached)
     }
     if (pendingRequests >= MAX_PENDING_REQUESTS) {
-      log('warn', `provider=${provider} request=skipped reason=queue_full`)
+      log(
+        'warn',
+        `${provider === 'amap' ? '高德' : 'Nominatim'}位置查询队列已满，本次停止查询`,
+      )
       return undefined
     }
     pendingRequests += 1
     log(
       'debug',
-      `provider=${provider} queue=accepted pending=${pendingRequests}`,
+      `已将${provider === 'amap' ? '高德' : 'Nominatim'}位置查询加入队列，当前等待或处理中：${pendingRequests} 项`,
     )
 
     const pending = queue

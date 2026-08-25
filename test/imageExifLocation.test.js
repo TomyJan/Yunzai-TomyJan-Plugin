@@ -124,14 +124,15 @@ test('returns undefined when EXIF GPS is missing or outside valid ranges', async
   }
 })
 
-test('treats EXIF parser errors as images without usable GPS', async () => {
-  const result = await extractGps(Buffer.from('image'), {
-    gpsReader: async () => {
-      throw new Error('invalid EXIF')
-    },
-  })
-
-  assert.equal(result, undefined)
+test('propagates EXIF parser errors for safe workflow logging', async () => {
+  await assert.rejects(
+    extractGps(Buffer.from('image'), {
+      gpsReader: async () => {
+        throw new Error('invalid EXIF')
+      },
+    }),
+    /invalid EXIF/u,
+  )
 })
 
 test('formats municipality addresses without duplicate city names', () => {
@@ -589,8 +590,29 @@ test('bounds external Amap codes and exception types in logs', async () => {
   const logText = entries.map((entry) => entry.message).join('\n')
 
   assert.doesNotMatch(logText, /secret-log|secret-type|Injected/u)
-  assert.match(logText, /apiCode=unknown/u)
-  assert.match(logText, /type=Error/u)
+  assert.match(logText, /高德返回了无法识别的错误码/u)
+  assert.match(logText, /高德请求失败：未知网络错误/u)
+  assert.doesNotMatch(logText, /\b(?:provider|request|apiCode|type)=/u)
+})
+
+test('describes safe Nominatim network causes in natural language', async () => {
+  const { entries, logger } = createLogCollector()
+  const error = new TypeError('fetch failed: secret endpoint')
+  error.cause = Object.assign(new Error('connect timeout: secret proxy'), {
+    code: 'UND_ERR_CONNECT_TIMEOUT',
+  })
+  const reverseGeocode = createReverseGeocoder({
+    logger,
+    fetchImpl: async () => {
+      throw error
+    },
+  })
+
+  await reverseGeocode({ latitude: 31, longitude: 121 }, configuredGeocoder)
+  const logText = entries.map((entry) => entry.message).join('\n')
+
+  assert.match(logText, /Nominatim 请求失败：连接超时/u)
+  assert.doesNotMatch(logText, /secret|provider=|request=|type=/u)
 })
 
 test('uses the default delay when requests arrive too quickly', async () => {

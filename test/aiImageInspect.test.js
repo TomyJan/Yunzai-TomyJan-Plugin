@@ -154,6 +154,40 @@ test('rejects unsupported image content before providers run', async () => {
   )
 })
 
+test('allows callers to opt into HEIF downloads without changing AI defaults', async () => {
+  const image = await downloadImage('https://example.test/photo.heic', {
+    allowedMimeTypes: ['image/jpeg', 'image/heic', 'image/heif'],
+    downloadImpl: async () => ({
+      buffer: Buffer.from('heic'),
+      mimeType: 'image/heic',
+    }),
+  })
+
+  assert.equal(image.mimeType, 'image/heic')
+  await assert.rejects(
+    downloadImage('https://example.test/photo.heic', {
+      downloadImpl: async () => ({
+        buffer: Buffer.from('heic'),
+        mimeType: 'image/heic',
+      }),
+    }),
+    /PNG、JPEG、WebP/,
+  )
+})
+
+test('uses an allowed MIME hint for opaque HEIF download responses', async () => {
+  const image = await downloadImage('https://example.test/download?id=123', {
+    allowedMimeTypes: ['image/heic', 'image/heif'],
+    mimeTypeHint: 'image/heif',
+    downloadImpl: async () => ({
+      buffer: Buffer.from('heif'),
+      mimeType: 'application/octet-stream',
+    }),
+  })
+
+  assert.equal(image.mimeType, 'image/heif')
+})
+
 test('rejects private image URLs before making a request', async () => {
   let requested = false
   await assert.rejects(

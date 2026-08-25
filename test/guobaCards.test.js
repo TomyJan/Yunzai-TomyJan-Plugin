@@ -55,8 +55,6 @@ const expectedCardFields = {
   '图片 EXIF 定位设置': [
     'imageExif.enable',
     'imageExif.provider',
-    'imageExif.allowPrivate',
-    'imageExif.allowedGroups',
     'imageExif.honorific',
     'imageExif.timeoutMs',
     'imageExif.maxFileSize',

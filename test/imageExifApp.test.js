@@ -33,7 +33,7 @@ test('registers a low-priority message listener and delegates to the model workf
   }
 })
 
-test('logs allowed image processing by level without sensitive values', async () => {
+test('logs image processing in natural language without sensitive values', async () => {
   const logs = []
   const logger = Object.fromEntries(
     ['debug', 'info', 'warn', 'error'].map((level) => [
@@ -55,6 +55,10 @@ test('logs allowed image processing by level without sensitive values', async ()
   assert.ok(logs.some((entry) => entry.level === 'info'))
   assert.ok(logs.some((entry) => entry.level === 'debug'))
   const logText = logs.map((entry) => entry.message).join('\n')
+  assert.match(logText, /开始处理图片定位/u)
+  assert.match(logText, /图片下载完成/u)
+  assert.match(logText, /没有可用的 GPS 信息/u)
+  assert.doesNotMatch(logText, /\b(?:provider|workflow|stage|status|reason)=/u)
   assert.doesNotMatch(logText, /first\.jpg|小明|10001/u)
 })
 
@@ -77,7 +81,7 @@ test('uses the selected provider default attribution in replies', async () => {
   )
 })
 
-test('skips disabled, disallowed and imageless events without downloading', async () => {
+test('processes all chat scopes when enabled and skips imageless events', async () => {
   let downloads = 0
   const dependencies = {
     downloadImage: async () => {
@@ -89,13 +93,17 @@ test('skips disabled, disallowed and imageless events without downloading', asyn
     await processImageExifEvent(privateImageEvent(), {}, dependencies),
     { status: 'skipped', reason: 'disabled' },
   )
-  assert.deepEqual(
-    await processImageExifEvent(
-      privateImageEvent({ isPrivate: false }),
-      { imageExif: { enable: true } },
-      dependencies,
-    ),
-    { status: 'skipped', reason: 'scope' },
+  await processImageExifEvent(
+    privateImageEvent({ isPrivate: false, isGroup: true, group_id: 123456 }),
+    { imageExif: { enable: true } },
+    {
+      ...dependencies,
+      downloadImage: async () => {
+        downloads += 1
+        return { buffer: Buffer.from('jpeg'), mimeType: 'image/jpeg' }
+      },
+      extractGps: async () => undefined,
+    },
   )
   assert.deepEqual(
     await processImageExifEvent(
@@ -105,7 +113,232 @@ test('skips disabled, disallowed and imageless events without downloading', asyn
     ),
     { status: 'skipped', reason: 'no_image' },
   )
-  assert.equal(downloads, 0)
+  assert.equal(downloads, 1)
+})
+
+test('resolves HEIC file messages through get_file without trusting message paths', async () => {
+  const image = Buffer.from('heic-image')
+  const apiCalls = []
+  let downloaded = false
+  const result = await processImageExifEvent(
+    privateImageEvent({
+      message: [
+        {
+          type: 'file',
+          data: {
+            file: 'C:\\untrusted\\IMG_0001.HEIC',
+            file_id: 'napcat-file-id',
+            file_name: 'IMG_0001.HEIC',
+          },
+        },
+      ],
+      bot: {
+        sendApi: async (action, payload) => {
+          apiCalls.push({ action, payload })
+          return {
+            data: {
+              file: 'C:\\trusted-cache\\IMG_0001.HEIC',
+              file_name: 'IMG_0001.HEIC',
+              file_size: image.length,
+            },
+          }
+        },
+      },
+    }),
+    { imageExif: { enable: true } },
+    {
+      downloadImage: async () => {
+        downloaded = true
+      },
+      readFile: async (filePath) => {
+        assert.equal(filePath, 'C:\\trusted-cache\\IMG_0001.HEIC')
+        return image
+      },
+      statFile: async () => ({ size: image.length, isFile: () => true }),
+      extractGps: async (buffer) => {
+        assert.equal(buffer, image)
+        return undefined
+      },
+    },
+  )
+
+  assert.deepEqual(apiCalls, [
+    { action: 'get_file', payload: { file_id: 'napcat-file-id' } },
+  ])
+  assert.equal(downloaded, false)
+  assert.deepEqual(result, { status: 'skipped', reason: 'no_gps' })
+})
+
+test('downloads the remote URL returned by get_file for HEIF files', async () => {
+  const calls = []
+  const result = await processImageExifEvent(
+    privateImageEvent({
+      message: [
+        {
+          type: 'file',
+          data: { file_name: 'camera.heif', file_id: 'remote-file-id' },
+        },
+      ],
+      bot: {
+        sendApi: async () => ({
+          data: { data: { url: 'https://files.example/download?id=123' } },
+        }),
+      },
+    }),
+    { imageExif: { enable: true } },
+    {
+      downloadImage: async (url, options) => {
+        calls.push({ url, options })
+        return { buffer: Buffer.from('heif'), mimeType: 'image/heif' }
+      },
+      extractGps: async () => undefined,
+    },
+  )
+
+  assert.equal(calls[0].url, 'https://files.example/download?id=123')
+  assert.ok(calls[0].options.allowedMimeTypes.includes('image/heif'))
+  assert.equal(calls[0].options.mimeTypeHint, 'image/heif')
+  assert.deepEqual(result, { status: 'skipped', reason: 'no_gps' })
+})
+
+test('supports OneBot file segments that use file as an opaque file ID', async () => {
+  const apiCalls = []
+  const result = await processImageExifEvent(
+    privateImageEvent({
+      message: [
+        {
+          type: 'file',
+          data: { name: 'camera.heic', file: 'opaque-onebot-file-id' },
+        },
+      ],
+      bot: {
+        sendApi: async (action, payload) => {
+          apiCalls.push({ action, payload })
+          return { data: { file: 'C:\\cache\\camera.heic' } }
+        },
+      },
+    }),
+    { imageExif: { enable: true } },
+    {
+      statFile: async () => ({ size: 4, isFile: () => true }),
+      readFile: async () => Buffer.from('heic'),
+      extractGps: async () => undefined,
+    },
+  )
+
+  assert.deepEqual(apiCalls, [
+    { action: 'get_file', payload: { file_id: 'opaque-onebot-file-id' } },
+  ])
+  assert.deepEqual(result, { status: 'skipped', reason: 'no_gps' })
+})
+
+test('times out a stalled get_file request and releases the workflow', async () => {
+  const event = privateImageEvent({
+    message: [
+      {
+        type: 'file',
+        data: { file_name: 'camera.heic', file_id: 'stalled-file-id' },
+      },
+    ],
+    bot: { sendApi: async () => new Promise(() => {}) },
+  })
+  const config = { imageExif: { enable: true, timeoutMs: 10 } }
+
+  const first = await processImageExifEvent(event, config)
+  const second = await processImageExifEvent(privateImageEvent(), config, {
+    downloadImage: async () => ({
+      buffer: Buffer.from('jpeg'),
+      mimeType: 'image/jpeg',
+    }),
+    extractGps: async () => undefined,
+  })
+
+  assert.deepEqual(first, { status: 'error', stage: 'download' })
+  assert.deepEqual(second, { status: 'skipped', reason: 'no_gps' })
+})
+
+test('times out a stalled local HEIC read and releases the workflow', async () => {
+  const event = privateImageEvent({
+    message: [
+      {
+        type: 'file',
+        data: { file_name: 'camera.heic', file_id: 'cached-file-id' },
+      },
+    ],
+    bot: {
+      sendApi: async () => ({ data: { file: 'C:\\cache\\camera.heic' } }),
+    },
+  })
+  const config = { imageExif: { enable: true, timeoutMs: 10 } }
+
+  const result = await processImageExifEvent(event, config, {
+    statFile: async () => ({ size: 4, isFile: () => true }),
+    readFile: async () => new Promise(() => {}),
+  })
+
+  assert.deepEqual(result, { status: 'error', stage: 'download' })
+})
+
+test('rejects oversized local HEIC files before reading their contents', async () => {
+  let read = false
+  const result = await processImageExifEvent(
+    privateImageEvent({
+      message: [
+        {
+          type: 'file',
+          data: { file_name: 'large.heic', file_id: 'large-file-id' },
+        },
+      ],
+      bot: {
+        sendApi: async () => ({ data: { file: 'C:\\cache\\large.heic' } }),
+      },
+    }),
+    { imageExif: { enable: true, maxFileSize: 1024 } },
+    {
+      statFile: async () => ({ size: 1025, isFile: () => true }),
+      readFile: async () => {
+        read = true
+        return Buffer.alloc(1025)
+      },
+    },
+  )
+
+  assert.equal(read, false)
+  assert.deepEqual(result, { status: 'error', stage: 'download' })
+})
+
+test('downloads HEIF file URLs with explicit EXIF-only MIME support', async () => {
+  const calls = []
+  await processImageExifEvent(
+    privateImageEvent({
+      message: [
+        {
+          type: 'file',
+          data: {
+            file_name: 'camera.heif',
+            url: 'https://files.example/camera.heif',
+          },
+        },
+      ],
+    }),
+    { imageExif: { enable: true } },
+    {
+      downloadImage: async (url, options) => {
+        calls.push({ url, options })
+        return { buffer: Buffer.from('heif'), mimeType: 'image/heif' }
+      },
+      extractGps: async () => undefined,
+    },
+  )
+
+  assert.equal(calls[0].url, 'https://files.example/camera.heif')
+  assert.deepEqual(calls[0].options.allowedMimeTypes, [
+    'image/png',
+    'image/jpeg',
+    'image/webp',
+    'image/heic',
+    'image/heif',
+  ])
 })
 
 test('downloads only the first image and produces the requested reply', async () => {

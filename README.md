@@ -144,8 +144,6 @@ pnpm -C ./plugins/Yunzai-TomyJan-Plugin/ --ignore-workspace test:c2pa
     // 图片 EXIF 定位自动回复配置
     "enable": false, // 是否自动检查收到图片的 EXIF GPS
     "provider": "nominatim", // nominatim 或 amap
-    "allowPrivate": true, // 是否允许私聊触发
-    "allowedGroups": [], // 允许触发的群号白名单，空数组不允许群聊
     "honorific": "先生", // 昵称后的称谓，可设为“朋友”或空字符串
     "timeoutMs": 10000, // 图片下载和地理编码超时
     "maxFileSize": 20971520, // 图片大小上限，默认 20 MiB
@@ -232,7 +230,7 @@ OpenAI 和 Hive 的 `apiKeys`、Sightengine 的 `credentials` 都可以配置多
 
 #### 图片 EXIF 定位配置
 
-该功能默认关闭，支持 Nominatim 兼容接口和高德开放平台。默认提供商是 `nominatim`，默认 endpoint 为 OSMF 公共 reverse API；切换到 `amap` 后需要填写至少一个高德 Web 服务 Key。启用后，私聊收到图片会自动检查 EXIF GPS；群聊只有群号位于 `allowedGroups` 白名单时才会检查。建议通过锅巴配置，并在允许群聊前确认图片发送者知悉坐标会提交给所选位置服务商。
+该功能默认关闭，支持 Nominatim 兼容接口和高德开放平台。默认提供商是 `nominatim`，默认 endpoint 为 OSMF 公共 reverse API；切换到 `amap` 后需要填写至少一个高德 Web 服务 Key。启用后会自动检查所有群聊和私聊中的图片 EXIF GPS，也支持 QQ 以文件消息发送的 HEIF/HEIC 图片。请确认图片发送者知悉坐标会提交给所选位置服务商。
 
 高德配置示例：
 
@@ -248,7 +246,7 @@ OpenAI 和 Hive 的 `apiKeys`、Sightengine 的 `credentials` 都可以配置多
 }
 ```
 
-- 图片只下载到内存，不保存图片、EXIF、坐标或地理编码响应；日志也不会记录图片 URL、坐标、地点、昵称、API Key 或完整响应。
+- 图片只下载到内存，不保存图片、EXIF、坐标或地理编码响应；HEIF/HEIC 文件可通过适配器的 `get_file` 接口读取临时 URL 或本地缓存。插件不会直接读取消息段提供的本地路径。日志也不会记录图片 URL、本地路径、坐标、地点、昵称、API Key 或完整响应。
 - 图片无 GPS、图片被平台压缩清除 EXIF、下载失败或地理编码失败时不会回复。
 - 有效地点会按省/直辖市、城市、区县、乡镇/街道逐层去重，例如：`请问是上海市松江区泗泾镇的小明 先生吗？`
 - 称呼优先使用群名片，其次使用发送者昵称，最后回退为“朋友”。`honorific` 默认是“先生”，可改成中性的“朋友”或留空；插件不会推断性别。
@@ -261,10 +259,10 @@ OpenAI 和 Hive 的 `apiKeys`、Sightengine 的 `credentials` 都可以配置多
 
 日志使用 `[图片EXIF]` 前缀并遵循全局 `logger.logLevel`：
 
-- `debug`：缓存命中、队列接收、处理阶段和跳过原因。
-- `info`：获准图片开始处理、提供商请求成功和总耗时。
-- `warn`：缺少高德 Key、队列已满、HTTP/API 失败和响应无法识别。
-- `error`：网络、超时或 JSON 解析等请求异常，只记录安全异常类别。
+- `debug`：任务数量、输入来源、缓存命中、队列数量、请求尝试和跳过原因。
+- `info`：处理开始、图片格式与大小、各阶段耗时、发现 GPS、位置查询成功和回复完成。
+- `warn`：缺少高德 Key、队列已满、HTTP/API 失败、响应无法识别或没有可用位置。
+- `error`：图片读取、EXIF 解析、DNS、连接、代理、TLS、超时或 JSON 解析异常，只记录安全分类。
 
 全插件只配置一个代理地址 `proxy.url`，各功能分别通过自己的 `proxy.enable` 决定是否使用。`aiImage.proxy.enable` 只控制 OpenAI、Hive 和 Sightengine API；待检测图片下载（包括重定向）和本地 C2PA 始终直连。`JMComic.proxy.enable` 开启后，插件会将统一代理地址同步到 `data/JMComic/option.yml` 的 `client.postman.meta_data.proxies`。
 
@@ -290,9 +288,9 @@ OpenAI 和 Hive 的 `apiKeys`、Sightengine 的 `credentials` 都可以配置多
 
 ### 图片 EXIF 定位
 
-- 功能启用且聊天范围获准时，收到图片会自动提取 EXIF GPS，通过 Nominatim 或高德反向解析位置，并与群名片或昵称组合成问候消息。
-- 默认只允许私聊；群聊必须配置群号白名单。无 GPS 或任一处理阶段失败时静默跳过。
-- 请谨慎开启群聊白名单。位置元数据属于敏感隐私，机器人不会保存或记录解析出的坐标和地点。
+- 功能启用后，所有群聊和私聊收到图片时都会自动提取 EXIF GPS，通过 Nominatim 或高德反向解析位置，并与群名片或昵称组合成问候消息。
+- 支持普通图片消息，以及 QQ 作为文件发送的 `.heif`、`.heic` 图片。无 GPS 或任一处理阶段失败时不回复。
+- 位置元数据属于敏感信息，启用前请确认使用场景。机器人不会保存或记录解析出的坐标和地点。
 
 ### EDU Auth
 

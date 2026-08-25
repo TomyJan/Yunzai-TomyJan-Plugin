@@ -260,19 +260,6 @@ const schemas = [
     },
   },
   {
-    field: 'imageExif.allowPrivate',
-    label: '允许私聊',
-    helpMessage: '是否在私聊收到图片时自动检查 EXIF 定位',
-    bottomHelpMessage: '仅在功能启用时生效',
-    component: 'Switch',
-  },
-  tags(
-    'imageExif.allowedGroups',
-    '群聊白名单',
-    '逐项添加允许自动检查图片 EXIF 的群号',
-    '空列表不允许任何群聊；请先确认群成员知悉位置隐私风险',
-  ),
-  {
     field: 'imageExif.honorific',
     label: '称谓',
     helpMessage: '添加在群名片或昵称后的称谓',
