@@ -188,6 +188,22 @@ test('uses an allowed MIME hint for opaque HEIF download responses', async () =>
   assert.equal(image.mimeType, 'image/heif')
 })
 
+test('uses a HEIF MIME hint with the real fetch download path', async () => {
+  const image = await downloadImage('https://example.test/download?id=123', {
+    allowedMimeTypes: ['image/heic', 'image/heif'],
+    mimeTypeHint: 'image/heif',
+    resolveHost: async () => [{ address: '93.184.216.34' }],
+    fetchImpl: async () =>
+      new Response(Buffer.from('heif'), {
+        status: 200,
+        headers: { 'content-type': 'application/octet-stream' },
+      }),
+  })
+
+  assert.equal(image.mimeType, 'image/heif')
+  assert.deepEqual(image.buffer, Buffer.from('heif'))
+})
+
 test('rejects private image URLs before making a request', async () => {
   let requested = false
   await assert.rejects(

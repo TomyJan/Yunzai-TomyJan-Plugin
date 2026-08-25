@@ -255,6 +255,7 @@ test('times out a stalled get_file request and releases the workflow', async () 
 })
 
 test('times out a stalled local HEIC read and releases the workflow', async () => {
+  let aborted = false
   const event = privateImageEvent({
     message: [
       {
@@ -270,10 +271,91 @@ test('times out a stalled local HEIC read and releases the workflow', async () =
 
   const result = await processImageExifEvent(event, config, {
     statFile: async () => ({ size: 4, isFile: () => true }),
-    readFile: async () => new Promise(() => {}),
+    readFile: async (_filePath, options = {}) =>
+      new Promise((resolve, reject) => {
+        options.signal?.addEventListener(
+          'abort',
+          () => {
+            aborted = true
+            reject(options.signal.reason)
+          },
+          { once: true },
+        )
+      }),
   })
 
   assert.deepEqual(result, { status: 'error', stage: 'download' })
+  assert.equal(aborted, true)
+})
+
+test('rejects UNC and Windows device paths returned by get_file', async () => {
+  const unsafePaths = [
+    String.raw`\\server\share\camera.heic`,
+    String.raw`\\?\C:\cache\camera.heic`,
+    String.raw`\\.\PhysicalDrive0`,
+    String.raw`\??\C:\cache\camera.heic`,
+  ]
+
+  for (const filePath of unsafePaths) {
+    let accessed = false
+    const result = await processImageExifEvent(
+      privateImageEvent({
+        message: [
+          {
+            type: 'file',
+            data: { file_name: 'camera.heic', file_id: 'unsafe-file-id' },
+          },
+        ],
+        bot: { sendApi: async () => ({ data: { file: filePath } }) },
+      }),
+      { imageExif: { enable: true } },
+      {
+        statFile: async () => {
+          accessed = true
+          return { size: 4, isFile: () => true }
+        },
+        readFile: async () => {
+          accessed = true
+          return Buffer.from('heic')
+        },
+      },
+    )
+
+    assert.equal(accessed, false, filePath)
+    assert.deepEqual(result, { status: 'error', stage: 'download' })
+  }
+})
+
+test('accepts standard Windows and POSIX paths returned by get_file', async () => {
+  for (const filePath of [
+    String.raw`C:\cache\camera.heic`,
+    '/tmp/camera.heic',
+  ]) {
+    let accessedPath
+    const result = await processImageExifEvent(
+      privateImageEvent({
+        message: [
+          {
+            type: 'file',
+            data: { file_name: 'camera.heic', file_id: 'safe-file-id' },
+          },
+        ],
+        bot: { sendApi: async () => ({ data: { file: filePath } }) },
+      }),
+      { imageExif: { enable: true } },
+      {
+        statFile: async (value) => {
+          accessedPath = value
+          return { size: 4, isFile: () => true }
+        },
+        readFile: async () => Buffer.from('heic'),
+        extractGps: async () => undefined,
+      },
+    )
+
+    assert.equal(accessedPath, filePath)
+    assert.deepEqual(result, { status: 'skipped', reason: 'no_gps' })
+  }
 })
 
 test('rejects oversized local HEIC files before reading their contents', async () => {

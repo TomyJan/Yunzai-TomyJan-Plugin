@@ -107,20 +107,34 @@ function unwrapFileResult(result) {
 }
 
 async function withTimeout(operation, timeoutMs) {
+  const controller = new AbortController()
   let timer
   try {
     return await Promise.race([
-      Promise.resolve().then(operation),
+      Promise.resolve().then(() => operation(controller.signal)),
       new Promise((resolve, reject) => {
-        timer = setTimeout(
-          () => reject(fileResolutionError('EXIF_FILE_TIMEOUT')),
-          timeoutMs,
-        )
+        timer = setTimeout(() => {
+          const error = fileResolutionError('EXIF_FILE_TIMEOUT')
+          controller.abort(error)
+          reject(error)
+        }, timeoutMs)
       }),
     ])
   } finally {
     clearTimeout(timer)
   }
+}
+
+function isSafeAdapterFilePath(value) {
+  if (typeof value !== 'string') return false
+  const filePath = value.trim()
+  if (!path.isAbsolute(filePath) && !path.win32.isAbsolute(filePath)) {
+    return false
+  }
+  return !(
+    /^[\\/]{2}/u.test(filePath) ||
+    /^[\\/](?:\?\?|device|globalroot)(?:[\\/]|$)/iu.test(filePath)
+  )
 }
 
 async function resolveHeifFile(event, candidate, options) {
@@ -149,11 +163,9 @@ async function resolveHeifFile(event, candidate, options) {
     }
   }
 
-  const filePath = [data?.file, data?.file_path, data?.path].find(
-    (value) =>
-      typeof value === 'string' &&
-      (path.isAbsolute(value) || path.win32.isAbsolute(value)),
-  )
+  const filePath = [data?.file, data?.file_path, data?.path]
+    .find((value) => isSafeAdapterFilePath(value))
+    ?.trim()
   if (!filePath) throw fileResolutionError('EXIF_FILE_UNAVAILABLE')
   const statFile = options.statFile || fs.stat
   const readFile = options.readFile || fs.readFile
@@ -164,7 +176,10 @@ async function resolveHeifFile(event, candidate, options) {
   if (Number(stats?.size) > options.maxFileSize) {
     throw fileResolutionError('EXIF_FILE_TOO_LARGE')
   }
-  const buffer = await withTimeout(() => readFile(filePath), options.timeoutMs)
+  const buffer = await withTimeout(
+    (signal) => readFile(filePath, { signal }),
+    options.timeoutMs,
+  )
   if (buffer.byteLength > options.maxFileSize) {
     throw fileResolutionError('EXIF_FILE_TOO_LARGE')
   }
