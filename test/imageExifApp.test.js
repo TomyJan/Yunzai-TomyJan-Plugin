@@ -347,7 +347,6 @@ test('downloads only the first image and produces the requested reply', async ()
       imageExif: {
         enable: true,
         honorific: '先生',
-        attribution: '位置服务商',
       },
     },
     {
