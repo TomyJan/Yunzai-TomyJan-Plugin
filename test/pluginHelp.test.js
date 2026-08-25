@@ -25,3 +25,20 @@ test('lists AI image inspection in the plugin menu with a valid icon', () => {
     true,
   )
 })
+
+test('lists automatic EXIF location inspection in the plugin menu', () => {
+  const utilityGroup = helpData.find((group) => group.group === '实用功能')
+  const item = utilityGroup?.list?.find((entry) => entry.title.includes('EXIF'))
+
+  assert.deepEqual(item, {
+    icon: 'tomyjan',
+    title: '图片 EXIF 定位（自动）',
+    desc: '收到图片后自动解析其中的拍摄位置',
+  })
+  assert.equal(
+    fs.existsSync(
+      new URL(`resources/img/common/icon/${item.icon}.png`, rootUrl),
+    ),
+    true,
+  )
+})

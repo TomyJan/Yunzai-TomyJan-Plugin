@@ -66,6 +66,19 @@
       "credentials": []
     }
   },
+  "imageExif": {
+    "enable": false,
+    "allowPrivate": true,
+    "allowedGroups": [],
+    "honorific": "先生",
+    "timeoutMs": 10000,
+    "maxFileSize": 20971520,
+    "geocodingEndpoint": "",
+    "attribution": "",
+    "proxy": {
+      "enable": false
+    }
+  },
   "httpServer": {
     "enable": false,
     "listenPort": 5252,

@@ -12,6 +12,9 @@
     - icon: tomyjan
       title: "#ai图 + 图片/引用图片"
       desc: 检测图片中的 AI 生成或来源信号
+    - icon: tomyjan
+      title: 图片 EXIF 定位（自动）
+      desc: 收到图片后自动解析其中的拍摄位置
 - group: EDU 认证
   list:
     - icon: eduauth

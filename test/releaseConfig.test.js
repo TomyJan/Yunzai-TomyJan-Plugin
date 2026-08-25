@@ -36,6 +36,16 @@ test('exposes read-only formatting and test scripts for CI', () => {
     packageJson.scripts['test:coverage'],
     /--test-coverage-include="?model\//,
   )
+  for (const module of [
+    'imageExifLocation.js',
+    'imageExifMessage.js',
+    'imageExifPolicy.js',
+  ]) {
+    assert.match(
+      packageJson.scripts['test:coverage'],
+      new RegExp(`--test-coverage-include="?model/${module}`),
+    )
+  }
 })
 
 test('does not declare the built-in child_process module as a dependency', () => {
