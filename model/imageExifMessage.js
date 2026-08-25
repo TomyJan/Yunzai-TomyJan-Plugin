@@ -4,6 +4,7 @@ import {
   extractGps as defaultExtractGps,
   formatExifReply,
   formatLocation,
+  getGeocodingAttribution,
 } from './imageExifLocation.js'
 import {
   getSenderDisplayName,
@@ -40,6 +41,14 @@ function getCurrentImageUrls(event) {
   ]
 }
 
+function safeLog(logger, level, message) {
+  try {
+    logger?.[level]?.(message)
+  } catch {
+    // Logging must not change message handling.
+  }
+}
+
 export async function processImageExifEvent(
   event,
   pluginConfig = {},
@@ -55,9 +64,13 @@ export async function processImageExifEvent(
   const imageUrl = getCurrentImageUrls(event)[0]
   if (!imageUrl) return { status: 'skipped', reason: 'no_image' }
   if (activeJobs >= MAX_CONCURRENT_JOBS) {
+    safeLog(dependencies.logger, 'warn', 'workflow=skipped reason=busy')
     return { status: 'skipped', reason: 'busy' }
   }
   activeJobs += 1
+  const provider = imageExifConfig.provider === 'amap' ? 'amap' : 'nominatim'
+  const startedAt = Date.now()
+  safeLog(dependencies.logger, 'info', `provider=${provider} workflow=started`)
 
   try {
     const downloadImage = dependencies.downloadImage || defaultDownloadImage
@@ -78,25 +91,70 @@ export async function processImageExifEvent(
         ),
       })
     } catch {
+      safeLog(
+        dependencies.logger,
+        'warn',
+        `provider=${provider} workflow=failed stage=download`,
+      )
       return { status: 'error', stage: 'download' }
     }
+    safeLog(
+      dependencies.logger,
+      'debug',
+      `provider=${provider} stage=download status=succeeded`,
+    )
 
     let gps
     try {
       gps = await extractGps(image.buffer)
     } catch {
+      safeLog(
+        dependencies.logger,
+        'warn',
+        `provider=${provider} workflow=failed stage=exif`,
+      )
       return { status: 'error', stage: 'exif' }
     }
-    if (!gps) return { status: 'skipped', reason: 'no_gps' }
+    if (!gps) {
+      safeLog(
+        dependencies.logger,
+        'debug',
+        `provider=${provider} workflow=skipped reason=no_gps`,
+      )
+      return { status: 'skipped', reason: 'no_gps' }
+    }
+    safeLog(
+      dependencies.logger,
+      'debug',
+      `provider=${provider} stage=exif status=gps_found`,
+    )
 
     let address
     try {
       address = await reverseGeocode(gps, pluginConfig)
     } catch {
+      safeLog(
+        dependencies.logger,
+        'warn',
+        `provider=${provider} workflow=failed stage=geocode`,
+      )
       return { status: 'error', stage: 'geocode' }
     }
     const location = formatLocation(address)
-    if (!location) return { status: 'skipped', reason: 'no_location' }
+    if (!location) {
+      safeLog(
+        dependencies.logger,
+        'debug',
+        `provider=${provider} workflow=skipped reason=no_location`,
+      )
+      return { status: 'skipped', reason: 'no_location' }
+    }
+
+    safeLog(
+      dependencies.logger,
+      'info',
+      `provider=${provider} workflow=succeeded durationMs=${Math.max(0, Date.now() - startedAt)}`,
+    )
 
     return {
       status: 'reply',
@@ -104,7 +162,7 @@ export async function processImageExifEvent(
         location,
         getSenderDisplayName(event),
         imageExifConfig.honorific,
-        imageExifConfig.attribution,
+        getGeocodingAttribution(imageExifConfig),
       ),
     }
   } finally {

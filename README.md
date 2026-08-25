@@ -143,13 +143,15 @@ pnpm -C ./plugins/Yunzai-TomyJan-Plugin/ --ignore-workspace test:c2pa
   "imageExif": {
     // 图片 EXIF 定位自动回复配置
     "enable": false, // 是否自动检查收到图片的 EXIF GPS
+    "provider": "nominatim", // nominatim 或 amap
     "allowPrivate": true, // 是否允许私聊触发
     "allowedGroups": [], // 允许触发的群号白名单，空数组不允许群聊
     "honorific": "先生", // 昵称后的称谓，可设为“朋友”或空字符串
     "timeoutMs": 10000, // 图片下载和地理编码超时
     "maxFileSize": 20971520, // 图片大小上限，默认 20 MiB
-    "geocodingEndpoint": "", // 自建或已获授权的 Nominatim 兼容 HTTPS 服务
-    "attribution": "", // 成功回复第二行展示的数据来源署名
+    "geocodingEndpoint": "https://nominatim.openstreetmap.org/reverse", // Nominatim reverse API
+    "attribution": "", // 留空时使用提供商默认署名
+    "amap": { "apiKeys": [] }, // 高德开放平台 Web 服务 Key 列表
     "proxy": { "enable": false } // 反向地理编码是否使用上方统一代理
   },
   "httpServer": {
@@ -230,16 +232,39 @@ OpenAI 和 Hive 的 `apiKeys`、Sightengine 的 `credentials` 都可以配置多
 
 #### 图片 EXIF 定位配置
 
-该功能默认关闭，反向地理编码地址也默认为空。管理员必须配置允许处理图片坐标的自建或已获授权 Nominatim 兼容 HTTPS 服务后，位置转换才会执行。启用后，私聊收到图片会自动检查 EXIF GPS；群聊只有群号位于 `allowedGroups` 白名单时才会检查。建议通过锅巴配置，并在允许群聊前确认群成员知悉原图可能包含位置隐私。
+该功能默认关闭，支持 Nominatim 兼容接口和高德开放平台。默认提供商是 `nominatim`，默认 endpoint 为 OSMF 公共 reverse API；切换到 `amap` 后需要填写至少一个高德 Web 服务 Key。启用后，私聊收到图片会自动检查 EXIF GPS；群聊只有群号位于 `allowedGroups` 白名单时才会检查。建议通过锅巴配置，并在允许群聊前确认图片发送者知悉坐标会提交给所选位置服务商。
 
-- 图片只下载到内存，不保存图片、EXIF、坐标或地理编码响应；日志也不会记录图片 URL、坐标、地点和昵称。
+高德配置示例：
+
+```json
+{
+  "imageExif": {
+    "enable": true,
+    "provider": "amap",
+    "amap": {
+      "apiKeys": ["你的高德 Web 服务 Key"]
+    }
+  }
+}
+```
+
+- 图片只下载到内存，不保存图片、EXIF、坐标或地理编码响应；日志也不会记录图片 URL、坐标、地点、昵称、API Key 或完整响应。
 - 图片无 GPS、图片被平台压缩清除 EXIF、下载失败或地理编码失败时不会回复。
 - 有效地点会按省/直辖市、城市、区县、乡镇/街道逐层去重，例如：`请问是上海市松江区泗泾镇的小明 先生吗？`
 - 称呼优先使用群名片，其次使用发送者昵称，最后回退为“朋友”。`honorific` 默认是“先生”，可改成中性的“朋友”或留空；插件不会推断性别。
-- OpenStreetMap 的公共 `nominatim.openstreetmap.org` 不允许自动提交图片中的个人定位信息，因此插件会拒绝该域名。请使用自建实例或确认服务条款明确允许此用途的兼容服务。
-- 按地理编码服务及底层地图数据的许可要求填写 `attribution`；非空时成功回复第二行会显示 `位置数据：<署名>`。
-- 插件最多并发处理 2 张图片；地理编码最多排队 20 条、缓存 500 个坐标一小时，并将请求限制为每秒最多一次。繁忙时新图片会静默跳过。
-- `imageExif.proxy.enable` 只控制反向地理编码请求；图片下载始终直连，并沿用私网地址阻断、重定向次数、超时和大小限制。
+- 公共 Nominatim 受 [OSMF 使用政策](https://operations.osmfoundation.org/policies/nominatim/) 约束。插件使用明确的 User-Agent、单请求队列、一小时缓存，并将 Nominatim 请求限制为每秒最多一次；管理员仍需自行确认图片内容、总调用量和使用场景符合政策。需要更稳定的服务等级时，请改用自建或商业 Nominatim 兼容服务。
+- 高德调用固定使用官方 HTTPS 逆地理编码接口，并在请求前将 EXIF 的 WGS-84 坐标转换为高德使用的 GCJ-02 坐标。高德当前为符合条件的个人非商业开发者提供基础 LBS 月配额，但商业用途、技术服务许可、免费期限、QPS 和配额均以 [官方定价说明](https://lbs.amap.com/upgrade#price) 与 [高德开放平台控制台](https://console.amap.com/) 为准，插件不承诺免费或无限调用。
+- 高德 `apiKeys` 支持多项并轮换起始 Key。当前 Key 遇到鉴权、配额或限流类错误时，会自动尝试下一项；参数错误或无法识别的响应不会盲目轮换。
+- `attribution` 非空时覆盖默认署名；留空时 Nominatim 显示 `© OpenStreetMap contributors`，高德显示“高德开放平台”。
+- 插件最多并发处理 2 张图片；地理编码最多排队 20 条、缓存 500 个坐标一小时。Nominatim 每秒最多请求一次，高德请求仍通过统一队列并受账号配额约束。繁忙时新图片会静默跳过。
+- `imageExif.proxy.enable` 控制 Nominatim 和高德反向地理编码请求是否使用统一代理；图片下载始终直连，并沿用私网地址阻断、重定向次数、超时和大小限制。
+
+日志使用 `[图片EXIF]` 前缀并遵循全局 `logger.logLevel`：
+
+- `debug`：缓存命中、队列接收、处理阶段和跳过原因。
+- `info`：获准图片开始处理、提供商请求成功和总耗时。
+- `warn`：缺少高德 Key、队列已满、HTTP/API 失败和响应无法识别。
+- `error`：网络、超时或 JSON 解析等请求异常，只记录安全异常类别。
 
 全插件只配置一个代理地址 `proxy.url`，各功能分别通过自己的 `proxy.enable` 决定是否使用。`aiImage.proxy.enable` 只控制 OpenAI、Hive 和 Sightengine API；待检测图片下载（包括重定向）和本地 C2PA 始终直连。`JMComic.proxy.enable` 开启后，插件会将统一代理地址同步到 `data/JMComic/option.yml` 的 `client.postman.meta_data.proxies`。
 
@@ -265,7 +290,7 @@ OpenAI 和 Hive 的 `apiKeys`、Sightengine 的 `credentials` 都可以配置多
 
 ### 图片 EXIF 定位
 
-- 功能启用且聊天范围获准时，收到图片会自动提取 EXIF GPS，并将反向解析的位置与群名片或昵称组合成问候消息。
+- 功能启用且聊天范围获准时，收到图片会自动提取 EXIF GPS，通过 Nominatim 或高德反向解析位置，并与群名片或昵称组合成问候消息。
 - 默认只允许私聊；群聊必须配置群号白名单。无 GPS 或任一处理阶段失败时静默跳过。
 - 请谨慎开启群聊白名单。位置元数据属于敏感隐私，机器人不会保存或记录解析出的坐标和地点。
 

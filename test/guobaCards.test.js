@@ -54,12 +54,14 @@ const expectedCardFields = {
   ],
   '图片 EXIF 定位设置': [
     'imageExif.enable',
+    'imageExif.provider',
     'imageExif.allowPrivate',
     'imageExif.allowedGroups',
     'imageExif.honorific',
     'imageExif.timeoutMs',
     'imageExif.maxFileSize',
     'imageExif.geocodingEndpoint',
+    'imageExif.amap.apiKeys',
     'imageExif.attribution',
     'imageExif.proxy.enable',
   ],
@@ -79,6 +81,23 @@ const expectedCardFields = {
   随机背景图设置: ['useRandomBgInCard', 'proxy.randomBackground'],
   其他设置: ['attemptSendNonFriend', 'botQQ'],
 }
+
+test('uses provider selection and tag input for EXIF geocoding', () => {
+  const schemas = getGuobaSchemas()
+  const provider = schemas.find(
+    (schema) => schema.field === 'imageExif.provider',
+  )
+  const amapKeys = schemas.find(
+    (schema) => schema.field === 'imageExif.amap.apiKeys',
+  )
+
+  assert.equal(provider.component, 'Select')
+  assert.deepEqual(provider.componentProps.options, [
+    { label: 'Nominatim 兼容', value: 'nominatim' },
+    { label: '高德开放平台', value: 'amap' },
+  ])
+  assert.equal(amapKeys.component, 'GTags')
+})
 
 function splitCards(schemas) {
   const cards = new Map()

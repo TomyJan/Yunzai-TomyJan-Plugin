@@ -7,10 +7,22 @@ import {
   extractGps,
   formatExifReply,
   formatLocation,
+  getGeocodingAttribution,
 } from '../model/imageExifLocation.js'
 
 const configuredGeocoder = {
   imageExif: { geocodingEndpoint: 'https://geo.example/reverse' },
+}
+
+function createLogCollector() {
+  const entries = []
+  const logger = Object.fromEntries(
+    ['debug', 'info', 'warn', 'error'].map((level) => [
+      level,
+      (message) => entries.push({ level, message }),
+    ]),
+  )
+  return { entries, logger }
 }
 
 function createGpsJpeg() {
@@ -194,6 +206,24 @@ test('formats the requested reply with configurable honorific', () => {
   )
 })
 
+test('uses provider attribution unless explicitly overridden', () => {
+  assert.equal(
+    getGeocodingAttribution({ provider: 'nominatim', attribution: '' }),
+    '© OpenStreetMap contributors',
+  )
+  assert.equal(
+    getGeocodingAttribution({ provider: 'amap', attribution: '' }),
+    '高德开放平台',
+  )
+  assert.equal(
+    getGeocodingAttribution({
+      provider: 'amap',
+      attribution: '自定义位置服务',
+    }),
+    '自定义位置服务',
+  )
+})
+
 test('reverse geocodes with Nominatim parameters and caches rounded coordinates', async () => {
   const calls = []
   const reverseGeocode = createReverseGeocoder({
@@ -288,6 +318,40 @@ test('uses the shared proxy only when the EXIF feature enables it', async () => 
   })
 })
 
+test('uses the shared proxy for Amap requests', async () => {
+  const requests = []
+  const reverseGeocode = createReverseGeocoder({
+    proxyAgentFactory: (url) => ({ proxyUrl: url }),
+    fetchImpl: async (url, init) => {
+      requests.push({ url: new URL(url), init })
+      return {
+        ok: true,
+        json: async () => ({
+          status: '1',
+          regeocode: { addressComponent: { township: '泗泾镇' } },
+        }),
+      }
+    },
+  })
+
+  await reverseGeocode(
+    { latitude: 31, longitude: 121 },
+    {
+      proxy: { url: 'http://127.0.0.1:7890' },
+      imageExif: {
+        provider: 'amap',
+        amap: { apiKeys: ['key'] },
+        proxy: { enable: true },
+      },
+    },
+  )
+
+  assert.equal(requests[0].url.origin, 'https://restapi.amap.com')
+  assert.deepEqual(requests[0].init.dispatcher, {
+    proxyUrl: 'http://127.0.0.1:7890',
+  })
+})
+
 test('rejects insecure endpoints and treats remote failures as unavailable', async () => {
   let calls = 0
   const reverseGeocode = createReverseGeocoder({
@@ -335,41 +399,198 @@ test('rejects invalid coordinates and malformed endpoints before fetching', asyn
   assert.equal(calls, 0)
 })
 
-test('does not send coordinates to an unconfigured or public Nominatim endpoint', async () => {
-  let calls = 0
+test('uses the public Nominatim reverse API by default', async () => {
+  const calls = []
   const reverseGeocode = createReverseGeocoder({
+    fetchImpl: async (url) => {
+      calls.push(new URL(url))
+      return {
+        ok: true,
+        json: async () => ({ address: { state: '上海市' } }),
+      }
+    },
+  })
+
+  assert.deepEqual(
+    await reverseGeocode(
+      { latitude: 31, longitude: 121 },
+      { imageExif: { provider: 'nominatim' } },
+    ),
+    { state: '上海市' },
+  )
+  assert.equal(calls[0].origin, 'https://nominatim.openstreetmap.org')
+  assert.equal(calls[0].pathname, '/reverse')
+})
+
+test('reverse geocodes through Amap with GPS coordinates', async () => {
+  const calls = []
+  const reverseGeocode = createReverseGeocoder({
+    fetchImpl: async (url, init) => {
+      calls.push({ url: new URL(url), init })
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({
+          status: '1',
+          regeocode: {
+            addressComponent: {
+              province: '上海市',
+              city: [],
+              district: '松江区',
+              township: '泗泾镇',
+            },
+          },
+        }),
+      }
+    },
+  })
+
+  const result = await reverseGeocode(
+    { latitude: 31.03021, longitude: 121.23045 },
+    {
+      imageExif: {
+        provider: 'amap',
+        amap: { apiKeys: ['amap-key'] },
+      },
+    },
+  )
+
+  assert.deepEqual(result, {
+    province: '上海市',
+    city: undefined,
+    district: '松江区',
+    town: '泗泾镇',
+  })
+  assert.equal(calls[0].url.origin, 'https://restapi.amap.com')
+  assert.equal(calls[0].url.pathname, '/v3/geocode/regeo')
+  assert.equal(calls[0].url.searchParams.get('key'), 'amap-key')
+  const [longitude, latitude] = calls[0].url.searchParams
+    .get('location')
+    .split(',')
+    .map(Number)
+  assert.ok(Math.abs(longitude - 121.234865) < 0.000001)
+  assert.ok(Math.abs(latitude - 31.028088) < 0.000001)
+  assert.equal(calls[0].url.searchParams.has('coordsys'), false)
+  assert.equal(calls[0].url.searchParams.get('output'), 'json')
+  assert.equal(calls[0].url.searchParams.get('extensions'), 'base')
+  assert.ok(calls[0].init.signal instanceof AbortSignal)
+})
+
+test('rotates Amap keys on retryable failures and redacts graded logs', async () => {
+  const requestedKeys = []
+  const { entries, logger } = createLogCollector()
+  const reverseGeocode = createReverseGeocoder({
+    logger,
+    fetchImpl: async (url) => {
+      requestedKeys.push(new URL(url).searchParams.get('key'))
+      if (requestedKeys.length === 1) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ status: '0', infocode: '10003' }),
+        }
+      }
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({
+          status: '1',
+          regeocode: {
+            addressComponent: {
+              province: '上海市',
+              district: '松江区',
+              township: '泗泾镇',
+            },
+          },
+        }),
+      }
+    },
+  })
+
+  const result = await reverseGeocode(
+    { latitude: 31.03021, longitude: 121.23045 },
+    {
+      imageExif: {
+        provider: 'amap',
+        amap: { apiKeys: ['secret-one', 'secret-two'] },
+      },
+    },
+  )
+
+  assert.equal(result.town, '泗泾镇')
+  assert.deepEqual(requestedKeys, ['secret-one', 'secret-two'])
+  assert.ok(entries.some((entry) => entry.level === 'debug'))
+  assert.ok(entries.some((entry) => entry.level === 'info'))
+  assert.ok(entries.some((entry) => entry.level === 'warn'))
+  const logText = entries.map((entry) => entry.message).join('\n')
+  assert.doesNotMatch(
+    logText,
+    /secret-one|secret-two|31\.03021|121\.23045|泗泾镇/u,
+  )
+})
+
+test('skips Amap without keys and logs a safe warning', async () => {
+  let calls = 0
+  const { entries, logger } = createLogCollector()
+  const reverseGeocode = createReverseGeocoder({
+    logger,
     fetchImpl: async () => {
       calls += 1
     },
   })
 
   assert.equal(
-    await reverseGeocode({ latitude: 31, longitude: 121 }, {}),
-    undefined,
-  )
-  assert.equal(
     await reverseGeocode(
       { latitude: 31, longitude: 121 },
-      {
-        imageExif: {
-          geocodingEndpoint: 'https://nominatim.openstreetmap.org/reverse',
-        },
-      },
-    ),
-    undefined,
-  )
-  assert.equal(
-    await reverseGeocode(
-      { latitude: 31, longitude: 121 },
-      {
-        imageExif: {
-          geocodingEndpoint: 'https://nominatim.openstreetmap.org./reverse',
-        },
-      },
+      { imageExif: { provider: 'amap', amap: { apiKeys: [] } } },
     ),
     undefined,
   )
   assert.equal(calls, 0)
+  assert.ok(entries.some((entry) => entry.level === 'warn'))
+})
+
+test('bounds external Amap codes and exception types in logs', async () => {
+  const { entries, logger } = createLogCollector()
+  const responses = [
+    {
+      ok: true,
+      status: 200,
+      json: async () => ({ status: '0', infocode: '10003\nsecret-log' }),
+    },
+  ]
+  const reverseGeocode = createReverseGeocoder({
+    logger,
+    fetchImpl: async () => {
+      const response = responses.shift()
+      if (response) return response
+      const error = new Error('network')
+      error.name = 'Injected\nsecret-type'
+      throw error
+    },
+  })
+  const config = {
+    imageExif: {
+      provider: 'amap',
+      amap: { apiKeys: ['first', 'second'] },
+    },
+  }
+
+  await reverseGeocode({ latitude: 31, longitude: 121 }, config)
+  await reverseGeocode(
+    { latitude: 32, longitude: 121 },
+    {
+      imageExif: {
+        provider: 'amap',
+        amap: { apiKeys: ['third'] },
+      },
+    },
+  )
+  const logText = entries.map((entry) => entry.message).join('\n')
+
+  assert.doesNotMatch(logText, /secret-log|secret-type|Injected/u)
+  assert.match(logText, /apiCode=unknown/u)
+  assert.match(logText, /type=Error/u)
 })
 
 test('uses the default delay when requests arrive too quickly', async () => {

@@ -19,6 +19,50 @@
 - 修改 `data/system/default_config.json`、`model/guobaSchemas.js`、`test/guobaCards.test.js`、`README.md`：配置和文档。
 - 修改 `package.json`、`pnpm-lock.yaml`、`test/releaseConfig.test.js`：依赖和核心覆盖率范围。
 
+## 双提供商扩展
+
+### 任务 7：Nominatim 与高德提供商选择
+
+- [ ] **步骤 1：编写失败测试**
+
+在 `test/imageExifLocation.test.js` 覆盖默认公共 Nominatim endpoint、高德 GPS 请求参数、`regeocode.addressComponent` 规范化、Key 缺失和鉴权/配额错误轮换。日志断言必须确认没有 Key、经纬度和地点。
+
+- [ ] **步骤 2：运行测试验证失败**
+
+运行：`node --test test/imageExifLocation.test.js`
+
+预期：FAIL，现有实现不识别 `provider=amap`，并拒绝公共 Nominatim endpoint。
+
+- [ ] **步骤 3：实现最少提供商适配**
+
+在 `model/imageExifLocation.js` 保留统一的缓存、背压、代理和超时边界，按提供商构造请求并返回统一地址。Nominatim 保持每秒最多一次；高德固定请求 `https://restapi.amap.com/v3/geocode/regeo`，将 WGS-84 坐标转换为 GCJ-02 后发送，只在可重试错误上轮换 `amap.apiKeys`。
+
+- [ ] **步骤 4：验证定向测试通过**
+
+运行：`node --test test/imageExifLocation.test.js`
+
+预期：全部 PASS。
+
+### 任务 8：配置、日志与文档契约
+
+- [ ] **步骤 1：编写失败契约测试**
+
+更新 `test/imageExifConfig.test.js`、`test/guobaCards.test.js` 和 `test/imageExifApp.test.js`，要求默认 `provider=nominatim`、公共 endpoint、高德 Key 数组、提供商选项，以及应用层分级日志适配。
+
+- [ ] **步骤 2：运行测试验证失败**
+
+运行：`node --test test/imageExifConfig.test.js test/guobaCards.test.js test/imageExifApp.test.js`
+
+预期：FAIL，默认配置、锅巴字段和日志适配尚未新增。
+
+- [ ] **步骤 3：同步配置和说明**
+
+修改 `data/system/default_config.json`、`model/guobaSchemas.js`、`apps/imageExif.js` 和 `README.md`。Key 使用 `GTags`，默认配置只保留空数组；文档说明高德额度以开放平台控制台为准，并说明公共 Nominatim 的速率、缓存、署名和数据政策责任。
+
+- [ ] **步骤 4：运行完整验证**
+
+运行：`pnpm lint`、`pnpm test`、`pnpm test:coverage`、相关文件 Prettier 检查和 `git diff --check`。
+
 ### 任务 1：EXIF 与地点核心
 
 - [ ] **步骤 1：编写失败测试**
@@ -31,7 +75,12 @@ const gps = await extractGps(Buffer.from('image'), {
 })
 assert.deepEqual(gps, { latitude: 31.03, longitude: 121.23 })
 assert.equal(
-  formatLocation({ state: '上海市', city: '上海市', city_district: '松江区', town: '泗泾镇' }),
+  formatLocation({
+    state: '上海市',
+    city: '上海市',
+    city_district: '松江区',
+    town: '泗泾镇',
+  }),
   '上海市松江区泗泾镇',
 )
 ```

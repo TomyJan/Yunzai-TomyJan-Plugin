@@ -33,7 +33,7 @@ test('lists automatic EXIF location inspection in the plugin menu', () => {
   assert.deepEqual(item, {
     icon: 'tomyjan',
     title: '图片 EXIF 定位（自动）',
-    desc: '收到图片后自动解析其中的拍摄位置',
+    desc: '通过 Nominatim 或高德解析图片拍摄位置',
   })
   assert.equal(
     fs.existsSync(

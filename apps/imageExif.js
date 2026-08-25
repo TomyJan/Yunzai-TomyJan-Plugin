@@ -4,9 +4,13 @@ import tjLogger from '../components/logger.js'
 import { createReverseGeocoder } from '../model/imageExifLocation.js'
 import { processImageExifEvent } from '../model/imageExifMessage.js'
 
-const reverseGeocode = createReverseGeocoder({
+const exifLogger = {
+  debug: (message) => tjLogger.debug(`[图片EXIF] ${message}`),
+  info: (message) => tjLogger.info(`[图片EXIF] ${message}`),
   warn: (message) => tjLogger.warn(`[图片EXIF] ${message}`),
-})
+  error: (message) => tjLogger.error(`[图片EXIF] ${message}`),
+}
+const reverseGeocode = createReverseGeocoder({ logger: exifLogger })
 
 export class imageExifApp extends plugin {
   constructor() {
@@ -27,11 +31,8 @@ export class imageExifApp extends plugin {
   async handleImage() {
     const result = await processImageExifEvent(this.e, config.getConfig(), {
       reverseGeocode,
+      logger: exifLogger,
     })
-    if (result.status === 'error') {
-      tjLogger.warn(`[图片EXIF] ${result.stage} 阶段处理失败`)
-      return false
-    }
     if (result.status !== 'reply') return false
     await this.reply(result.message, true)
     return true

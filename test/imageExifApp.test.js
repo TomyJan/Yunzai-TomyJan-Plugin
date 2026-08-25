@@ -28,6 +28,53 @@ test('registers a low-priority message listener and delegates to the model workf
   assert.match(appSource, /priority:\s*9999/)
   assert.match(appSource, /reg:\s*'\.\*'/)
   assert.match(appSource, /processImageExifEvent\(/)
+  for (const level of ['debug', 'info', 'warn', 'error']) {
+    assert.match(appSource, new RegExp(`tjLogger\\.${level}`))
+  }
+})
+
+test('logs allowed image processing by level without sensitive values', async () => {
+  const logs = []
+  const logger = Object.fromEntries(
+    ['debug', 'info', 'warn', 'error'].map((level) => [
+      level,
+      (message) => logs.push({ level, message }),
+    ]),
+  )
+  const result = await processImageExifEvent(
+    privateImageEvent(),
+    { imageExif: { enable: true, provider: 'nominatim' } },
+    {
+      logger,
+      downloadImage: async () => ({ buffer: Buffer.from('jpeg') }),
+      extractGps: async () => undefined,
+    },
+  )
+
+  assert.deepEqual(result, { status: 'skipped', reason: 'no_gps' })
+  assert.ok(logs.some((entry) => entry.level === 'info'))
+  assert.ok(logs.some((entry) => entry.level === 'debug'))
+  const logText = logs.map((entry) => entry.message).join('\n')
+  assert.doesNotMatch(logText, /first\.jpg|小明|10001/u)
+})
+
+test('uses the selected provider default attribution in replies', async () => {
+  const result = await processImageExifEvent(
+    privateImageEvent(),
+    {
+      imageExif: { enable: true, provider: 'amap', amap: { apiKeys: ['key'] } },
+    },
+    {
+      downloadImage: async () => ({ buffer: Buffer.from('jpeg') }),
+      extractGps: async () => ({ latitude: 31, longitude: 121 }),
+      reverseGeocode: async () => ({ province: '上海市', district: '松江区' }),
+    },
+  )
+
+  assert.equal(
+    result.message,
+    '请问是上海市松江区的小明 先生吗？\n位置数据：高德开放平台',
+  )
 })
 
 test('skips disabled, disallowed and imageless events without downloading', async () => {

@@ -247,6 +247,19 @@ const schemas = [
     component: 'Switch',
   },
   {
+    field: 'imageExif.provider',
+    label: '位置服务商',
+    helpMessage: '选择反向地理编码使用的服务商',
+    bottomHelpMessage: '默认使用 Nominatim 兼容接口；高德需要配置 Web 服务 Key',
+    component: 'Select',
+    componentProps: {
+      options: [
+        { label: 'Nominatim 兼容', value: 'nominatim' },
+        { label: '高德开放平台', value: 'amap' },
+      ],
+    },
+  },
+  {
     field: 'imageExif.allowPrivate',
     label: '允许私聊',
     helpMessage: '是否在私聊收到图片时自动检查 EXIF 定位',
@@ -284,14 +297,20 @@ const schemas = [
     field: 'imageExif.geocodingEndpoint',
     label: '反向地理编码地址',
     helpMessage: '兼容 Nominatim reverse API 的 HTTPS 地址',
-    bottomHelpMessage: '默认留空；请配置自建或已获授权处理图片坐标的服务',
+    bottomHelpMessage: '仅 Nominatim 模式使用；默认是 OSMF 公共 reverse API',
     component: 'Input',
   },
+  tags(
+    'imageExif.amap.apiKeys',
+    '高德 Web 服务 Key',
+    '逐项添加高德开放平台 Web 服务 Key',
+    '仅高德模式使用；鉴权、配额或限流失败时自动轮换',
+  ),
   {
     field: 'imageExif.attribution',
     label: '位置数据署名',
     helpMessage: '成功回复第二行展示的数据来源或许可署名',
-    bottomHelpMessage: '按地理编码服务和底层地图数据的许可要求填写',
+    bottomHelpMessage: '留空时自动使用所选提供商的默认署名',
     component: 'Input',
   },
   {
