@@ -37,7 +37,7 @@
     "iconv-lite": "^0.7.3",
     "pdf-lib-plus-encrypt": "^1.1.0",
     "sharp": "^0.35.4",
-    "undici": "^8.10.0",
+    "undici": "^8.10.1",
     "yaml": "^2.8.1"
   },
   "devDependencies": {
