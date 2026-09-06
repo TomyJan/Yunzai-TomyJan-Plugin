@@ -27,8 +27,8 @@ importers:
         specifier: ^0.35.4
         version: 0.35.4
       undici:
-        specifier: ^8.10.0
-        version: 8.10.0
+        specifier: ^8.10.1
+        version: 8.10.1
       yaml:
         specifier: ^2.8.1
         version: 2.9.0
@@ -1028,8 +1028,8 @@ packages:
     engines: {node: '>=0.8.0'}
     hasBin: true
 
-  undici@8.10.0:
-    resolution: {integrity: sha512-HvltHd7avK13QIw/oLe4qoOLyoVSoafqJ2jYOrtMRBkbYT31eiBQ8O0ehRKZiEZCMEyLFQNIADpgCWC5fALvYQ==}
+  undici@8.10.1:
+    resolution: {integrity: sha512-YQ3WlbqjYMmNpdvDH64jAgLjxuAR9+649calDWhbshYaeQGO2bR4nI94ORJmwI3J9YhoKQnpyGOK+0zlWS5N5Q==}
     engines: {node: '>=22.19.0'}
 
   unicorn-magic@0.1.0:
@@ -1994,7 +1994,7 @@ snapshots:
   uglify-js@3.19.3:
     optional: true
 
-  undici@8.10.0: {}
+  undici@8.10.1: {}
 
   unicorn-magic@0.1.0: {}
 
