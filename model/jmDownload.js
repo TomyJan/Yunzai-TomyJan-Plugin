@@ -1,6 +1,7 @@
 import tjLogger from '../components/logger.js'
 import config from '../components/config.js'
 import { runCommand } from './utils.js'
+import { handleJmPdfUploadFailure } from './jmDownloadResult.js'
 import httpServer from './httpServer.js'
 import { _DataPath } from '../data/system/pluginConstants.js'
 import fs from 'fs'
@@ -175,30 +176,10 @@ export default class jmDownload {
         if (e.isGroup) sendFileRet = await e.group.fs.upload(pdfPath)
         else sendFileRet = await e.private.sendFile(pdfPath)
       } catch (err) {
-        // 发送文件出问题
-        tjLogger.error(`发送文件失败: ${err.message}`)
-        if (err.message == 'group space not enough')
-          err.message = '群文件空间不足'
-        else if (err.message.includes('send feed not all success'))
-          // send feed not all success. failed_count=1 , 大概是协议问题
-          err.message = '部分分片未发送成功'
-        else if (err.message.includes('unknown highway error'))
-          // 大概也是协议问题
-          err.message = '未知通道错误'
-
-        let msg = `文件发送失败, 错误信息: \n${err.message}`
-
-        if (sendFilePolicy == 2 && err.message != '群文件空间不足') {
-          // 发送策略为优先文件并且错误不是群文件空间不足的话, 尝试创建临时链接
-          msg += `\n将尝试上传到内置服务器...`
-          let msgId = await e.reply(msg, true)
-          let sendLinkRet = await sendLink()
-          e.group.recallMsg(msgId.message_id)
-          e.reply(sendLinkRet, true)
-        } else {
-          e.reply(msg, true)
-        }
-
+        await handleJmPdfUploadFailure(err, Number(sendFilePolicy), e, {
+          sendLink,
+          logError: (message) => tjLogger.error(message),
+        })
         return
       }
 
