@@ -192,10 +192,6 @@ async function resolveHeifFile(event, candidate, options) {
   }
 }
 
-function providerName(provider) {
-  return provider === 'amap' ? '高德' : 'Nominatim'
-}
-
 function formatImageType(mimeType) {
   return (
     {
@@ -253,7 +249,14 @@ export async function processImageExifEvent(
     return { status: 'skipped', reason: 'busy' }
   }
   activeJobs += 1
-  const provider = imageExifConfig.provider === 'amap' ? 'amap' : 'nominatim'
+  const hasAmapKeys =
+    Array.isArray(imageExifConfig.amap?.apiKeys) &&
+    imageExifConfig.amap.apiKeys.some(
+      (key) => typeof key === 'string' && key.trim(),
+    )
+  const geocodingStrategy = hasAmapKeys
+    ? '优先高德，位置不可用时回退 Nominatim'
+    : '未配置高德 Key，使用 Nominatim'
   const now = dependencies.now || Date.now
   const startedAt = now()
   const timeoutMs = positiveLimit(
@@ -269,7 +272,7 @@ export async function processImageExifEvent(
   safeLog(
     dependencies.logger,
     'info',
-    `开始处理图片定位，位置服务：${providerName(provider)}，消息来源：${heifFile ? 'HEIF/HEIC 文件' : '普通图片'}`,
+    `开始处理图片定位，位置查询策略：${geocodingStrategy}，消息来源：${heifFile ? 'HEIF/HEIC 文件' : '普通图片'}`,
   )
   safeLog(
     dependencies.logger,
@@ -350,7 +353,7 @@ export async function processImageExifEvent(
     safeLog(
       dependencies.logger,
       'info',
-      `已从图片中读取到 GPS 信息，准备使用 ${providerName(provider)} 查询位置，EXIF 处理耗时：${Math.max(0, now() - exifStartedAt)} ms`,
+      `已从图片中读取到 GPS 信息，准备查询位置（${geocodingStrategy}），EXIF 处理耗时：${Math.max(0, now() - exifStartedAt)} ms`,
     )
 
     let address
@@ -360,7 +363,7 @@ export async function processImageExifEvent(
       safeLog(
         dependencies.logger,
         'error',
-        `${providerName(provider)} 位置查询发生未处理异常，本次不发送回复`,
+        '位置查询发生未处理异常，本次不发送回复',
       )
       return { status: 'error', stage: 'geocode' }
     }
@@ -369,7 +372,7 @@ export async function processImageExifEvent(
       safeLog(
         dependencies.logger,
         'warn',
-        `${providerName(provider)} 未返回可用位置，本次不发送回复`,
+        '位置服务均未返回可用位置，本次不发送回复',
       )
       return { status: 'skipped', reason: 'no_location' }
     }

@@ -12,7 +12,6 @@ const defaultConfig = JSON.parse(
 test('keeps automatic EXIF location replies disabled with no chat scope fields', () => {
   assert.deepEqual(defaultConfig.imageExif, {
     enable: false,
-    provider: 'nominatim',
     honorific: '先生',
     timeoutMs: 10000,
     maxFileSize: 20971520,

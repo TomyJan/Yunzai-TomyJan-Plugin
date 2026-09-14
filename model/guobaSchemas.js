@@ -247,19 +247,6 @@ const schemas = [
     component: 'Switch',
   },
   {
-    field: 'imageExif.provider',
-    label: '位置服务商',
-    helpMessage: '选择反向地理编码使用的服务商',
-    bottomHelpMessage: '默认使用 Nominatim 兼容接口；高德需要配置 Web 服务 Key',
-    component: 'Select',
-    componentProps: {
-      options: [
-        { label: 'Nominatim 兼容', value: 'nominatim' },
-        { label: '高德开放平台', value: 'amap' },
-      ],
-    },
-  },
-  {
     field: 'imageExif.honorific',
     label: '称谓',
     helpMessage: '添加在群名片或昵称后的称谓',
@@ -284,14 +271,15 @@ const schemas = [
     field: 'imageExif.geocodingEndpoint',
     label: '反向地理编码地址',
     helpMessage: '兼容 Nominatim reverse API 的 HTTPS 地址',
-    bottomHelpMessage: '仅 Nominatim 模式使用；默认是 OSMF 公共 reverse API',
+    bottomHelpMessage:
+      '未配置高德 Key 或高德位置不可用时使用；默认是 OSMF 公共 reverse API',
     component: 'Input',
   },
   tags(
     'imageExif.amap.apiKeys',
     '高德 Web 服务 Key',
     '逐项添加高德开放平台 Web 服务 Key',
-    '仅高德模式使用；鉴权、配额或限流失败时自动轮换',
+    '有 Key 时优先高德；无可用位置时回退 Nominatim；鉴权、配额或限流失败时自动轮换',
   ),
   {
     field: 'imageExif.proxy.enable',

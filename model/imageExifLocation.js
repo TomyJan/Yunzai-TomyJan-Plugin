@@ -11,6 +11,7 @@ const CACHE_TTL_MS = 60 * 60 * 1000
 const MAX_PENDING_REQUESTS = 20
 const DEFAULT_NOMINATIM_ENDPOINT = 'https://nominatim.openstreetmap.org/reverse'
 const AMAP_ENDPOINT = 'https://restapi.amap.com/v3/geocode/regeo'
+const GENERIC_AMAP_LOCATIONS = new Set(['国外', '海外', '境外'])
 const AMAP_RETRYABLE_CODES = new Set([
   '10001',
   '10002',
@@ -94,6 +95,7 @@ function firstAddressValue(address, keys) {
 }
 
 export function formatLocation(address) {
+  const country = firstAddressValue(address, ['country'])
   const levels = [
     firstAddressValue(address, ['state', 'province', 'region']),
     firstAddressValue(address, ['city', 'municipality']),
@@ -109,7 +111,14 @@ export function formatLocation(address) {
   const unique = levels.filter(
     (value, index) => value && levels.indexOf(value) === index,
   )
-  return unique.length > 0 ? unique.join('') : undefined
+  if (unique.length === 0) return undefined
+  const withCountry =
+    country && !['中国', '中华人民共和国'].includes(country)
+      ? [country, ...unique]
+      : unique
+  return withCountry
+    .filter((value, index) => withCountry.indexOf(value) === index)
+    .join('')
 }
 
 export function formatExifReply(location, name, honorific = '先生') {
@@ -117,10 +126,6 @@ export function formatExifReply(location, name, honorific = '先生') {
   const safeName = sanitizeMessageText(name, 32) || '朋友'
   const suffix = sanitizeMessageText(honorific, 16)
   return `请问是${safeLocation}的${safeName}${suffix ? ` ${suffix}` : ''}吗？`
-}
-
-function getProvider(config) {
-  return config?.provider === 'amap' ? 'amap' : 'nominatim'
 }
 
 function getGeocodingConfig(pluginConfig) {
@@ -324,7 +329,7 @@ export function createReverseGeocoder(dependencies = {}) {
         !Array.isArray(body.address)
           ? body.address
           : undefined
-      if (!address) {
+      if (!address || !formatLocation(address)) {
         log('warn', 'Nominatim 返回成功响应，但其中没有可用的地址信息')
         return undefined
       }
@@ -347,8 +352,12 @@ export function createReverseGeocoder(dependencies = {}) {
     if (!address || typeof address !== 'object' || Array.isArray(address)) {
       return undefined
     }
-    const text = (value) =>
-      typeof value === 'string' && value.trim() ? value.trim() : undefined
+    const text = (value) => {
+      const trimmed = typeof value === 'string' ? value.trim() : ''
+      return trimmed && !GENERIC_AMAP_LOCATIONS.has(trimmed)
+        ? trimmed
+        : undefined
+    }
     const normalized = {
       province: text(address.province),
       city: text(address.city),
@@ -452,21 +461,20 @@ export function createReverseGeocoder(dependencies = {}) {
       return undefined
     }
     const config = getGeocodingConfig(pluginConfig)
-    const provider = getProvider(config)
-    const endpoint =
-      provider === 'amap' ? new URL(AMAP_ENDPOINT) : getHttpsEndpoint(config)
-    if (!endpoint) {
-      log(
-        'warn',
-        `${provider === 'amap' ? '高德' : 'Nominatim'} 位置服务地址无效，已停止查询`,
-      )
+    const provider = getAmapKeys(config).length > 0 ? 'amap' : 'nominatim'
+    const endpoint = getHttpsEndpoint(config)
+    if (!endpoint && provider === 'nominatim') {
+      log('warn', 'Nominatim 位置服务地址无效，已停止查询')
       return undefined
     }
-    if (provider === 'amap' && getAmapKeys(config).length === 0) {
-      log('warn', '未配置高德 Web 服务 Key，无法查询图片位置')
-      return undefined
+    if (provider === 'nominatim') {
+      log('debug', '未配置高德 Web 服务 Key，直接使用 Nominatim 查询位置')
     }
-    const key = coordinateCacheKey(provider, endpoint, gps)
+    const key = coordinateCacheKey(
+      provider,
+      endpoint || new URL(AMAP_ENDPOINT),
+      gps,
+    )
     const cached = cache.get(key)
     if (cached) {
       if (cached.expiresAt > now()) {
@@ -493,11 +501,18 @@ export function createReverseGeocoder(dependencies = {}) {
 
     const pending = queue
       .catch(() => undefined)
-      .then(() =>
-        provider === 'amap'
-          ? requestAmap(gps, pluginConfig, config)
-          : requestNominatim(gps, pluginConfig, config, endpoint),
-      )
+      .then(async () => {
+        if (provider === 'amap') {
+          const address = await requestAmap(gps, pluginConfig, config)
+          if (address && formatLocation(address)) return address
+          log('info', '高德未返回可用位置，自动回退 Nominatim 查询')
+        }
+        if (!endpoint) {
+          log('warn', 'Nominatim 位置服务地址无效，无法继续查询')
+          return undefined
+        }
+        return requestNominatim(gps, pluginConfig, config, endpoint)
+      })
       .catch(() => undefined)
     queue = pending.then(() => undefined)
     const entry = {

@@ -62,6 +62,30 @@ test('logs image processing in natural language without sensitive values', async
   assert.doesNotMatch(logText, /first\.jpg|小明|10001/u)
 })
 
+test('describes automatic Amap-first fallback rather than a removed provider setting', async () => {
+  const messages = []
+  const result = await processImageExifEvent(
+    privateImageEvent(),
+    {
+      imageExif: {
+        enable: true,
+        provider: 'nominatim',
+        amap: { apiKeys: ['key'] },
+      },
+    },
+    {
+      logger: { info: (message) => messages.push(message) },
+      downloadImage: async () => ({ buffer: Buffer.from('jpeg') }),
+      extractGps: async () => ({ latitude: 48.8566, longitude: 2.3522 }),
+      reverseGeocode: async () => ({ country: '法国', city: '巴黎' }),
+    },
+  )
+
+  assert.equal(result.message, '请问是法国巴黎的小明 先生吗？')
+  assert.match(messages.join('\n'), /优先高德.*Nominatim/u)
+  assert.doesNotMatch(messages.join('\n'), /位置服务：Nominatim/u)
+})
+
 test('does not append provider attribution to replies', async () => {
   const result = await processImageExifEvent(
     privateImageEvent(),

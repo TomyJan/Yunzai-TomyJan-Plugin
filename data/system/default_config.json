@@ -68,7 +68,6 @@
   },
   "imageExif": {
     "enable": false,
-    "provider": "nominatim",
     "honorific": "先生",
     "timeoutMs": 10000,
     "maxFileSize": 20971520,

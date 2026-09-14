@@ -175,6 +175,18 @@ test('uses available Nominatim fallbacks and ignores empty address data', () => 
   assert.equal(formatLocation(undefined), undefined)
 })
 
+test('includes a foreign country when Nominatim supplies a usable city', () => {
+  assert.equal(
+    formatLocation({ country: '法国', state: '法兰西岛大区', city: '巴黎' }),
+    '法国法兰西岛大区巴黎',
+  )
+  assert.equal(formatLocation({ country: '法国' }), undefined)
+  assert.equal(
+    formatLocation({ country: '法国', state: '法国', city: '巴黎' }),
+    '法国巴黎',
+  )
+})
+
 test('sanitizes and bounds untrusted reverse geocoding fields', () => {
   assert.equal(
     formatLocation({
@@ -506,25 +518,198 @@ test('rotates Amap keys on retryable failures and redacts graded logs', async ()
   )
 })
 
-test('skips Amap without keys and logs a safe warning', async () => {
-  let calls = 0
+test('uses Nominatim without Amap keys even when an old provider value remains', async () => {
+  const calls = []
   const { entries, logger } = createLogCollector()
   const reverseGeocode = createReverseGeocoder({
     logger,
-    fetchImpl: async () => {
-      calls += 1
+    fetchImpl: async (url) => {
+      calls.push(new URL(url))
+      return { ok: true, json: async () => ({ address: { city: '巴黎' } }) }
+    },
+  })
+
+  assert.deepEqual(
+    await reverseGeocode(
+      { latitude: 48.8566, longitude: 2.3522 },
+      { imageExif: { provider: 'amap', amap: { apiKeys: [] } } },
+    ),
+    { city: '巴黎' },
+  )
+  assert.equal(calls.length, 1)
+  assert.equal(calls[0].origin, 'https://nominatim.openstreetmap.org')
+  assert.ok(
+    entries.some((entry) => /未配置高德.*Nominatim/u.test(entry.message)),
+  )
+})
+
+test('falls back to Nominatim with original WGS-84 GPS when Amap has no address', async () => {
+  const calls = []
+  const { entries, logger } = createLogCollector()
+  const reverseGeocode = createReverseGeocoder({
+    logger,
+    fetchImpl: async (url) => {
+      const endpoint = new URL(url)
+      calls.push(endpoint)
+      return endpoint.hostname === 'restapi.amap.com'
+        ? {
+            ok: true,
+            json: async () => ({
+              status: '1',
+              regeocode: { addressComponent: { city: [] } },
+            }),
+          }
+        : {
+            ok: true,
+            json: async () => ({ address: { country: '法国', city: '巴黎' } }),
+          }
+    },
+  })
+  const config = {
+    imageExif: { provider: 'nominatim', amap: { apiKeys: ['secret-key'] } },
+  }
+  const gps = { latitude: 48.8566, longitude: 2.3522 }
+
+  assert.deepEqual(await reverseGeocode(gps, config), {
+    country: '法国',
+    city: '巴黎',
+  })
+  assert.equal(calls.length, 2)
+  assert.equal(calls[0].origin, 'https://restapi.amap.com')
+  assert.equal(calls[1].origin, 'https://nominatim.openstreetmap.org')
+  assert.equal(calls[1].searchParams.get('lat'), String(gps.latitude))
+  assert.equal(calls[1].searchParams.get('lon'), String(gps.longitude))
+  assert.deepEqual(await reverseGeocode(gps, config), {
+    country: '法国',
+    city: '巴黎',
+  })
+  assert.equal(calls.length, 2)
+  assert.ok(
+    entries.some(
+      (entry) =>
+        entry.level === 'info' && /高德.*Nominatim/u.test(entry.message),
+    ),
+  )
+  assert.doesNotMatch(
+    entries.map((entry) => entry.message).join('\n'),
+    /secret-key|48\.8566|2\.3522|巴黎/u,
+  )
+})
+
+test('does not treat a generic overseas Amap label as a usable location', async () => {
+  const calls = []
+  const reverseGeocode = createReverseGeocoder({
+    fetchImpl: async (url) => {
+      const endpoint = new URL(url)
+      calls.push(endpoint.hostname)
+      return endpoint.hostname === 'restapi.amap.com'
+        ? {
+            ok: true,
+            json: async () => ({
+              status: '1',
+              regeocode: { addressComponent: { province: '国外' } },
+            }),
+          }
+        : { ok: true, json: async () => ({ address: { city: '巴黎' } }) }
+    },
+  })
+
+  assert.deepEqual(
+    await reverseGeocode(
+      { latitude: 48.8566, longitude: 2.3522 },
+      { imageExif: { amap: { apiKeys: ['key'] } } },
+    ),
+    { city: '巴黎' },
+  )
+  assert.deepEqual(calls, ['restapi.amap.com', 'nominatim.openstreetmap.org'])
+})
+
+test('does not call Nominatim when Amap returns a usable location', async () => {
+  const calls = []
+  const reverseGeocode = createReverseGeocoder({
+    fetchImpl: async (url) => {
+      calls.push(new URL(url))
+      return {
+        ok: true,
+        json: async () => ({
+          status: '1',
+          regeocode: { addressComponent: { district: '松江区' } },
+        }),
+      }
     },
   })
 
   assert.equal(
-    await reverseGeocode(
-      { latitude: 31, longitude: 121 },
-      { imageExif: { provider: 'amap', amap: { apiKeys: [] } } },
-    ),
-    undefined,
+    (
+      await reverseGeocode(
+        { latitude: 31, longitude: 121 },
+        {
+          imageExif: { provider: 'nominatim', amap: { apiKeys: ['key'] } },
+        },
+      )
+    ).district,
+    '松江区',
   )
-  assert.equal(calls, 0)
-  assert.ok(entries.some((entry) => entry.level === 'warn'))
+  assert.equal(calls.length, 1)
+  assert.equal(calls[0].origin, 'https://restapi.amap.com')
+})
+
+test('falls back after an Amap error and does not cache total failure', async () => {
+  const calls = []
+  const reverseGeocode = createReverseGeocoder({
+    now: () => 0,
+    sleep: async () => {},
+    fetchImpl: async (url) => {
+      const endpoint = new URL(url)
+      calls.push(endpoint.hostname)
+      return endpoint.hostname === 'restapi.amap.com'
+        ? { ok: false, status: 500 }
+        : { ok: false, status: 503 }
+    },
+  })
+  const config = { imageExif: { amap: { apiKeys: ['key'] } } }
+  const gps = { latitude: 48, longitude: 2 }
+
+  assert.equal(await reverseGeocode(gps, config), undefined)
+  assert.equal(await reverseGeocode(gps, config), undefined)
+  assert.deepEqual(calls, [
+    'restapi.amap.com',
+    'nominatim.openstreetmap.org',
+    'restapi.amap.com',
+    'nominatim.openstreetmap.org',
+  ])
+})
+
+test('keeps Amap available even if the fallback endpoint is invalid', async () => {
+  const calls = []
+  const reverseGeocode = createReverseGeocoder({
+    fetchImpl: async (url) => {
+      calls.push(new URL(url))
+      return {
+        ok: true,
+        json: async () => ({
+          status: '1',
+          regeocode: { addressComponent: { district: '松江区' } },
+        }),
+      }
+    },
+  })
+
+  assert.equal(
+    (
+      await reverseGeocode(
+        { latitude: 31, longitude: 121 },
+        {
+          imageExif: {
+            amap: { apiKeys: ['key'] },
+            geocodingEndpoint: 'http://insecure.example/reverse',
+          },
+        },
+      )
+    ).district,
+    '松江区',
+  )
+  assert.equal(calls.length, 1)
 })
 
 test('bounds external Amap codes and exception types in logs', async () => {
