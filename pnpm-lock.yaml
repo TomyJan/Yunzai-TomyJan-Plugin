@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       '@contentauth/c2pa-node':
-        specifier: ^0.9.3
-        version: 0.9.3
+        specifier: ^0.9.4
+        version: 0.9.4
       chalk:
         specifier: ^6.0.0
         version: 6.0.0
@@ -74,8 +74,8 @@ packages:
   '@cacheable/utils@2.5.0':
     resolution: {integrity: sha512-buipgOVDkkPXNR5+xBpDw7Zk2n1EvU7qBJCNUcL7rhQ//kfpOXPAvQ511Os0vpLYJ1pZnvudNytkQt2hst3wqA==}
 
-  '@contentauth/c2pa-node@0.9.3':
-    resolution: {integrity: sha512-VjEOhNpf/0RBULPhV8h1j5dxFA8KHHTOmZOu86nSzJcjNDNrxDaV2Hi3QMP2wXwpnJtl3d3AUQVb/Z2XbKGNxg==}
+  '@contentauth/c2pa-node@0.9.4':
+    resolution: {integrity: sha512-7IvUQ4yyjk8IBJZIA8jD9juaOpD+FfI1FH/pf4uO/ZzJ0Dhh59pwWhTQbfRRUBy0qYYkCjDmfzpiMQ9XnbD2JA==}
     engines: {node: '>=22'}
 
   '@contentauth/c2pa-types@0.7.4':
@@ -1133,7 +1133,7 @@ snapshots:
       hashery: 1.5.1
       keyv: 5.6.0
 
-  '@contentauth/c2pa-node@0.9.3':
+  '@contentauth/c2pa-node@0.9.4':
     dependencies:
       '@contentauth/c2pa-types': 0.7.4
       '@contentauth/c2pa-utilities': 0.2.2
