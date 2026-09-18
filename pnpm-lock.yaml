@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       '@contentauth/c2pa-node':
-        specifier: ^0.9.5
-        version: 0.9.5
+        specifier: ^0.9.6
+        version: 0.9.6
       chalk:
         specifier: ^6.0.0
         version: 6.0.0
@@ -74,15 +74,15 @@ packages:
   '@cacheable/utils@2.5.0':
     resolution: {integrity: sha512-buipgOVDkkPXNR5+xBpDw7Zk2n1EvU7qBJCNUcL7rhQ//kfpOXPAvQ511Os0vpLYJ1pZnvudNytkQt2hst3wqA==}
 
-  '@contentauth/c2pa-node@0.9.5':
-    resolution: {integrity: sha512-7n2o3UX0rmNL+8LmVhEd3aun2LXLulcI9y02gKhKE1rgqliZgwocmwg8V+vZat3+JLHPvxABtp8Icy1sUEbd1w==}
+  '@contentauth/c2pa-node@0.9.6':
+    resolution: {integrity: sha512-fozH7SIHop6o1iwZ/8UIapihw/sgkD8tGSR7Zw4nmeEJ4t8wvzQpn20IyED6Xgepl1n/jLacemVH4Yo5dc2j7g==}
     engines: {node: '>=22'}
 
   '@contentauth/c2pa-types@0.7.4':
     resolution: {integrity: sha512-lPxm/5yvUqS2LItFMvgfCDWm8yCw9vsW32vrkCPgj4QkzGxQ9WuUkK32eWzsxBL9sCDbCQDNNtFroH6qTaU90w==}
 
-  '@contentauth/c2pa-utilities@0.2.2':
-    resolution: {integrity: sha512-mUHDB2QlVFRcB6jUk+puZRvfJLPjfA2aiJVqk1QrO8GakoWtNMdjbFA3cRhhuMa4W0rIFrWfi4s/lCTGtMSG4g==}
+  '@contentauth/c2pa-utilities@0.3.0':
+    resolution: {integrity: sha512-1rlnqnZrfw5IE85JbIPYybIb65l3o8YJzLUAoD4zHNkEZguhM33hCPw5FE1BHHI1VvNmO8qbKZWok6vL84zdiQ==}
 
   '@conventional-changelog/git-client@1.0.1':
     resolution: {integrity: sha512-PJEqBwAleffCMETaVm/fUgHldzBE35JFk3/9LL6NUA5EXa3qednu+UT6M7E5iBu3zIQZCULYIiZ90fBYHt6xUw==}
@@ -434,8 +434,8 @@ packages:
   bluebird@3.4.7:
     resolution: {integrity: sha512-iD3898SR7sWVRHbiQv+sHUtHnMvC1o3nW5rAcqnq3uOn07DSAppZYUkIGslDz6gXC7HfunPe7YVBgoEJASPcHA==}
 
-  brace-expansion@1.1.18:
-    resolution: {integrity: sha512-Edep/X9fGqVNmzKBVsDYIOtD+z1tuezV70LBjdCst9Tqu76lsnvRiZ6oTic1n+/BIwX6QDGAO94PN4N2SADvtw==}
+  brace-expansion@1.1.21:
+    resolution: {integrity: sha512-9zeA+KLZNNzglF2TPKRQEDyx6Yby7daAkuy8MiPzpXPsYDWi/DRM8jmwUDxokQjYqBpv5DgPiwD4h4ZZSy1Ujw==}
 
   brace-expansion@5.0.9:
     resolution: {integrity: sha512-ScQ4IuvIEF1TMlP7Zt+vjJ//9zlPb2SDcxWxM3bk8s6t6GGdJ7KO1dCcTidOPJKePW30LE/2cT7wCyPho9/Wxg==}
@@ -1133,10 +1133,10 @@ snapshots:
       hashery: 1.5.1
       keyv: 5.6.0
 
-  '@contentauth/c2pa-node@0.9.5':
+  '@contentauth/c2pa-node@0.9.6':
     dependencies:
       '@contentauth/c2pa-types': 0.7.4
-      '@contentauth/c2pa-utilities': 0.2.2
+      '@contentauth/c2pa-utilities': 0.3.0
       cargo-cp-artifact: 0.1.9
       cli-progress: 3.12.0
       debug: 4.4.3
@@ -1151,7 +1151,7 @@ snapshots:
 
   '@contentauth/c2pa-types@0.7.4': {}
 
-  '@contentauth/c2pa-utilities@0.2.2':
+  '@contentauth/c2pa-utilities@0.3.0':
     dependencies:
       '@contentauth/c2pa-types': 0.7.4
       ts-deepmerge: 8.0.0
@@ -1413,7 +1413,7 @@ snapshots:
 
   bluebird@3.4.7: {}
 
-  brace-expansion@1.1.18:
+  brace-expansion@1.1.21:
     dependencies:
       balanced-match: 1.0.2
       concat-map: 0.0.1
@@ -1840,7 +1840,7 @@ snapshots:
 
   minimatch@3.1.5:
     dependencies:
-      brace-expansion: 1.1.18
+      brace-expansion: 1.1.21
 
   minimist@1.2.8: {}
 
