@@ -162,6 +162,20 @@ export function updateCardBg() {
         rsp.status === 308
       ) {
         let location = rsp.headers.get('location')
+        let redirectUrl
+        try {
+          redirectUrl = new URL(location, imgDownloadUrl)
+        } catch {
+          redirectUrl = null
+        }
+        if (
+          !redirectUrl ||
+          redirectUrl.protocol !== 'https:' ||
+          redirectUrl.hostname !== new URL(imgDownloadUrl).hostname
+        ) {
+          tjLogger.warn('更新卡片背景图片重定向地址不受信任, 已阻止:', location)
+          return rsp
+        }
         tjLogger.debug(
           '更新卡片背景图片重定向:',
           rsp.status,
@@ -169,7 +183,7 @@ export function updateCardBg() {
           'url:',
           location,
         )
-        return fetch(location, fetchOptions)
+        return fetch(redirectUrl, fetchOptions)
       }
       return rsp
     })
@@ -303,7 +317,8 @@ export async function imagesToPDF(
   pdfDoc.setProducer(copyRightAuthor)
 
   for (const file of files) {
-    const imgPath = path.join(inputDir, file)
+    const safeFileName = path.basename(file)
+    const imgPath = `${inputDir}${path.sep}${safeFileName}`
     const imgBuffer = fs.readFileSync(imgPath)
 
     // 获取图片尺寸
