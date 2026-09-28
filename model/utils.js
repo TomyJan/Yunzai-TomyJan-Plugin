@@ -144,7 +144,7 @@ export function updateCardBg() {
 
   // 获取随机背景图片
   const fetchOptions = withProxy(
-    { method: 'GET', signal: AbortSignal.timeout(5000) },
+    { method: 'GET', signal: AbortSignal.timeout(5000), redirect: 'manual' },
     pluginConfig,
     pluginConfig.proxy?.randomBackground,
     {
