@@ -32,7 +32,7 @@
   },
   "dependencies": {
     "@contentauth/c2pa-node": "^0.9.7",
-    "chalk": "^6.0.0",
+    "chalk": "^6.0.1",
     "date-fns": "^4.4.0",
     "iconv-lite": "^0.7.3",
     "pdf-lib-plus-encrypt": "^1.1.0",
