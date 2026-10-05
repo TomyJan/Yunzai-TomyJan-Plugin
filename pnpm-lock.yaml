@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       '@contentauth/c2pa-node':
-        specifier: ^0.9.7
-        version: 0.9.7
+        specifier: ^0.9.9
+        version: 0.9.9
       chalk:
         specifier: ^6.0.1
         version: 6.0.1
@@ -74,15 +74,15 @@ packages:
   '@cacheable/utils@2.5.0':
     resolution: {integrity: sha512-buipgOVDkkPXNR5+xBpDw7Zk2n1EvU7qBJCNUcL7rhQ//kfpOXPAvQ511Os0vpLYJ1pZnvudNytkQt2hst3wqA==}
 
-  '@contentauth/c2pa-node@0.9.7':
-    resolution: {integrity: sha512-CXWc4avjHEJO2G2/UaesFirqaZLZtd71BxXn9VZ/glBKU5vGuvFfNr6jGUcPFCt0po86n60FcqRwV0zC8/jedw==}
+  '@contentauth/c2pa-node@0.9.9':
+    resolution: {integrity: sha512-2Zmv/UlIF7HNflbF6/vGFlLT23yAjMEm7DHeTuYRZCNXW3WX4/Gxs71B07U1vAYFXsoFYKSJdYw6oVUhLqGwQw==}
     engines: {node: '>=22'}
 
-  '@contentauth/c2pa-types@0.7.4':
-    resolution: {integrity: sha512-lPxm/5yvUqS2LItFMvgfCDWm8yCw9vsW32vrkCPgj4QkzGxQ9WuUkK32eWzsxBL9sCDbCQDNNtFroH6qTaU90w==}
+  '@contentauth/c2pa-types@0.7.5':
+    resolution: {integrity: sha512-5sK1GvBjC2YPpnbWrpC3RCSrbImgYWjlk9IIv7G7TYmrxt2o21X5jw/z7BrNZUuQDhS+G9LJ+9fTPN/mQQ2/rA==}
 
-  '@contentauth/c2pa-utilities@0.3.0':
-    resolution: {integrity: sha512-1rlnqnZrfw5IE85JbIPYybIb65l3o8YJzLUAoD4zHNkEZguhM33hCPw5FE1BHHI1VvNmO8qbKZWok6vL84zdiQ==}
+  '@contentauth/c2pa-utilities@0.3.1':
+    resolution: {integrity: sha512-vNYXiKdHGLXTjKTGuXisG1DE9s3oXQ2Qwm/teGQ5zMuRMEEqQPUrQ0rYvB0+Po7eAoAxms/ZgX3oXmgp9jiBVg==}
 
   '@conventional-changelog/git-client@1.0.1':
     resolution: {integrity: sha512-PJEqBwAleffCMETaVm/fUgHldzBE35JFk3/9LL6NUA5EXa3qednu+UT6M7E5iBu3zIQZCULYIiZ90fBYHt6xUw==}
@@ -702,8 +702,8 @@ packages:
     resolution: {integrity: sha512-buewHzMvYL29jdeQTVILecSaZKnt/RJWjoZCF5OW60Z67/GmSLBkOFM7qh1PI3zFNtJbaZL5eQu1vLfazOwj4g==}
     engines: {node: '>=12.20.0'}
 
-  fs-extra@11.4.0:
-    resolution: {integrity: sha512-EQsFzMUJkCKGr1ePqlYADkIUmHW1s3ZXr5Yqy6wbGrfUCphpl2maM/kyOIRA2HpP3AaFQTZXD4ldjek+nccddA==}
+  fs-extra@11.4.1:
+    resolution: {integrity: sha512-KYAb4c9BJQI6QqGKthV68OHe0badztdXJWKo0WtBA9IuCFPTKvE5ZdUBglP833aMjhaSPNO4A5j/EkzZtGlKjA==}
     engines: {node: '>=14.14'}
 
   fs.realpath@1.0.0:
@@ -1133,14 +1133,14 @@ snapshots:
       hashery: 1.5.1
       keyv: 5.6.0
 
-  '@contentauth/c2pa-node@0.9.7':
+  '@contentauth/c2pa-node@0.9.9':
     dependencies:
-      '@contentauth/c2pa-types': 0.7.4
-      '@contentauth/c2pa-utilities': 0.3.0
+      '@contentauth/c2pa-types': 0.7.5
+      '@contentauth/c2pa-utilities': 0.3.1
       cargo-cp-artifact: 0.1.9
       cli-progress: 3.12.0
       debug: 4.4.3
-      fs-extra: 11.4.0
+      fs-extra: 11.4.1
       mkdirp: 3.0.1
       node-fetch: 3.3.2
       pkg-dir: 8.0.0
@@ -1149,11 +1149,11 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@contentauth/c2pa-types@0.7.4': {}
+  '@contentauth/c2pa-types@0.7.5': {}
 
-  '@contentauth/c2pa-utilities@0.3.0':
+  '@contentauth/c2pa-utilities@0.3.1':
     dependencies:
-      '@contentauth/c2pa-types': 0.7.4
+      '@contentauth/c2pa-types': 0.7.5
       ts-deepmerge: 8.0.0
 
   '@conventional-changelog/git-client@1.0.1(conventional-commits-filter@6.0.1)(conventional-commits-parser@6.4.0)':
@@ -1703,7 +1703,7 @@ snapshots:
     dependencies:
       fetch-blob: 3.2.0
 
-  fs-extra@11.4.0:
+  fs-extra@11.4.1:
     dependencies:
       graceful-fs: 4.2.11
       jsonfile: 6.2.1
