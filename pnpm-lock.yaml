@@ -27,8 +27,8 @@ importers:
         specifier: ^0.35.5
         version: 0.35.5
       undici:
-        specifier: ^8.12.3
-        version: 8.12.3
+        specifier: ^8.12.4
+        version: 8.12.4
       yaml:
         specifier: ^2.9.1
         version: 2.9.1
@@ -1404,8 +1404,8 @@ packages:
     resolution: {integrity: sha512-nWJ91DjeOkej/TA8pXQ3myruKpKEYgqvpw9lz4OPHj/NWFNluYrjbz9j01CJ8yKQd2g4jFoOkINCTW2I5LEEyw==}
     engines: {node: '>= 0.4'}
 
-  undici@8.12.3:
-    resolution: {integrity: sha512-+fdndUTwBP86cVjihTp21hZHo7d6oj1c/47XPA3lL8mM0XHs+C4EkcjmgRsFnFk2f/UONGDy9ItBItmXsLOQHw==}
+  undici@8.12.4:
+    resolution: {integrity: sha512-8Mx+uNKKER2bA4AdtedkqRbwUCIJFr2nJckXRe5yrDqzePqwLP7VNcctN8/XdmDSbF7mS+jJKIszlL+vbam1VA==}
     engines: {node: '>=22.19.0'}
 
   unicorn-magic@0.1.0:
@@ -2966,7 +2966,7 @@ snapshots:
       has-symbols: 1.1.0
       which-boxed-primitive: 1.1.1
 
-  undici@8.12.3: {}
+  undici@8.12.4: {}
 
   unicorn-magic@0.1.0: {}
 
