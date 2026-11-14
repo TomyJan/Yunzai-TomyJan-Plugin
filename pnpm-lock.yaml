@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       '@contentauth/c2pa-node':
-        specifier: ^0.10.0
-        version: 0.10.0
+        specifier: ^0.10.1
+        version: 0.10.1
       chalk:
         specifier: ^6.0.1
         version: 6.0.1
@@ -74,15 +74,15 @@ packages:
   '@cacheable/utils@2.5.0':
     resolution: {integrity: sha512-buipgOVDkkPXNR5+xBpDw7Zk2n1EvU7qBJCNUcL7rhQ//kfpOXPAvQ511Os0vpLYJ1pZnvudNytkQt2hst3wqA==}
 
-  '@contentauth/c2pa-node@0.10.0':
-    resolution: {integrity: sha512-YqIhDTFkxnfFrNvVvK3yNmt9CPdq9v2MihxC4sIcETZY7ohDM3tyxUxGuO5B7QXl1q5WRDzFf+9Wg/S5zzk96g==}
+  '@contentauth/c2pa-node@0.10.1':
+    resolution: {integrity: sha512-Cxw+6FqmfGfhCLHwLE9B48a7K0Pd98DlvFaXmlNOpmjWUeiUiCNyjfviQiRETYGFuHD8n/XY75hDAWDj2sHi+g==}
     engines: {node: '>=22'}
 
   '@contentauth/c2pa-types@0.7.8':
     resolution: {integrity: sha512-wqvnS6Ms3FRMUlkBeHorSH4sJXpTx2kB5XcNRnzUcoechTJSoB/cjUVyxExMboN7ujUNPIHcIrtXWTms1A01XA==}
 
-  '@contentauth/c2pa-utilities@0.4.0':
-    resolution: {integrity: sha512-SnYvP1fZS+rKTXiad6Yj0kzOeI4YBhZC2E8zzsx0DPRE/ax02b+HwruphC+sIh5h8jhyw8qkAX/uJPKLarV/LA==}
+  '@contentauth/c2pa-utilities@0.5.0':
+    resolution: {integrity: sha512-EhFw1Li6uRAfwYtHD6Q8Qwl70lNDA9o1pS2cEV0osIQVnh2nUVtQ9pFjh4G7dNMygNTjUiTGB5L5HU6PZK9slA==}
 
   '@conventional-changelog/git-client@1.0.1':
     resolution: {integrity: sha512-PJEqBwAleffCMETaVm/fUgHldzBE35JFk3/9LL6NUA5EXa3qednu+UT6M7E5iBu3zIQZCULYIiZ90fBYHt6xUw==}
@@ -1498,10 +1498,10 @@ snapshots:
       hashery: 1.5.1
       keyv: 5.6.0
 
-  '@contentauth/c2pa-node@0.10.0':
+  '@contentauth/c2pa-node@0.10.1':
     dependencies:
       '@contentauth/c2pa-types': 0.7.8
-      '@contentauth/c2pa-utilities': 0.4.0
+      '@contentauth/c2pa-utilities': 0.5.0
       cargo-cp-artifact: 0.1.9
       cli-progress: 3.12.0
       debug: 4.4.3
@@ -1516,7 +1516,7 @@ snapshots:
 
   '@contentauth/c2pa-types@0.7.8': {}
 
-  '@contentauth/c2pa-utilities@0.4.0':
+  '@contentauth/c2pa-utilities@0.5.0':
     dependencies:
       '@contentauth/c2pa-types': 0.7.8
       ts-deepmerge: 8.0.0
