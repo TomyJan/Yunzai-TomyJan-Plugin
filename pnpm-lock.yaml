@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       '@contentauth/c2pa-node':
-        specifier: ^0.10.1
-        version: 0.10.1
+        specifier: ^0.11.0
+        version: 0.11.0
       chalk:
         specifier: ^6.0.1
         version: 6.0.1
@@ -74,15 +74,15 @@ packages:
   '@cacheable/utils@2.5.0':
     resolution: {integrity: sha512-buipgOVDkkPXNR5+xBpDw7Zk2n1EvU7qBJCNUcL7rhQ//kfpOXPAvQ511Os0vpLYJ1pZnvudNytkQt2hst3wqA==}
 
-  '@contentauth/c2pa-node@0.10.1':
-    resolution: {integrity: sha512-Cxw+6FqmfGfhCLHwLE9B48a7K0Pd98DlvFaXmlNOpmjWUeiUiCNyjfviQiRETYGFuHD8n/XY75hDAWDj2sHi+g==}
+  '@contentauth/c2pa-node@0.11.0':
+    resolution: {integrity: sha512-UOKxCgRJ0AKVnc8z/deHLD7r3rq8etRHaJon7+kxxcNyijSImvDAVsW4Tg3YzIzxCFyuGViJM8Ff+bltJSqnjw==}
     engines: {node: '>=22'}
 
-  '@contentauth/c2pa-types@0.7.8':
-    resolution: {integrity: sha512-wqvnS6Ms3FRMUlkBeHorSH4sJXpTx2kB5XcNRnzUcoechTJSoB/cjUVyxExMboN7ujUNPIHcIrtXWTms1A01XA==}
+  '@contentauth/c2pa-types@0.8.0':
+    resolution: {integrity: sha512-JGqhFynV2fcz1HnbkhDciZ+4N2Ul4w5cnPMOJ5OXlrQ5frGrQTXhrIZCop9FbjaA2OB5k9Q6vVLxVrEiYMhcsw==}
 
-  '@contentauth/c2pa-utilities@0.5.0':
-    resolution: {integrity: sha512-EhFw1Li6uRAfwYtHD6Q8Qwl70lNDA9o1pS2cEV0osIQVnh2nUVtQ9pFjh4G7dNMygNTjUiTGB5L5HU6PZK9slA==}
+  '@contentauth/c2pa-utilities@0.5.1':
+    resolution: {integrity: sha512-Eh5zeg7EbTWkeTqi8NH/ozzlkwt8qBgZ5hGghGII5DyWUa1K2GNWmf6Hguns83JSSWzMCbMYQ66kw6U2US5WfQ==}
 
   '@conventional-changelog/git-client@1.0.1':
     resolution: {integrity: sha512-PJEqBwAleffCMETaVm/fUgHldzBE35JFk3/9LL6NUA5EXa3qednu+UT6M7E5iBu3zIQZCULYIiZ90fBYHt6xUw==}
@@ -450,8 +450,8 @@ packages:
   bluebird@3.4.7:
     resolution: {integrity: sha512-iD3898SR7sWVRHbiQv+sHUtHnMvC1o3nW5rAcqnq3uOn07DSAppZYUkIGslDz6gXC7HfunPe7YVBgoEJASPcHA==}
 
-  brace-expansion@1.1.21:
-    resolution: {integrity: sha512-9zeA+KLZNNzglF2TPKRQEDyx6Yby7daAkuy8MiPzpXPsYDWi/DRM8jmwUDxokQjYqBpv5DgPiwD4h4ZZSy1Ujw==}
+  brace-expansion@1.1.22:
+    resolution: {integrity: sha512-CKLDTuSsN0+r1ThM0WkzzBI7dnPI6xEGfa/JnVYIK9JNBA1N1NyPwXVHor//NKD/y3sDxp764sZdLhFK7pH8XQ==}
 
   brace-expansion@5.0.12:
     resolution: {integrity: sha512-YovQ3rzhaLMIrDjNDMkNS01tea93qhEhG5xy8f6+R0l+dw3Ki+5sCoIoI942iuLZTHWogWktgwVDhU09iNEimQ==}
@@ -856,8 +856,8 @@ packages:
     resolution: {integrity: sha512-ZUKRh6/kUFoAiTAtTYPZJ3hw9wNxx+BIBOijnlG9PnrJsCcSjs1wyyD6vJpaYtgnzDrKYRSqf3OO6Rfa93xsRg==}
     engines: {node: '>= 0.4'}
 
-  graceful-fs@4.2.11:
-    resolution: {integrity: sha512-RbJ5/jmFcNNCcDV5o9eTnBLJ/HszWV0P73bc+Ff4nS/rJj+YaS6IGyiOL0VoBYX+l1Wrl3k63h/KrH+nhJ0XvQ==}
+  graceful-fs@4.2.12:
+    resolution: {integrity: sha512-iuyGF2E4oafQfPsRrG2wtY2ILupMhvtdrhzrxB+0VcjsPpSPttpfYdjnGFGsTi5MaJFjI1jOKHPQ6UTbTj9TAw==}
 
   handlebars@4.7.8:
     resolution: {integrity: sha512-vafaFqs8MZkRrSX7sFVUdo3ap/eNiLnb4IakshzvP56X5Nr1iGKAIqdX6tMlm6HcNRIkr6AxO5jFEoJzzpT8aQ==}
@@ -1498,10 +1498,10 @@ snapshots:
       hashery: 1.5.1
       keyv: 5.6.0
 
-  '@contentauth/c2pa-node@0.10.1':
+  '@contentauth/c2pa-node@0.11.0':
     dependencies:
-      '@contentauth/c2pa-types': 0.7.8
-      '@contentauth/c2pa-utilities': 0.5.0
+      '@contentauth/c2pa-types': 0.8.0
+      '@contentauth/c2pa-utilities': 0.5.1
       cargo-cp-artifact: 0.1.9
       cli-progress: 3.12.0
       debug: 4.4.3
@@ -1514,11 +1514,11 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@contentauth/c2pa-types@0.7.8': {}
+  '@contentauth/c2pa-types@0.8.0': {}
 
-  '@contentauth/c2pa-utilities@0.5.0':
+  '@contentauth/c2pa-utilities@0.5.1':
     dependencies:
-      '@contentauth/c2pa-types': 0.7.8
+      '@contentauth/c2pa-types': 0.8.0
       ts-deepmerge: 8.0.0
 
   '@conventional-changelog/git-client@1.0.1(conventional-commits-filter@6.0.1)(conventional-commits-parser@6.4.0)':
@@ -1799,7 +1799,7 @@ snapshots:
 
   bluebird@3.4.7: {}
 
-  brace-expansion@1.1.21:
+  brace-expansion@1.1.22:
     dependencies:
       balanced-match: 1.0.2
       concat-map: 0.0.1
@@ -2236,7 +2236,7 @@ snapshots:
 
   fs-extra@11.4.1:
     dependencies:
-      graceful-fs: 4.2.11
+      graceful-fs: 4.2.12
       jsonfile: 6.2.1
       universalify: 2.0.1
 
@@ -2244,7 +2244,7 @@ snapshots:
 
   fstream@1.0.12:
     dependencies:
-      graceful-fs: 4.2.11
+      graceful-fs: 4.2.12
       inherits: 2.0.4
       mkdirp: 0.5.6
       rimraf: 2.7.1
@@ -2329,7 +2329,7 @@ snapshots:
 
   gopd@1.2.0: {}
 
-  graceful-fs@4.2.11: {}
+  graceful-fs@4.2.12: {}
 
   handlebars@4.7.8:
     dependencies:
@@ -2521,7 +2521,7 @@ snapshots:
     dependencies:
       universalify: 2.0.1
     optionalDependencies:
-      graceful-fs: 4.2.11
+      graceful-fs: 4.2.12
 
   keyv@5.6.0:
     dependencies:
@@ -2550,7 +2550,7 @@ snapshots:
 
   minimatch@3.1.5:
     dependencies:
-      brace-expansion: 1.1.21
+      brace-expansion: 1.1.22
 
   minimist@1.2.8: {}
 
@@ -2980,7 +2980,7 @@ snapshots:
       buffer-indexof-polyfill: 1.0.2
       duplexer2: 0.1.4
       fstream: 1.0.12
-      graceful-fs: 4.2.11
+      graceful-fs: 4.2.12
       listenercount: 1.0.1
       readable-stream: 2.3.8
       setimmediate: 1.0.5
