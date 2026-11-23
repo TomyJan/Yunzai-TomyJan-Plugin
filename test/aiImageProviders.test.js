@@ -289,8 +289,8 @@ test('keeps the default C2PA reader local-only', async () => {
     },
   })
 
-  assert.equal(readerOptions.readerSettings.verify.ocsp_fetch, false)
-  assert.equal(readerOptions.readerSettings.verify.remote_manifest_fetch, false)
+  assert.equal(readerOptions.readerSettings.verify.ocspFetch, false)
+  assert.equal(readerOptions.readerSettings.verify.remoteManifestFetch, false)
 })
 
 test('does not treat a trusted camera manifest as AI evidence', async () => {

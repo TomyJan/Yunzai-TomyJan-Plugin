@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       '@contentauth/c2pa-node':
-        specifier: ^0.9.3
-        version: 0.9.3
+        specifier: ^0.12.1
+        version: 0.12.1
       chalk:
         specifier: ^6.0.0
         version: 6.0.0
@@ -77,15 +77,15 @@ packages:
   '@cacheable/utils@2.5.0':
     resolution: {integrity: sha512-buipgOVDkkPXNR5+xBpDw7Zk2n1EvU7qBJCNUcL7rhQ//kfpOXPAvQ511Os0vpLYJ1pZnvudNytkQt2hst3wqA==}
 
-  '@contentauth/c2pa-node@0.9.3':
-    resolution: {integrity: sha512-VjEOhNpf/0RBULPhV8h1j5dxFA8KHHTOmZOu86nSzJcjNDNrxDaV2Hi3QMP2wXwpnJtl3d3AUQVb/Z2XbKGNxg==}
+  '@contentauth/c2pa-node@0.12.1':
+    resolution: {integrity: sha512-ZHfZlnLQJRwPzSKTHiJVITT8kwtGdoE8fZQeD7hMVvrRXXOJWtDzbNYrirOcs2aLFVMUMtrY0EhVgiYh0bEyCA==}
     engines: {node: '>=22'}
 
-  '@contentauth/c2pa-types@0.7.4':
-    resolution: {integrity: sha512-lPxm/5yvUqS2LItFMvgfCDWm8yCw9vsW32vrkCPgj4QkzGxQ9WuUkK32eWzsxBL9sCDbCQDNNtFroH6qTaU90w==}
+  '@contentauth/c2pa-types@0.8.0':
+    resolution: {integrity: sha512-JGqhFynV2fcz1HnbkhDciZ+4N2Ul4w5cnPMOJ5OXlrQ5frGrQTXhrIZCop9FbjaA2OB5k9Q6vVLxVrEiYMhcsw==}
 
-  '@contentauth/c2pa-utilities@0.2.2':
-    resolution: {integrity: sha512-mUHDB2QlVFRcB6jUk+puZRvfJLPjfA2aiJVqk1QrO8GakoWtNMdjbFA3cRhhuMa4W0rIFrWfi4s/lCTGtMSG4g==}
+  '@contentauth/c2pa-utilities@0.5.2':
+    resolution: {integrity: sha512-ioNqRyL2IbSfNOYUz9Rh9uBUWQLcBKK9ItENlVSmQMg1YGDSh4CK06gZlaqNfpvtusebUdt2AQQiP5/RYWjEiw==}
 
   '@conventional-changelog/git-client@1.0.1':
     resolution: {integrity: sha512-PJEqBwAleffCMETaVm/fUgHldzBE35JFk3/9LL6NUA5EXa3qednu+UT6M7E5iBu3zIQZCULYIiZ90fBYHt6xUw==}
@@ -1139,10 +1139,10 @@ snapshots:
       hashery: 1.5.1
       keyv: 5.6.0
 
-  '@contentauth/c2pa-node@0.9.3':
+  '@contentauth/c2pa-node@0.12.1':
     dependencies:
-      '@contentauth/c2pa-types': 0.7.4
-      '@contentauth/c2pa-utilities': 0.2.2
+      '@contentauth/c2pa-types': 0.8.0
+      '@contentauth/c2pa-utilities': 0.5.2
       cargo-cp-artifact: 0.1.9
       cli-progress: 3.12.0
       debug: 4.4.3
@@ -1155,11 +1155,11 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@contentauth/c2pa-types@0.7.4': {}
+  '@contentauth/c2pa-types@0.8.0': {}
 
-  '@contentauth/c2pa-utilities@0.2.2':
+  '@contentauth/c2pa-utilities@0.5.2':
     dependencies:
-      '@contentauth/c2pa-types': 0.7.4
+      '@contentauth/c2pa-types': 0.8.0
       ts-deepmerge: 8.0.0
 
   '@conventional-changelog/git-client@1.0.1(conventional-commits-filter@6.0.1)(conventional-commits-parser@6.4.0)':

@@ -302,12 +302,17 @@ async function defaultC2paReaderFactory(buffer, options = {}) {
   const module = await import('@contentauth/c2pa-node')
   const Reader = module.Reader || module.default?.Reader
   if (!Reader?.fromAsset) throw new Error('C2PA Reader API unavailable')
+  const Context = module.Context || module.default?.Context
+  const readerContext =
+    typeof Context === 'function'
+      ? new Context(options.readerSettings)
+      : options.readerSettings
   return Reader.fromAsset(
     {
       buffer: asBuffer(buffer),
       mimeType: options.mimeType || 'application/octet-stream',
     },
-    options.readerSettings,
+    readerContext,
   )
 }
 
@@ -336,8 +341,8 @@ export async function checkC2pa(buffer, options = {}) {
         ...options.readerSettings,
         verify: {
           ...options.readerSettings?.verify,
-          ocsp_fetch: false,
-          remote_manifest_fetch: false,
+          ocspFetch: false,
+          remoteManifestFetch: false,
         },
       },
     }
